@@ -130,9 +130,10 @@
         font-size: 0.88rem;
       }
 
-      label[for="model"] {
-        display: block;
-        margin-bottom: 8px;
+      .picker {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
       }
 
       select,
@@ -262,6 +263,15 @@
         cursor: not-allowed;
       }
 
+      button.ghost {
+        align-self: stretch;
+        margin-top: 8px;
+        background: transparent;
+        color: var(--paper);
+        border: 1px solid var(--line);
+        font-weight: 500;
+      }
+
       @media (max-width: 840px) {
         .frame {
           grid-template-columns: 1fr;
@@ -291,16 +301,23 @@
           <div class="label">Live keys</div>
           <div id="lamps" class="lamps" aria-live="polite"></div>
         </div>
-        <div>
+        <div class="picker">
           <label class="label" for="model">Model</label>
           <select id="model"></select>
+        </div>
+        <div class="picker">
+          <label class="label" for="promptName">Prompt</label>
+          <select id="promptName">
+            <option value="">Messages only</option>
+          </select>
+          <button id="newChat" class="ghost" type="button">New chat</button>
         </div>
       </aside>
       <main class="stage">
         <div id="log" class="log" aria-live="polite">
           <div class="bubble system">
-            Choose a model on the left, then send a message. Add another PROVIDER_API_KEY to .env to light up more
-            providers.
+            Choose a model on the left, then send a message. Leave Prompt on “Messages only” to skip named prompts.
+            Add another PROVIDER_API_KEY to .env to light up more providers.
           </div>
         </div>
         <form id="form" class="composer">
@@ -313,12 +330,34 @@
     <script>
       const lamps = document.getElementById("lamps");
       const modelSelect = document.getElementById("model");
+      const promptName = document.getElementById("promptName");
       const log = document.getElementById("log");
       const form = document.getElementById("form");
       const prompt = document.getElementById("prompt");
       const send = document.getElementById("send");
+      const newChat = document.getElementById("newChat");
 
+      const USER_ID = "local";
       const messages = [];
+      const intro =
+        "Choose a model on the left, then send a message. Leave Prompt on “Messages only” to skip named prompts. Add another PROVIDER_API_KEY to .env to light up more providers.";
+
+      function conversationId() {
+        let id = sessionStorage.getItem("realmm.conversation_id");
+        if (!id) {
+          id = crypto.randomUUID();
+          sessionStorage.setItem("realmm.conversation_id", id);
+        }
+        return id;
+      }
+
+      function resetLog() {
+        log.innerHTML = "";
+        const el = document.createElement("div");
+        el.className = "bubble system";
+        el.textContent = intro;
+        log.appendChild(el);
+      }
 
       function addBubble(role, text) {
         if (role === "assistant") {
@@ -352,6 +391,24 @@
         meta.textContent = labels.join(" · ");
       }
 
+      function formatTokens(usage) {
+        if (!usage) return "";
+        const total =
+          usage.total_tokens != null
+            ? usage.total_tokens
+            : (usage.prompt_tokens || 0) + (usage.completion_tokens || 0);
+        if (!total) return "";
+        return `${total} tok`;
+      }
+
+      function formatCost(value) {
+        if (value == null || value === "") return "";
+        const n = Number(value);
+        if (!Number.isFinite(n)) return "";
+        if (n === 0) return "$0";
+        return `$${n.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
+      }
+
       async function boot() {
         try {
           const res = await fetch("/models");
@@ -375,6 +432,7 @@
             opt.textContent = "No models available";
             modelSelect.appendChild(opt);
             send.disabled = true;
+            await loadPrompts();
             return;
           }
           data.models.forEach((model) => {
@@ -383,9 +441,31 @@
             opt.textContent = model.id;
             modelSelect.appendChild(opt);
           });
+          await loadPrompts();
         } catch (err) {
           addBubble("error", err.message || "Could not reach the local API.");
           send.disabled = true;
+        }
+      }
+
+      async function loadPrompts() {
+        promptName.innerHTML = "";
+        const none = document.createElement("option");
+        none.value = "";
+        none.textContent = "Messages only";
+        promptName.appendChild(none);
+        try {
+          const res = await fetch("/prompts");
+          if (!res.ok) return;
+          const data = await res.json();
+          (data.prompts || []).forEach((item) => {
+            const opt = document.createElement("option");
+            opt.value = item.name;
+            opt.textContent = item.source === "langfuse" ? `${item.name} (langfuse)` : item.name;
+            promptName.appendChild(opt);
+          });
+        } catch {
+          return;
         }
       }
 
@@ -402,10 +482,18 @@
 
         const assistant = addBubble("assistant", "");
         try {
+          const body = {
+            model,
+            messages,
+            stream: true,
+            user_id: USER_ID,
+            conversation_id: conversationId(),
+          };
+          if (promptName.value) body.prompt = promptName.value;
           const res = await fetch("/chat", {
             method: "POST",
             headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ model, messages, stream: true }),
+            body: JSON.stringify(body),
           });
 
           if (!res.ok || !res.body) {
@@ -417,7 +505,16 @@
           const decoder = new TextDecoder();
           let buffer = "";
           let reply = "";
-          let meta = { cached: false, fallbackFrom: null, served: model };
+          let meta = {
+            cached: false,
+            fallbackFrom: null,
+            served: model,
+            promptName: "",
+            promptSource: "",
+            usage: null,
+            cost: null,
+            memoriesUsed: null,
+          };
 
           while (true) {
             const { value, done } = await reader.read();
@@ -440,6 +537,12 @@
               if (json.cached) meta.cached = true;
               if (json.fallback_from) meta.fallbackFrom = json.fallback_from;
               if (json.model) meta.served = json.model;
+              if (json.prompt_name) meta.promptName = json.prompt_name;
+              if (json.prompt_source) meta.promptSource = json.prompt_source;
+              if (json.usage) meta.usage = json.usage;
+              if (json.cost_usd != null) meta.cost = json.cost_usd;
+              else if (json.usage && json.usage.cost_usd != null) meta.cost = json.usage.cost_usd;
+              if (json.memories_used != null) meta.memoriesUsed = json.memories_used;
             }
           }
 
@@ -448,6 +551,10 @@
           setMeta(assistant, [
             meta.cached ? "cache hit" : "",
             meta.fallbackFrom ? `served by ${meta.served}` : "",
+            meta.promptName ? `${meta.promptName}${meta.promptSource ? ` (${meta.promptSource})` : ""}` : "",
+            meta.memoriesUsed ? `${meta.memoriesUsed} memories` : "",
+            formatTokens(meta.usage),
+            formatCost(meta.cost),
           ]);
         } catch (err) {
           assistant.className = "bubble error";
@@ -456,6 +563,13 @@
           send.disabled = false;
           prompt.focus();
         }
+      });
+
+      newChat.addEventListener("click", () => {
+        sessionStorage.setItem("realmm.conversation_id", crypto.randomUUID());
+        messages.length = 0;
+        resetLog();
+        prompt.focus();
       });
 
       boot();

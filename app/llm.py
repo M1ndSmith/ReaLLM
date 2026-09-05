@@ -153,10 +153,15 @@ def _usage_from_response(response: object) -> UsageInfo | None:
     usage = getattr(response, "usage", None)
     if usage is None:
         return None
+    prompt_tokens = getattr(usage, "prompt_tokens", None)
+    completion_tokens = getattr(usage, "completion_tokens", None)
+    total_tokens = getattr(usage, "total_tokens", None)
+    if prompt_tokens is None and completion_tokens is None and total_tokens is None:
+        return None
     return UsageInfo(
-        prompt_tokens=getattr(usage, "prompt_tokens", None),
-        completion_tokens=getattr(usage, "completion_tokens", None),
-        total_tokens=getattr(usage, "total_tokens", None),
+        prompt_tokens=prompt_tokens,
+        completion_tokens=completion_tokens,
+        total_tokens=total_tokens,
     )
 
 
@@ -205,15 +210,45 @@ def fallback_from(requested: str, served: str) -> str | None:
     return None
 
 
-async def complete_chat(model: str, messages: list[ChatMessage]) -> ChatResponse:
+async def complete_chat(
+    model: str,
+    messages: list[ChatMessage],
+    *,
+    prompt: str | None = None,
+    prompt_label: str | None = None,
+    prompt_version: int | None = None,
+    variables: dict[str, str] | None = None,
+    user_id: str | None = None,
+    conversation_id: str | None = None,
+    agent_id: str | None = None,
+) -> ChatResponse:
+    from app.budget import assert_allowed, attach_cost, completion_usd, max_output_tokens, record_usage, token_count
+    from app.memory import attach_memories, record_turn
+    from app.prompts import prepare_messages
     from app.reliability import chat_fallback_ids, get_router
 
+    outgoing, prompt_meta = prepare_messages(
+        messages,
+        prompt=prompt,
+        prompt_label=prompt_label,
+        prompt_version=prompt_version,
+        variables=variables,
+    )
+    outgoing, memories_used = await attach_memories(
+        outgoing,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+    )
     resolved = resolve_model(model)
+    estimated = token_count(resolved, outgoing)
+    assert_allowed(resolved, estimated)
     router = get_router()
     fallbacks = chat_fallback_ids(resolved)
     call_kwargs: dict = {
         "model": resolved,
-        "messages": [message.model_dump() for message in messages],
+        "messages": [message.model_dump() for message in outgoing],
+        "max_tokens": max_output_tokens(),
     }
     if fallbacks:
         call_kwargs["fallbacks"] = fallbacks
@@ -223,34 +258,124 @@ async def complete_chat(model: str, messages: list[ChatMessage]) -> ChatResponse
     served = _served_model(response, resolved)
     used_fallback = fallback_from(resolved, served)
     reported = served if used_fallback else resolved
+    cached = _cache_hit(response)
+    usage = attach_cost(_usage_from_response(response), completion_usd(response, reported))
+    tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
+    record_usage(tokens=tokens, usd=usage.cost_usd if usage else None, cached=cached)
+    record_turn(
+        messages,
+        content,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+    )
     return ChatResponse(
         model=reported,
         provider=provider_for_model(reported),
         message=ChatMessage(role="assistant", content=content),
-        usage=_usage_from_response(response),
-        cached=_cache_hit(response),
+        usage=usage,
+        cached=cached,
         fallback_from=used_fallback,
+        prompt_name=prompt_meta.name if prompt_meta else None,
+        prompt_version=prompt_meta.version if prompt_meta else None,
+        prompt_source=prompt_meta.source if prompt_meta else None,
+        memories_used=memories_used,
     )
 
 
-async def stream_chat(model: str, messages: list[ChatMessage]):
+def _chunk_delta(chunk: object) -> str:
+    choices = getattr(chunk, "choices", None)
+    if not choices:
+        return ""
+    delta = getattr(choices[0], "delta", None)
+    if delta is None:
+        return ""
+    return getattr(delta, "content", None) or ""
+
+
+async def stream_chat(
+    model: str,
+    messages: list[ChatMessage],
+    *,
+    prompt: str | None = None,
+    prompt_label: str | None = None,
+    prompt_version: int | None = None,
+    variables: dict[str, str] | None = None,
+    user_id: str | None = None,
+    conversation_id: str | None = None,
+    agent_id: str | None = None,
+):
+    from app.budget import (
+        assert_allowed,
+        max_output_tokens,
+        record_usage,
+        token_count,
+        token_count_text,
+        usage_from_counts,
+    )
+    from app.memory import attach_memories, record_turn
+    from app.prompts import prepare_messages
     from app.reliability import chat_fallback_ids, get_router
 
+    outgoing, prompt_meta = prepare_messages(
+        messages,
+        prompt=prompt,
+        prompt_label=prompt_label,
+        prompt_version=prompt_version,
+        variables=variables,
+    )
+    outgoing, memories_used = await attach_memories(
+        outgoing,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+    )
     resolved = resolve_model(model)
+    estimated = token_count(resolved, outgoing)
+    assert_allowed(resolved, estimated)
+    yield None, resolved, resolved, prompt_meta, None, memories_used
     router = get_router()
     fallbacks = chat_fallback_ids(resolved)
     call_kwargs: dict = {
         "model": resolved,
-        "messages": [message.model_dump() for message in messages],
+        "messages": [message.model_dump() for message in outgoing],
         "stream": True,
         "caching": False,
+        "max_tokens": max_output_tokens(),
+        "stream_options": {"include_usage": True},
     }
     if fallbacks:
         call_kwargs["fallbacks"] = fallbacks
     stream = await router.acompletion(**call_kwargs)
     served = resolved
+    assembled: list[str] = []
+    usage = None
     async for chunk in stream:
         chunk_model = getattr(chunk, "model", None)
         if isinstance(chunk_model, str) and chunk_model:
             served = _served_model(chunk, resolved)
-        yield chunk, resolved, served
+        delta = _chunk_delta(chunk)
+        if delta:
+            assembled.append(delta)
+        chunk_usage = _usage_from_response(chunk)
+        if chunk_usage is not None:
+            usage = chunk_usage
+        yield chunk, resolved, served, prompt_meta, None, memories_used
+    if usage is None:
+        usage = usage_from_counts(served, estimated, token_count_text(served, "".join(assembled)))
+    elif usage.cost_usd is None:
+        completion_tokens = usage.completion_tokens
+        if completion_tokens is None:
+            completion_tokens = token_count_text(served, "".join(assembled))
+        prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
+        usage = usage_from_counts(served, prompt_tokens, completion_tokens)
+    tokens = usage.total_tokens if usage.total_tokens is not None else estimated
+    record_usage(tokens=tokens, usd=usage.cost_usd, cached=False)
+    record_turn(
+        messages,
+        "".join(assembled),
+        user_id=user_id,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+    )
+    yield None, resolved, served, prompt_meta, usage, memories_used

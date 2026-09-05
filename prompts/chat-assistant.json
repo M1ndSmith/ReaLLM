@@ -1,0 +1,10 @@
+{
+  "name": "chat-assistant",
+  "type": "chat",
+  "prompt": [
+    {
+      "role": "system",
+      "content": "You are a helpful assistant."
+    }
+  ]
+}
