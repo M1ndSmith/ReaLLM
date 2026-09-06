@@ -4,7 +4,7 @@ Chat counts tokens and USD with LiteLLM, then applies app-level caps. The LLM ca
 
 ## What is counted
 
-After named prompts are compiled (and memory hits are injected, if `MEMORY=1`), [`app/budget.py`](../app/budget.py) calls `litellm.token_counter` on the outgoing messages (tiktoken under the hood; no extra package). After the call, it reads provider `usage` and `litellm.completion_cost`. Models missing from LiteLLM’s price map (many live Groq ids) return `cost_usd: null`. Token counts still apply.
+After named prompts are compiled, optional PII masking, and memory hits (if `MEMORY=1`), [`app/budget.py`](../app/budget.py) calls `litellm.token_counter` on the outgoing messages (tiktoken under the hood; no extra package). After the call, it reads provider `usage` and `litellm.completion_cost`. Models missing from LiteLLM’s price map (many live Groq ids) return `cost_usd: null`. Token counts still apply.
 
 JSON `POST /chat` includes `usage` (`prompt_tokens`, `completion_tokens`, `total_tokens`, `cost_usd`). Streams send the same on a final SSE event. Cache hits return usage but do not add to the daily ledger.
 
@@ -17,7 +17,16 @@ JSON `POST /chat` includes `usage` (`prompt_tokens`, `completion_tokens`, `total
 | `DAILY_TOKEN_BUDGET` | unset | Estimate would pass the remaining daily tokens → `402` |
 | `DAILY_USD_BUDGET` | unset | Priced-model input estimate would pass remaining USD → `402` |
 
-Unset daily/input knobs mean **report only**. Daily window is the UTC calendar day. Spend is stored in `data/budget-state.json` so a restart does not reset the day.
+Unset daily/input knobs mean **report only**. Daily window is the UTC calendar day.
+
+## Ledger
+
+- **One worker:** `data/budget-state.json` (gitignored via `data/`). A restart does not reset the day.
+- **`REDIS_URL` set:** hash `realmm:budget:{utc-day}` with `tokens` / `usd`, TTL ~3 days. Required as soon as you run more than one uvicorn process; the JSON file is not shared.
+
+If Redis is configured but unreachable, the process logs a warning and falls back to the file for that process. `GET /health` / `GET /budget` include `ledger`: `redis` or `file`.
+
+## Inspect
 
 `GET /budget` and `GET /health` (`budget`) show used vs limits.
 

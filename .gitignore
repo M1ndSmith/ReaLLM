@@ -4,9 +4,15 @@ __pycache__/
 *.py[cod]
 *$py.class
 .pytest_cache/
+.coverage
+htmlcov/
 .mypy_cache/
 .ruff_cache/
 .python-version
 data/
 *.code-workspace
 *.ses
+web/node_modules/
+web/.next/
+web/.env.local
+web/.env*.local

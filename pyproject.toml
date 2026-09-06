@@ -1,0 +1,18 @@
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# -p pytest_cov keeps coverage when PYTEST_DISABLE_PLUGIN_AUTOLOAD=1
+# (needed if ROS or other system pytest plugins are on PYTHONPATH).
+addopts = [
+    "-p", "pytest_cov",
+    "--cov=app",
+    "--cov-report=term-missing",
+    "--cov-fail-under=80",
+]
+
+[tool.coverage.run]
+source = ["app"]
+omit = ["app/static/*"]
+
+[tool.coverage.report]
+show_missing = true
+fail_under = 80

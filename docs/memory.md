@@ -12,13 +12,13 @@ Set `MEMORY=1`. First request downloads a small FastEmbed ONNX model and creates
 
 Mem0’s unconfigured default is OpenAI `gpt-5-mini` plus OpenAI embeddings. This app does not use that stack.
 
-- **Extraction LLM:** the existing Router (`retries`, RPM, `record_usage`). `MEMORY_LLM_MODEL` selects the catalog id; if unset, the first chat model from `GET /models` is used. Do not point Mem0 at ReaLMM `POST /chat` (recursion). Avoid reasoning models; extraction needs `content`, not `reasoning_content`.
-- **Embedder:** FastEmbed `BAAI/bge-small-en-v1.5` on CPU (Groq has no embeddings API). `MEMORY_EMBEDDER=openai` uses `text-embedding-3-small` and requires `OPENAI_API_KEY`. Changing embedder against an existing store needs a fresh `data/mem0`.
+- **Extraction LLM:** the existing Router (`retries`, RPM, `record_usage`). Extract calls are tagged `mem0-extract` on Langfuse when tracing is on. `MEMORY_LLM_MODEL` selects the catalog id; if unset, the first chat model from `GET /models` is used. Do not point Mem0 at ReaLMM `POST /chat` (recursion). Avoid reasoning models; extraction needs `content`, not `reasoning_content`.
+- **Embedder:** FastEmbed `BAAI/bge-small-en-v1.5` on CPU. Groq (and several other keyed providers) have no embeddings API; that is why FastEmbed is the default, not because this gateway is Groq-only. `MEMORY_EMBEDDER=openai` uses `text-embedding-3-small` and requires `OPENAI_API_KEY`. Changing embedder against an existing store needs a fresh `data/mem0`.
 - **Store:** on-disk Qdrant at `data/mem0/qdrant`, history at `data/mem0/history.db`.
 
 ## Chat order
 
-Langfuse compile → Mem0 `search` → prepend `Relevant memory:` → budget → Router → Mem0 `add` (background; extract errors are logged and do not fail the chat).
+Langfuse compile → Presidio inbound (when `PII=1`) → Mem0 `search` → prepend `Relevant memory:` → Presidio on injected text → guard inbound (when `GUARD=1`) → budget → Router → Presidio outbound → Llama Guard outbound (when `GUARD_CONTENT` is on) → Mem0 `add` (background; extract errors are logged and do not fail the chat).
 
 The client still sends `messages` (the hot window). Mem0 stores facts, not a replayable transcript. Refresh still clears the UI unless the client persists bubbles.
 
@@ -41,6 +41,8 @@ Agents can call these later via MCP; they are HTTP first.
 - `DELETE /memory/{id}`
 
 Unset `MEMORY` → `503`.
+
+When `GUARD_CONTENT` is on, `POST /memory` is scanned after Presidio and blocked with `400` if Llama Guard flags it (see [guardrails](guardrails.md)). `GET /memory` is not blocked for old unsafe hits.
 
 `GET /health` includes `memory: { enabled, llm, embedder, vector }`.
 

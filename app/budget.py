@@ -1,10 +1,12 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import threading
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Any
 
 from dotenv import load_dotenv
 import litellm
@@ -17,7 +19,13 @@ load_dotenv(Path(__file__).resolve().parent.parent / ".env")
 _ROOT = Path(__file__).resolve().parent.parent
 _STATE_PATH = _ROOT / "data" / "budget-state.json"
 _DEFAULT_MAX_OUTPUT_TOKENS = 2048
+_BUDGET_KEY_PREFIX = "realmm:budget:"
+_REDIS_TTL_SECONDS = 3 * 24 * 3600
 _lock = threading.Lock()
+logger = logging.getLogger(__name__)
+
+_redis_client: Any = None
+_redis_unavailable = False
 
 
 class InputTooLargeError(ValueError):
@@ -79,8 +87,58 @@ def _empty_state(day: str) -> dict:
     return {"day": day, "tokens": 0, "usd": 0.0}
 
 
-def _load_state() -> dict:
-    day = _utc_day()
+def _coerce_state(day: str, tokens: object, usd: object) -> dict:
+    try:
+        tokens_i = int(float(tokens))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        tokens_i = 0
+    try:
+        usd_f = float(usd)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        usd_f = 0.0
+    return {"day": day, "tokens": max(0, tokens_i), "usd": max(0.0, usd_f)}
+
+
+def redis_url() -> str | None:
+    url = (os.getenv("REDIS_URL") or "").strip()
+    return url or None
+
+
+def _get_redis():
+    global _redis_client, _redis_unavailable
+    if _redis_unavailable:
+        return None
+    url = redis_url()
+    if not url:
+        return None
+    if _redis_client is not None:
+        return _redis_client
+    try:
+        import redis as redis_lib
+    except ImportError:
+        logger.warning("REDIS_URL is set but the redis package is missing; daily budget uses %s", _STATE_PATH)
+        _redis_unavailable = True
+        return None
+    try:
+        client = redis_lib.Redis.from_url(url, decode_responses=True)
+        client.ping()
+    except Exception:
+        logger.warning("REDIS_URL is set but Redis is unreachable; daily budget uses %s", _STATE_PATH)
+        _redis_unavailable = True
+        return None
+    _redis_client = client
+    return _redis_client
+
+
+def ledger_backend() -> str:
+    return "redis" if _get_redis() is not None else "file"
+
+
+def _budget_key(day: str) -> str:
+    return f"{_BUDGET_KEY_PREFIX}{day}"
+
+
+def _load_file_state(day: str) -> dict:
     if not _STATE_PATH.is_file():
         return _empty_state(day)
     try:
@@ -89,24 +147,43 @@ def _load_state() -> dict:
         return _empty_state(day)
     if not isinstance(data, dict) or data.get("day") != day:
         return _empty_state(day)
-    tokens = data.get("tokens", 0)
-    usd = data.get("usd", 0.0)
-    try:
-        tokens_i = int(tokens)
-    except (TypeError, ValueError):
-        tokens_i = 0
-    try:
-        usd_f = float(usd)
-    except (TypeError, ValueError):
-        usd_f = 0.0
-    return {"day": day, "tokens": max(0, tokens_i), "usd": max(0.0, usd_f)}
+    return _coerce_state(day, data.get("tokens", 0), data.get("usd", 0.0))
 
 
-def _save_state(state: dict) -> None:
+def _load_redis_state(client: Any, day: str) -> dict:
+    data = client.hgetall(_budget_key(day))
+    if not isinstance(data, dict) or not data:
+        return _empty_state(day)
+    return _coerce_state(day, data.get("tokens", 0), data.get("usd", 0.0))
+
+
+def _load_state() -> dict:
+    day = _utc_day()
+    client = _get_redis()
+    if client is not None:
+        try:
+            return _load_redis_state(client, day)
+        except Exception:
+            logger.warning("Redis budget read failed; using file ledger", exc_info=True)
+    return _load_file_state(day)
+
+
+def _save_file_state(state: dict) -> None:
     _STATE_PATH.parent.mkdir(parents=True, exist_ok=True)
     tmp = _STATE_PATH.with_suffix(".tmp")
     tmp.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
     tmp.replace(_STATE_PATH)
+
+
+def _record_redis(client: Any, add_tokens: int, add_usd: float) -> None:
+    key = _budget_key(_utc_day())
+    pipe = client.pipeline()
+    if add_tokens:
+        pipe.hincrby(key, "tokens", add_tokens)
+    if add_usd:
+        pipe.hincrbyfloat(key, "usd", add_usd)
+    pipe.expire(key, _REDIS_TTL_SECONDS)
+    pipe.execute()
 
 
 def model_priced(model: str) -> bool:
@@ -245,11 +322,18 @@ def record_usage(*, tokens: int | None, usd: float | None, cached: bool) -> None
     add_usd = float(usd) if isinstance(usd, (int, float)) and usd > 0 else 0.0
     if add_tokens == 0 and add_usd == 0.0:
         return
+    client = _get_redis()
+    if client is not None:
+        try:
+            _record_redis(client, add_tokens, add_usd)
+            return
+        except Exception:
+            logger.warning("Redis budget write failed; using file ledger", exc_info=True)
     with _lock:
-        state = _load_state()
+        state = _load_file_state(_utc_day())
         state["tokens"] += add_tokens
         state["usd"] += add_usd
-        _save_state(state)
+        _save_file_state(state)
 
 
 def attach_cost(usage: UsageInfo | None, cost: float | None) -> UsageInfo | None:
@@ -294,4 +378,5 @@ def budget_status() -> BudgetInfo:
         daily_usd_limit=daily_usd_budget(),
         max_input_tokens=max_input_tokens(),
         max_output_tokens=max_output_tokens(),
+        ledger=ledger_backend(),
     )

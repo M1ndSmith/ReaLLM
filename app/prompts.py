@@ -52,12 +52,34 @@ def prompts_source() -> Literal["langfuse", "local", "off"]:
     return "off"
 
 
+def tracing_enabled() -> bool:
+    if not prompts_enabled():
+        return False
+    raw = (os.getenv("LANGFUSE_TRACING") or "1").strip().lower()
+    return raw not in {"0", "false", "no", "off"}
+
+
 def _ensure_langfuse_env() -> None:
-    base = os.getenv("LANGFUSE_BASE_URL") or os.getenv("LANGFUSE_HOST")
-    if not base:
-        return
+    base = _langfuse_base_url()
     os.environ.setdefault("LANGFUSE_BASE_URL", base)
     os.environ.setdefault("LANGFUSE_HOST", base)
+
+
+_tracing_ready = False
+
+
+def ensure_tracing() -> None:
+    """Register LiteLLM's langfuse_otel callback. Does not call models."""
+    global _tracing_ready
+    if _tracing_ready or not tracing_enabled():
+        return
+    _ensure_langfuse_env()
+    import litellm
+
+    current = list(litellm.callbacks) if litellm.callbacks else []
+    if "langfuse_otel" not in current:
+        litellm.callbacks = [*current, "langfuse_otel"]
+    _tracing_ready = True
 
 
 def _get_langfuse_client():

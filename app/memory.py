@@ -84,6 +84,21 @@ class RouterLLM:
             params["tools"] = tools
             params["tool_choice"] = tool_choice
         params.update(kwargs)
+        meta = params.get("metadata")
+        if not isinstance(meta, dict):
+            meta = {}
+        else:
+            meta = dict(meta)
+        meta.setdefault("generation_name", "mem0-extract")
+        meta.setdefault("trace_name", "mem0-extract")
+        tags = meta.get("tags")
+        if not isinstance(tags, list):
+            tags = []
+        for tag in ("realmm", "mem0"):
+            if tag not in tags:
+                tags.append(tag)
+        meta["tags"] = tags
+        params["metadata"] = meta
 
         router = get_router()
         response = router.completion(**params)

@@ -19,6 +19,7 @@ class ChatRequest(BaseModel):
     user_id: str | None = None
     conversation_id: str | None = None
     agent_id: str | None = None
+    response_format: dict | None = None
 
 
 class ModelInfo(BaseModel):
@@ -38,6 +39,9 @@ class ProvidersResponse(BaseModel):
 class ReliabilityInfo(BaseModel):
     retries: int
     cache: bool
+    cache_ttl: int | None = None
+    redis: bool = False
+    fallback_policy: str | None = None
     fallbacks: list[str]
     routing_strategy: str
 
@@ -45,6 +49,7 @@ class ReliabilityInfo(BaseModel):
 class PromptsInfo(BaseModel):
     enabled: bool
     source: str
+    tracing: bool = False
 
 
 class PromptListItem(BaseModel):
@@ -63,6 +68,7 @@ class BudgetInfo(BaseModel):
     daily_usd_limit: float | None = None
     max_input_tokens: int | None = None
     max_output_tokens: int
+    ledger: str = "file"
 
 
 class MemoryInfo(BaseModel):
@@ -70,6 +76,21 @@ class MemoryInfo(BaseModel):
     llm: str | None = None
     embedder: str | None = None
     vector: str | None = None
+
+
+class PiiInfo(BaseModel):
+    enabled: bool
+    engine: str | None = None
+    entities: list[str] = Field(default_factory=list)
+
+
+class GuardInfo(BaseModel):
+    enabled: bool
+    injection: bool = False
+    content: bool = False
+    injection_model: str | None = None
+    content_model: str | None = None
+    content_ignore: list[str] = Field(default_factory=list)
 
 
 class MemoryHit(BaseModel):
@@ -100,6 +121,8 @@ class HealthResponse(BaseModel):
     prompts: PromptsInfo | None = None
     budget: BudgetInfo | None = None
     memory: MemoryInfo | None = None
+    pii: PiiInfo | None = None
+    guard: GuardInfo | None = None
 
 
 class UsageInfo(BaseModel):
@@ -120,3 +143,7 @@ class ChatResponse(BaseModel):
     prompt_version: int | None = None
     prompt_source: str | None = None
     memories_used: int | None = None
+    pii_redacted: bool | None = None
+    pii_entities: list[str] | None = None
+    guard_passed: bool | None = None
+    schema_valid: bool | None = None

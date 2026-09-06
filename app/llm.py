@@ -3,6 +3,7 @@ from __future__ import annotations
 import os
 import time
 from pathlib import Path
+from types import SimpleNamespace
 
 import httpx
 import litellm
@@ -10,6 +11,7 @@ from dotenv import load_dotenv
 from litellm import get_valid_models
 from litellm.utils import _infer_valid_provider_from_env_vars
 
+from app.prompts import PromptMeta
 from app.schemas import ChatMessage, ChatResponse, ModelInfo, UsageInfo
 
 load_dotenv(Path(__file__).resolve().parent.parent / ".env")
@@ -199,6 +201,37 @@ def _served_model(response: object, requested: str) -> str:
     return requested
 
 
+def _completion_metadata(
+    *,
+    user_id: str | None = None,
+    conversation_id: str | None = None,
+    agent_id: str | None = None,
+    prompt_meta: PromptMeta | None = None,
+    generation_name: str | None = None,
+) -> dict:
+    name = generation_name or (prompt_meta.name if prompt_meta else "chat")
+    tags = ["realmm"]
+    if agent_id:
+        tags.append(f"agent:{agent_id}")
+    metadata: dict = {
+        "generation_name": name,
+        "trace_name": name,
+        "tags": tags,
+    }
+    if user_id:
+        metadata["trace_user_id"] = user_id
+    if conversation_id:
+        metadata["session_id"] = conversation_id
+    if prompt_meta is not None:
+        if prompt_meta.version is not None:
+            metadata["version"] = str(prompt_meta.version)
+        metadata["trace_metadata"] = {
+            "prompt_name": prompt_meta.name,
+            "prompt_source": prompt_meta.source,
+        }
+    return metadata
+
+
 def fallback_from(requested: str, served: str) -> str | None:
     if served == requested:
         return None
@@ -208,6 +241,70 @@ def fallback_from(requested: str, served: str) -> str | None:
     if served in catalog_ids and served != requested:
         return requested
     return None
+
+
+def _delta_chunk(text: str, model: str | None = None):
+    return SimpleNamespace(
+        choices=[SimpleNamespace(delta=SimpleNamespace(content=text))],
+        model=model,
+        usage=None,
+    )
+
+
+async def _prepare_outgoing(
+    model: str,
+    messages: list[ChatMessage],
+    *,
+    prompt: str | None = None,
+    prompt_label: str | None = None,
+    prompt_version: int | None = None,
+    variables: dict[str, str] | None = None,
+    user_id: str | None = None,
+    conversation_id: str | None = None,
+    agent_id: str | None = None,
+):
+    from app.budget import assert_allowed, token_count
+    from app.guardrails import assert_inbound, guard_enabled
+    from app.memory import attach_memories
+    from app.pii import pii_enabled, redact_messages, unique_entity_types
+    from app.prompts import prepare_messages
+
+    outgoing, prompt_meta = prepare_messages(
+        messages,
+        prompt=prompt,
+        prompt_label=prompt_label,
+        prompt_version=prompt_version,
+        variables=variables,
+    )
+    pii_on = pii_enabled()
+    found: list[str] = []
+    if pii_on:
+        outgoing, types = await redact_messages(outgoing)
+        found = unique_entity_types(found, types)
+    outgoing, memories_used = await attach_memories(
+        outgoing,
+        user_id=user_id,
+        conversation_id=conversation_id,
+        agent_id=agent_id,
+    )
+    if pii_on:
+        outgoing, types = await redact_messages(outgoing)
+        found = unique_entity_types(found, types)
+    if guard_enabled():
+        await assert_inbound(outgoing)
+    resolved = resolve_model(model)
+    estimated = token_count(resolved, outgoing)
+    assert_allowed(resolved, estimated)
+    return (
+        outgoing,
+        prompt_meta,
+        memories_used,
+        resolved,
+        estimated,
+        True if pii_on else None,
+        found if pii_on else None,
+        True if guard_enabled() else None,
+    )
 
 
 async def complete_chat(
@@ -221,37 +318,45 @@ async def complete_chat(
     user_id: str | None = None,
     conversation_id: str | None = None,
     agent_id: str | None = None,
+    response_format: dict | None = None,
 ) -> ChatResponse:
-    from app.budget import assert_allowed, attach_cost, completion_usd, max_output_tokens, record_usage, token_count
-    from app.memory import attach_memories, record_turn
-    from app.prompts import prepare_messages
+    from app.budget import attach_cost, completion_usd, max_output_tokens, record_usage
+    from app.guardrails import assert_outbound
+    from app.memory import record_turn
+    from app.pii import redact_text, unique_entity_types
     from app.reliability import chat_fallback_ids, get_router
+    from app.structured import normalize_response_format, validate_output
 
-    outgoing, prompt_meta = prepare_messages(
+    fmt = normalize_response_format(response_format)
+
+    outgoing, prompt_meta, memories_used, resolved, estimated, pii_redacted, pii_entities, guard_passed = await _prepare_outgoing(
+        model,
         messages,
         prompt=prompt,
         prompt_label=prompt_label,
         prompt_version=prompt_version,
         variables=variables,
-    )
-    outgoing, memories_used = await attach_memories(
-        outgoing,
         user_id=user_id,
         conversation_id=conversation_id,
         agent_id=agent_id,
     )
-    resolved = resolve_model(model)
-    estimated = token_count(resolved, outgoing)
-    assert_allowed(resolved, estimated)
     router = get_router()
     fallbacks = chat_fallback_ids(resolved)
     call_kwargs: dict = {
         "model": resolved,
         "messages": [message.model_dump() for message in outgoing],
         "max_tokens": max_output_tokens(),
+        "metadata": _completion_metadata(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            agent_id=agent_id,
+            prompt_meta=prompt_meta,
+        ),
     }
     if fallbacks:
         call_kwargs["fallbacks"] = fallbacks
+    if fmt is not None:
+        call_kwargs["response_format"] = fmt
     response = await router.acompletion(**call_kwargs)
     choice = response.choices[0]
     content = choice.message.content or ""
@@ -262,8 +367,15 @@ async def complete_chat(
     usage = attach_cost(_usage_from_response(response), completion_usd(response, reported))
     tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
     record_usage(tokens=tokens, usd=usage.cost_usd if usage else None, cached=cached)
+    if pii_redacted:
+        content, found = await redact_text(content)
+        pii_entities = unique_entity_types(pii_entities or [], found)
+    if guard_passed:
+        await assert_outbound(content)
+    if fmt is not None:
+        validate_output(content, fmt)
     record_turn(
-        messages,
+        outgoing,
         content,
         user_id=user_id,
         conversation_id=conversation_id,
@@ -280,6 +392,10 @@ async def complete_chat(
         prompt_version=prompt_meta.version if prompt_meta else None,
         prompt_source=prompt_meta.source if prompt_meta else None,
         memories_used=memories_used,
+        pii_redacted=pii_redacted,
+        pii_entities=pii_entities,
+        guard_passed=guard_passed,
+        schema_valid=True if fmt is not None else None,
     )
 
 
@@ -304,36 +420,36 @@ async def stream_chat(
     user_id: str | None = None,
     conversation_id: str | None = None,
     agent_id: str | None = None,
+    response_format: dict | None = None,
 ):
     from app.budget import (
-        assert_allowed,
         max_output_tokens,
         record_usage,
-        token_count,
         token_count_text,
         usage_from_counts,
     )
-    from app.memory import attach_memories, record_turn
-    from app.prompts import prepare_messages
+    from app.guardrails import assert_outbound, content_enabled
+    from app.memory import record_turn
+    from app.pii import redact_text, unique_entity_types
     from app.reliability import chat_fallback_ids, get_router
+    from app.structured import SchemaError, normalize_response_format
 
-    outgoing, prompt_meta = prepare_messages(
+    if response_format is not None:
+        normalize_response_format(response_format)
+        raise SchemaError("Structured output cannot be streamed. Omit stream or response_format.")
+
+    outgoing, prompt_meta, memories_used, resolved, estimated, pii_redacted, pii_entities, guard_passed = await _prepare_outgoing(
+        model,
         messages,
         prompt=prompt,
         prompt_label=prompt_label,
         prompt_version=prompt_version,
         variables=variables,
-    )
-    outgoing, memories_used = await attach_memories(
-        outgoing,
         user_id=user_id,
         conversation_id=conversation_id,
         agent_id=agent_id,
     )
-    resolved = resolve_model(model)
-    estimated = token_count(resolved, outgoing)
-    assert_allowed(resolved, estimated)
-    yield None, resolved, resolved, prompt_meta, None, memories_used
+    yield None, resolved, resolved, prompt_meta, None, memories_used, pii_redacted, pii_entities, guard_passed
     router = get_router()
     fallbacks = chat_fallback_ids(resolved)
     call_kwargs: dict = {
@@ -343,6 +459,12 @@ async def stream_chat(
         "caching": False,
         "max_tokens": max_output_tokens(),
         "stream_options": {"include_usage": True},
+        "metadata": _completion_metadata(
+            user_id=user_id,
+            conversation_id=conversation_id,
+            agent_id=agent_id,
+            prompt_meta=prompt_meta,
+        ),
     }
     if fallbacks:
         call_kwargs["fallbacks"] = fallbacks
@@ -360,22 +482,43 @@ async def stream_chat(
         chunk_usage = _usage_from_response(chunk)
         if chunk_usage is not None:
             usage = chunk_usage
-        yield chunk, resolved, served, prompt_meta, None, memories_used
+        buffer_output = bool(pii_redacted) or bool(guard_passed and content_enabled())
+        if not buffer_output:
+            yield chunk, resolved, served, prompt_meta, None, memories_used, pii_redacted, pii_entities, guard_passed
+    raw_assistant = "".join(assembled)
     if usage is None:
-        usage = usage_from_counts(served, estimated, token_count_text(served, "".join(assembled)))
+        usage = usage_from_counts(served, estimated, token_count_text(served, raw_assistant))
     elif usage.cost_usd is None:
         completion_tokens = usage.completion_tokens
         if completion_tokens is None:
-            completion_tokens = token_count_text(served, "".join(assembled))
+            completion_tokens = token_count_text(served, raw_assistant)
         prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
         usage = usage_from_counts(served, prompt_tokens, completion_tokens)
     tokens = usage.total_tokens if usage.total_tokens is not None else estimated
     record_usage(tokens=tokens, usd=usage.cost_usd, cached=False)
+    assistant = raw_assistant
+    if pii_redacted:
+        assistant, found = await redact_text(raw_assistant)
+        pii_entities = unique_entity_types(pii_entities or [], found)
+    if guard_passed:
+        await assert_outbound(assistant)
+    if (pii_redacted or (guard_passed and content_enabled())) and assistant:
+        yield (
+            _delta_chunk(assistant, served),
+            resolved,
+            served,
+            prompt_meta,
+            None,
+            memories_used,
+            pii_redacted,
+            pii_entities,
+            guard_passed,
+        )
     record_turn(
-        messages,
-        "".join(assembled),
+        outgoing,
+        assistant,
         user_id=user_id,
         conversation_id=conversation_id,
         agent_id=agent_id,
     )
-    yield None, resolved, served, prompt_meta, usage, memories_used
+    yield None, resolved, served, prompt_meta, usage, memories_used, pii_redacted, pii_entities, guard_passed
