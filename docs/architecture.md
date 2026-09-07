@@ -1,12 +1,35 @@
 # Architecture
 
-ReaLMM is a FastAPI gateway in front of LLM providers. Completions always go through LiteLLM’s Router in [`app/reliability.py`](../app/reliability.py). The Next.js console in [`web/`](../web/) is a client of `POST /chat` and an operator UI for overlay layer flags. It talks to uvicorn directly (CORS). It does not write provider keys into `.env`. Optional inbound auth is [`GATEWAY_API_KEY`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md); native `/chat` stays.
+One FastAPI process, one `ChatService` pipeline, one LiteLLM Router. User chat, guard classifiers, and Mem0 fact extraction all call [`LiteLLMRouterRuntime`](../app/infrastructure/router.py) (`router.acompletion`).
 
-Providers are inferred from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`app/llm.py`](../app/llm.py)). `GET /models` is that catalog. The client sends a catalog `model` on `POST /chat`. Groq is not required for chat. Groq-shaped **defaults** (guard classifier ids, FastEmbed because Groq has no embeddings API, strict JSON on some Groq models) are in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
+The Next.js console in [`web/`](../web/) talks to uvicorn over CORS. It does not write provider keys. Optional inbound auth is [`GATEWAY_API_KEY`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md). Native clients use `POST /chat`.
+
+Providers come from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`ProviderCatalog`](../app/infrastructure/catalog.py)). `GET /models` is that catalog. You send a catalog `model` on `POST /chat`. Groq is optional for chat. Guard classifier ids, FastEmbed, and Groq strict JSON defaults are documented in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
+
+```mermaid
+flowchart LR
+  api[FastAPI API adapters]
+  appLayer[Application ChatService]
+  ports[Small typed ports]
+  infra[Stateful infrastructure adapters]
+  router[One LiteLLM Router runtime]
+  providers[Remote providers]
+
+  api --> appLayer
+  appLayer --> ports
+  infra --> ports
+  infra --> router
+  router --> providers
+  bootstrap[Bootstrap composition root] --> api
+  bootstrap --> appLayer
+  bootstrap --> infra
+```
+
+[`bootstrap.py`](../app/bootstrap.py) is the composition root: dotenv, `GatewaySettings`, `build_runtime()`, `create_app(runtime)`. [`app/main.py`](../app/main.py) is `app = create_configured_app()` for `uvicorn app.main:app`.
 
 ## Chat pipeline
 
-JSON [`complete_chat`](../app/llm.py) and SSE [`stream_chat`](../app/llm.py) use the same order.
+JSON `ChatService.complete` and SSE `ChatService.stream` use the same order. Native `/chat` and OpenAI `/v1/chat/completions` are encoders over those methods.
 
 ```mermaid
 flowchart LR
@@ -25,49 +48,47 @@ flowchart LR
   router --> redis[(Redis RPM cache budget)]
 ```
 
-1. Named prompt compile ([`app/prompts.py`](../app/prompts.py)) when `prompt` is set
-2. Presidio mask on compiled messages ([`app/pii.py`](../app/pii.py)) when `PII=1`
-3. Mem0 search and inject ([`app/memory.py`](../app/memory.py)) when `MEMORY=1`
-4. Presidio mask again on injected memory text when `PII=1`
-5. Prompt Guard 2 and Llama Guard 4 inbound ([`app/guardrails.py`](../app/guardrails.py)) when `GUARD=1`
-6. Token estimate and caps ([`app/budget.py`](../app/budget.py))
-7. `router.acompletion` (retries, allowlisted fallbacks, cache TTL, RPM/TPM)
-8. Presidio mask on the assistant reply when `PII=1`; Llama Guard 4 on outbound when `GUARD_CONTENT` is on; JSON Schema check when `response_format` is set; Langfuse OTEL callback on the Router when keys are set; record usage; Mem0 `add` in the background (extract errors do not fail the chat)
+1. Named prompt compile ([`PromptRepository`](../app/infrastructure/prompts.py)) when `prompt` is set
+2. One immutable [`RuntimeFlags`](../app/application/models.py) snapshot for the whole request
+3. Presidio mask on compiled messages ([`PiiRuntime`](../app/infrastructure/pii.py)) when PII is on
+4. Mem0 search and inject ([`MemoryRuntime`](../app/infrastructure/memory.py)) when MEMORY is on (no-op when off)
+5. Presidio mask again on injected memory text when PII is on
+6. Prompt Guard 2 and Llama Guard 4 inbound ([`GuardService`](../app/infrastructure/guards.py)) when GUARD is on
+7. Resolve catalog model, token estimate, and caps ([`BudgetRuntime`](../app/infrastructure/budget.py))
+8. Sole `router.acompletion` (retries, allowlisted fallbacks, cache TTL, RPM/TPM)
+9. Presidio on the assistant reply when PII is on; Llama Guard 4 outbound when `GUARD_CONTENT` is on; JSON Schema check when `response_format` is set; Langfuse OTEL callback on the Router when keys are set; record usage; Mem0 `add` in the background (extract errors do not fail the chat)
 
-Always on: catalog from env keys ([`app/llm.py`](../app/llm.py)), Router, `MAX_OUTPUT_TOKENS`, usage ledger. Optional: `GATEWAY_API_KEY`, Langfuse keys, `MEMORY=1`, `PII=1`, `GUARD=1`, `REDIS_URL`, per-request `response_format`. Unset optional layers leave `POST /chat` (and `/v1/chat/completions`) with `model` and `messages` unchanged. MEMORY / PII / GUARD can also be flipped at runtime via `PATCH /config` into `data/runtime-flags.json` when a gateway key is configured.
+Always on: catalog from env keys, Router, `MAX_OUTPUT_TOKENS`, usage ledger. Optional: `GATEWAY_API_KEY`, Langfuse keys, `MEMORY=1`, `PII=1`, `GUARD=1`, `REDIS_URL`, per-request `response_format`. Unset optional layers leave `POST /chat` and `/v1/chat/completions` with `model` and `messages` unchanged.
+
+MEMORY / PII / GUARD can also be flipped at runtime via `PATCH /config` into `data/runtime-flags.json` when a gateway key is configured. That overlay does not mutate `os.environ`.
+
+## Configuration
+
+1. [`bootstrap.load_dotenv_once`](../app/bootstrap.py) loads `.env` once with `override=False`. Process and Compose env win.
+2. [`GatewaySettings`](../app/settings.py) validates ReaLMM-owned static knobs. Provider `*_API_KEY` values stay in `os.environ` for LiteLLM autodetection. They are not settings fields.
+3. [`RuntimeFlagStore`](../app/infrastructure/flags.py) overlays only `MEMORY`, `PII`, `GUARD`, `GUARD_INJECTION`, and `GUARD_CONTENT` from `data/runtime-flags.json`.
+4. Each request reads an immutable snapshot. `PATCH /config` writes the JSON file atomically (tmp + replace).
+
+Malformed `DAILY_USD_BUDGET`, `DAILY_TOKEN_BUDGET`, `MAX_OUTPUT_TOKENS`, or `MEMORY_EMBEDDER` fail startup. Empty optional budgets stay unset. `LITELLM_NUM_RETRIES`, cache TTL, and RPM fall back silently when malformed. `FALLBACKS` unset means same-provider; empty / `off` means retry-only.
 
 ## Modules
 
-- [`app/main.py`](../app/main.py) — HTTP routes, SSE, health, CORS, gateway pointer, `/v1`, `/config`
-- [`web/`](../web/) — Next.js console (playground, Connect snippets, Settings overlay flags, health lamps)
-- [`app/auth.py`](../app/auth.py) — optional inbound `GATEWAY_API_KEY`
-- [`app/openai_compat.py`](../app/openai_compat.py) — OpenAI envelope over `complete_chat` / `stream_chat`
-- [`app/runtime_flags.py`](../app/runtime_flags.py) — `data/runtime-flags.json` overlay for MEMORY / PII / GUARD
-- [`app/schemas.py`](../app/schemas.py) — request and response models
-- [`app/llm.py`](../app/llm.py) — provider detection, catalog, `complete_chat` / `stream_chat`
-- [`app/reliability.py`](../app/reliability.py) — Router construction, fallbacks, cache, RPM/TPM
-- [`app/prompts.py`](../app/prompts.py) — Langfuse / `prompts/*.json` and `langfuse_otel` callback
-- [`app/budget.py`](../app/budget.py) — `token_counter`, `completion_cost`, daily ledger (Redis or JSON)
-- [`app/memory.py`](../app/memory.py) — Mem0 sidecar and `RouterLLM`
-- [`app/pii.py`](../app/pii.py) — optional Presidio mask in and out
-- [`app/guardrails.py`](../app/guardrails.py) — optional Prompt Guard 2 and Llama Guard 4 via the Router
-- [`app/structured.py`](../app/structured.py) — optional JSON Schema check after the Router
+API adapters: [`app/api/`](../app/api/) (factory, auth, error mapping, native/OpenAI encoders, route modules). HTTP DTOs live in [`app/schemas.py`](../app/schemas.py).
 
-`data/` is gitignored. Budget writes `data/budget-state.json` when Redis is off. Mem0 uses `data/mem0/` (on-disk Qdrant + SQLite). [`compose.yaml`](../compose.yaml) is an optional operator run path (gateway + Next + Redis, `./data` volume). Pytest stays on the host venv. Do not put keys in images. The browser still calls `http://127.0.0.1:8000`, not the Compose hostname `gateway`.
+Application: [`ChatService`](../app/application/chat.py) and [ports](../app/application/ports.py). No FastAPI, LiteLLM, Mem0, Presidio, or Redis imports.
+
+Infrastructure: [catalog](../app/infrastructure/catalog.py), [Router](../app/infrastructure/router.py) (sole `litellm.Router` and `litellm.cache` owner), [prompts](../app/infrastructure/prompts.py), [budget](../app/infrastructure/budget.py), [memory](../app/infrastructure/memory.py), [PII](../app/infrastructure/pii.py), [guards](../app/infrastructure/guards.py), [flags](../app/infrastructure/flags.py). JSON Schema check after the Router is [`app/structured.py`](../app/structured.py).
+
+Runtime owner: [`app/container.py`](../app/container.py) (`GatewayRuntime` start/close).
+
+`data/` is gitignored. Budget writes `data/budget-state.json` when Redis is off. Mem0 uses `data/mem0/` (on-disk Qdrant + SQLite). [`compose.yaml`](../compose.yaml) runs gateway + Next + Redis with a `./data` volume. Pytest stays on the host venv. Do not put keys in images. The browser still calls `http://127.0.0.1:8000`, not the Compose hostname `gateway`.
 
 ## Ownership
 
-The Router owns every completion: user chat and Mem0 fact extraction (`RouterLLM` in [`app/memory.py`](../app/memory.py)). Do not add a second path to providers.
+Only [`app/infrastructure/router.py`](../app/infrastructure/router.py) may construct `litellm.Router` or assign `litellm.cache`. Guards and Mem0 receive `CompletionBackend`. They do not open a second path to providers.
 
-- **Letta:** agent runtime. Memory tools fire inside Letta, not this Router.
-- **PromptLayer `run()`:** bypasses the Router the same way.
-- **LiteLLM Proxy spend DB / virtual keys:** a different product (Postgres gateway). This app calls `router.acompletion`.
-- **Mem0:** `search` / `add` only. Default unconfigured Mem0 is OpenAI plus `/tmp` Qdrant; this app does not use that stack.
-- **Presidio:** text rewrite around the Router. Not LiteLLM Proxy guardrails.
-- **Prompt Guard 2 / Llama Guard 4:** extra Router `acompletion` calls that block, they do not replace chat.
-- **`response_format` / jsonschema:** pass-through plus in-process validate. Not Instructor reask, not local logit grammars.
-- **LangChain memory, Zep, homemade JSON summaries:** wrong primitive or a harness this gateway would have to keep.
+Out of scope for this process: Letta, LiteLLM Proxy (spend DB / virtual keys), Instructor reask, Outlines/Guidance, in-process LangChain or LlamaIndex RAG, Zep, homemade transcript summaries, MCP and A2A protocol servers. `GET` / `POST` / `DELETE /memory` is HTTP. Those protocols are not implemented here.
 
-`GET` / `POST` / `DELETE /memory` is the HTTP hook for later MCP / A2A clients. Those protocols are not implemented here.
+Decisions: [modular monolith](adr/0001-modular-monolith.md), [single Router owner](adr/0002-single-router-owner.md), [static vs runtime config](adr/0003-static-vs-runtime-config.md).
 
-Knobs and failure modes live in [reliability](reliability.md), [auth](auth.md), [openai](openai.md), [prompts](prompts.md), [budget](budget.md), [memory](memory.md), [pii](pii.md), [guardrails](guardrails.md), and [structured](structured.md). Env examples are in [`.env.example`](../.env.example).
+Knobs and failure modes: [reliability](reliability.md), [auth](auth.md), [openai](openai.md), [prompts](prompts.md), [budget](budget.md), [memory](memory.md), [pii](pii.md), [guardrails](guardrails.md), [structured](structured.md). Env examples: [`.env.example`](../.env.example).

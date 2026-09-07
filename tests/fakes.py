@@ -67,6 +67,7 @@ class FakeGuardRouter:
         if "llama-guard" in model:
             return FakeResponse(self.content, model=model)
         if kwargs.get("stream"):
+
             async def _gen():
                 yield FakeChunk(self.chat, model=model)
                 yield FakeChunk("", usage=FakeUsage())

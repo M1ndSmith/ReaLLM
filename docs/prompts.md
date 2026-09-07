@@ -1,8 +1,10 @@
 # Named prompts and tracing
 
-Chat can optionally prepend a named, versioned prompt before the messages you send. Completions still go through LiteLLM’s Router. When Langfuse keys are set, that same Router emits traces (`langfuse_otel`). Do not use `model="langfuse/<id>"` — LiteLLM then ignores client `messages`.
+Chat can prepend a named, versioned prompt before the messages you send. Completions still go through LiteLLM's Router. When Langfuse keys are set, that same Router emits traces (`langfuse_otel`). Do not use `model="langfuse/<id>"`. LiteLLM then ignores client `messages`.
 
-## When nothing is configured
+Pipeline order is in [architecture](architecture.md). Prompt compile is the first step.
+
+## Off
 
 Leave `LANGFUSE_PUBLIC_KEY` and `LANGFUSE_SECRET_KEY` unset. `POST /chat` with only `model` and `messages` behaves as before.
 
@@ -22,7 +24,7 @@ If Langfuse is down, `get_prompt(..., fallback=)` plus the matching file in `pro
 
 ## Tracing
 
-When the same keys are set, `get_router()` registers LiteLLM’s `langfuse_otel` callback. That is not `@observe` wrapping a model call. Generations attach:
+When the same keys are set, `get_router()` registers LiteLLM's `langfuse_otel` callback. That is not `@observe` wrapping a model call. Generations attach:
 
 - `trace_user_id` ← `user_id`
 - `session_id` ← `conversation_id`
@@ -38,11 +40,11 @@ Mem0 extract calls use `generation_name=mem0-extract`.
 
 `POST /chat` accepts:
 
-- `prompt` — name (omit for messages only)
-- `prompt_label` — optional, defaults to `production`
-- `prompt_version` — optional integer; if set, label is not used
-- `variables` — `{{name}}` substitutions
-- `user_id` / `conversation_id` / `agent_id` — also used for traces (and Mem0 when `MEMORY=1`)
+- `prompt`: name (omit for messages only)
+- `prompt_label`: optional, defaults to `production`
+- `prompt_version`: optional integer; if set, label is not used
+- `variables`: `{{name}}` substitutions
+- `user_id` / `conversation_id` / `agent_id`: also used for traces (and Mem0 when `MEMORY=1`)
 
 JSON responses include `prompt_name`, `prompt_version`, and `prompt_source` (`langfuse`, `local`, or `fallback`). Streaming sends the same fields on the first SSE event.
 

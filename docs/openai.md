@@ -1,15 +1,15 @@
 # OpenAI-compatible `/v1`
 
-Native chat is still `POST /chat` (custom JSON and SSE). SDKs that want OpenAI’s envelope use:
+Native chat is `POST /chat` (custom JSON and SSE). SDKs that want OpenAI's envelope use:
 
 - `GET /v1/models`
 - `POST /v1/chat/completions`
 
-Both run the same pipeline as `/chat` (`complete_chat` / `stream_chat` → LiteLLM Router). This is not LiteLLM Proxy.
+Both run the same pipeline as `/chat` (`ChatService.complete` / `ChatService.stream` → LiteLLM Router).
 
 ## JSON
 
-Request fields: `model`, `messages`, `stream`, `response_format`, `user`. Sidecars (`prompt`, `prompt_label`, `prompt_version`, `variables`, `user_id`, `conversation_id`, `agent_id`) are accepted on the body (OpenAI SDK: `extra_body`). `user_id` wins over `user`. Extra OpenAI params (`temperature`, `tools`, `n`, …) are ignored; they are not forwarded to the Router.
+Request fields: `model`, `messages`, `stream`, `response_format`, `user`. Sidecars (`prompt`, `prompt_label`, `prompt_version`, `variables`, `user_id`, `conversation_id`, `agent_id`) are accepted on the body (OpenAI SDK: `extra_body`). `user_id` wins over `user`. Extra OpenAI params (`temperature`, `tools`, `n`, and similar) are ignored. They are not forwarded to the Router.
 
 Response: `id`, `object: chat.completion`, `created`, `choices[0].message`, `usage`. ReaLMM extras stay at the top level (`provider`, `cached`, `fallback_from`, `memories_used`, `pii_redacted`, `guard_passed`, `schema_valid`, `cost_usd`, prompt meta). Strict SDKs ignore them.
 
@@ -40,4 +40,4 @@ client.chat.completions.create(
 
 When gateway auth is off, `api_key` can be any placeholder because the SDK always sends Bearer.
 
-No `/v1/embeddings`, `/v1/moderations`, or `/v1/completions`.
+There is no `/v1/embeddings`, `/v1/moderations`, or `/v1/completions`.

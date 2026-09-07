@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 from fastapi.testclient import TestClient
+from tests.conftest import FROZEN_CATALOG
 
-from app.budget import BudgetExceededError
-from app.llm import UnknownModelError
-from app.main import app
+from app.application.errors import BudgetExceededError, UnknownModelError
+from app.application.events import StreamDelta, StreamFallback, StreamFinished, StreamStarted, StreamUsage
+from app.application.models import ChatCommand, PromptMeta
 from app.schemas import (
     BudgetInfo,
     ChatMessage,
@@ -12,13 +13,13 @@ from app.schemas import (
     ReliabilityInfo,
     UsageInfo,
 )
-from tests.conftest import FROZEN_CATALOG
-from tests.fakes import FakeChunk
 
 
-def test_health_and_catalog(monkeypatch):
+def test_health_and_catalog(make_app, monkeypatch):
+    app = make_app()
     monkeypatch.setattr(
-        "app.main.reliability_status",
+        app.state.runtime.router,
+        "reliability_status",
         lambda: ReliabilityInfo(
             retries=2,
             cache=True,
@@ -30,12 +31,13 @@ def test_health_and_catalog(monkeypatch):
         ),
     )
     monkeypatch.setattr(
-        "app.main.budget_status",
+        app.state.runtime.budget,
+        "status",
         lambda: BudgetInfo(daily_tokens=0, daily_usd=0.0, max_output_tokens=2048, ledger="file"),
     )
-    monkeypatch.setattr("app.main.prompts_enabled", lambda: False)
-    monkeypatch.setattr("app.main.prompts_source", lambda: "local")
-    monkeypatch.setattr("app.main.tracing_enabled", lambda: False)
+    monkeypatch.setattr(app.state.runtime.prompts, "prompts_enabled", lambda: False)
+    monkeypatch.setattr(app.state.runtime.prompts, "prompts_source", lambda: "local")
+    monkeypatch.setattr(app.state.runtime.prompts, "tracing_enabled", lambda: False)
     client = TestClient(app)
     health = client.get("/health")
     assert health.status_code == 200
@@ -48,8 +50,8 @@ def test_health_and_catalog(monkeypatch):
     assert body["guard"]["enabled"] is False
     assert body["guard"]["content_ignore"] == []
 
-    monkeypatch.setattr("app.llm.detected_providers", lambda: ["groq", "openai"])
-    monkeypatch.setattr("app.llm.list_available_models", lambda **_k: FROZEN_CATALOG)
+    monkeypatch.setattr(app.state.runtime.catalog, "detected_providers", lambda: ["groq", "openai"])
+    monkeypatch.setattr(app.state.runtime.catalog, "list_available_models", lambda **_k: FROZEN_CATALOG)
     providers = client.get("/providers")
     assert providers.json()["providers"] == ["groq", "openai"]
     models = client.get("/models")
@@ -60,16 +62,18 @@ def test_health_and_catalog(monkeypatch):
     assert budget.status_code == 200
 
 
-def test_chat_json_success_and_errors(monkeypatch):
-    async def fake_complete(model, messages, **kwargs):
+def test_chat_json_success_and_errors(make_app, monkeypatch):
+    app = make_app()
+
+    async def fake_complete(command: ChatCommand):
         return ChatResponse(
-            model=model,
+            model=command.model,
             provider="groq",
             message=ChatMessage(role="assistant", content="ok"),
             usage=UsageInfo(total_tokens=4),
         )
 
-    monkeypatch.setattr("app.llm.complete_chat", fake_complete)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", fake_complete)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -81,23 +85,27 @@ def test_chat_json_success_and_errors(monkeypatch):
     async def unknown(*_a, **_k):
         raise UnknownModelError("nope")
 
-    monkeypatch.setattr("app.llm.complete_chat", unknown)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", unknown)
     assert client.post("/chat", json={"model": "x", "messages": [{"role": "user", "content": "hi"}]}).status_code == 400
 
     async def broke(*_a, **_k):
         raise BudgetExceededError("cap")
 
-    monkeypatch.setattr("app.llm.complete_chat", broke)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", broke)
     assert client.post("/chat", json={"model": "x", "messages": [{"role": "user", "content": "hi"}]}).status_code == 402
 
 
-def test_chat_sse(monkeypatch):
-    async def fake_stream(*_a, **_k):
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, None, None, None
-        yield FakeChunk("hi"), "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, None, None, None
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, UsageInfo(total_tokens=5, cost_usd=None), None, None, None, None
+async def _stream_ok(*_a, **_k):
+    model = "groq/openai/gpt-oss-20b"
+    yield StreamStarted(model, "groq", None, None, None, None, None)
+    yield StreamDelta("hi")
+    yield StreamUsage(UsageInfo(total_tokens=5, cost_usd=None), None)
+    yield StreamFinished(model=model, served=model)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+
+def test_chat_sse(make_app, monkeypatch):
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", _stream_ok)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -114,20 +122,19 @@ def test_chat_sse(monkeypatch):
     assert "hi" in text
 
 
-def test_memory_disabled_is_503():
-    client = TestClient(app)
+def test_memory_disabled_is_503(client):
     response = client.get("/memory", params={"q": "tea"})
     assert response.status_code == 503
     assert client.post("/memory", json={"messages": [{"role": "user", "content": "x"}]}).status_code == 503
     assert client.delete("/memory/abc").status_code == 503
 
 
-def test_index_and_chat_http_errors(monkeypatch):
+def test_index_and_chat_http_errors(make_app, monkeypatch):
     from litellm.exceptions import APIError, AuthenticationError, BadRequestError, RateLimitError
 
-    from app.budget import InputTooLargeError
-    from app.prompts import UnknownPromptError
+    from app.application.errors import InputTooLargeError, UnknownPromptError
 
+    app = make_app()
     client = TestClient(app)
     index = client.get("/")
     assert index.status_code == 200
@@ -137,43 +144,43 @@ def test_index_and_chat_http_errors(monkeypatch):
     async def prompt_err(*_a, **_k):
         raise UnknownPromptError("missing")
 
-    monkeypatch.setattr("app.llm.complete_chat", prompt_err)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", prompt_err)
     assert client.post("/chat", json=payload).status_code == 400
 
     async def too_big(*_a, **_k):
         raise InputTooLargeError("big")
 
-    monkeypatch.setattr("app.llm.complete_chat", too_big)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", too_big)
     assert client.post("/chat", json=payload).status_code == 400
 
     async def auth(*_a, **_k):
         raise AuthenticationError("nope", "groq", "x")
 
-    monkeypatch.setattr("app.llm.complete_chat", auth)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", auth)
     assert client.post("/chat", json=payload).status_code == 401
 
     async def limited(*_a, **_k):
         raise RateLimitError("slow", "groq", "x")
 
-    monkeypatch.setattr("app.llm.complete_chat", limited)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", limited)
     assert client.post("/chat", json=payload).status_code == 429
 
     async def bad(*_a, **_k):
         raise BadRequestError("bad", "x", "groq")
 
-    monkeypatch.setattr("app.llm.complete_chat", bad)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", bad)
     assert client.post("/chat", json=payload).status_code == 400
 
     async def down(*_a, **_k):
         raise APIError(502, "down", "groq", "x")
 
-    monkeypatch.setattr("app.llm.complete_chat", down)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", down)
     assert client.post("/chat", json=payload).status_code == 502
 
 
-def test_memory_routes_when_enabled(monkeypatch):
+def test_memory_routes_when_enabled(monkeypatch, tmp_path, make_app):
     monkeypatch.setenv("MEMORY", "1")
-    monkeypatch.setattr("app.main.memory_enabled", lambda: True)
+    app = make_app()
 
     async def fake_search(*_a, **_k):
         from app.schemas import MemoryHit
@@ -186,9 +193,9 @@ def test_memory_routes_when_enabled(monkeypatch):
     async def fake_delete(*_a, **_k):
         return None
 
-    monkeypatch.setattr("app.main.search_memories", fake_search)
-    monkeypatch.setattr("app.main.add_memories", fake_add)
-    monkeypatch.setattr("app.main.delete_memory", fake_delete)
+    monkeypatch.setattr(app.state.runtime.memory, "search", fake_search)
+    monkeypatch.setattr(app.state.runtime.memory, "add", fake_add)
+    monkeypatch.setattr(app.state.runtime.memory, "delete", fake_delete)
     client = TestClient(app)
     assert client.get("/memory", params={"q": "tea"}).status_code == 200
     added = client.post("/memory", json={"messages": [{"role": "user", "content": "x"}]})
@@ -196,11 +203,10 @@ def test_memory_routes_when_enabled(monkeypatch):
     assert client.delete("/memory/1").json()["status"] == "deleted"
 
 
-def test_memory_routes_redact_when_pii_on(monkeypatch):
+def test_memory_routes_redact_when_pii_on(monkeypatch, make_app):
     monkeypatch.setenv("MEMORY", "1")
     monkeypatch.setenv("PII", "1")
-    monkeypatch.setattr("app.main.memory_enabled", lambda: True)
-
+    app = make_app()
     seen = {}
 
     async def fake_search(q, **_k):
@@ -223,10 +229,10 @@ def test_memory_routes_redact_when_pii_on(monkeypatch):
         ]
         return out, ["EMAIL_ADDRESS"]
 
-    monkeypatch.setattr("app.main.search_memories", fake_search)
-    monkeypatch.setattr("app.main.add_memories", fake_add)
-    monkeypatch.setattr("app.main.redact_text", fake_redact_text)
-    monkeypatch.setattr("app.main.redact_messages", fake_redact_messages)
+    monkeypatch.setattr(app.state.runtime.memory, "search", fake_search)
+    monkeypatch.setattr(app.state.runtime.memory, "add", fake_add)
+    monkeypatch.setattr(app.state.runtime.pii, "redact_text", fake_redact_text)
+    monkeypatch.setattr(app.state.runtime.pii, "redact_messages", fake_redact_messages)
 
     async def fake_redact_hits(hits):
         from app.schemas import MemoryHit
@@ -242,8 +248,8 @@ def test_memory_routes_redact_when_pii_on(monkeypatch):
             out.append(item)
         return out
 
-    monkeypatch.setattr("app.main.redact_hits", fake_redact_hits)
-    monkeypatch.setattr("app.main.redact_result_rows", fake_redact_rows)
+    monkeypatch.setattr(app.state.runtime.pii, "redact_hits", fake_redact_hits)
+    monkeypatch.setattr(app.state.runtime.pii, "redact_result_rows", fake_redact_rows)
     client = TestClient(app)
     searched = client.get("/memory", params={"q": "user@example.com"})
     assert searched.status_code == 200
@@ -255,27 +261,30 @@ def test_memory_routes_redact_when_pii_on(monkeypatch):
     assert added.json()["results"][0]["memory"] == "<EMAIL_ADDRESS>"
 
 
-def test_memory_pii_config_error_is_503(monkeypatch):
-    from app.pii import PiiConfigError
+def test_memory_pii_config_error_is_503(monkeypatch, tmp_path, make_app):
+    from app.application.errors import PiiConfigError
 
     monkeypatch.setenv("MEMORY", "1")
-    monkeypatch.setattr("app.main.memory_enabled", lambda: True)
+    monkeypatch.setenv("PII", "1")
+    app = make_app()
 
     async def boom(text):
         raise PiiConfigError("PII is enabled but Presidio failed to load")
 
-    monkeypatch.setattr("app.main.redact_text", boom)
+    monkeypatch.setattr(app.state.runtime.pii, "redact_text", boom)
     client = TestClient(app)
     assert client.get("/memory", params={"q": "tea"}).status_code == 503
 
 
-def test_chat_pii_config_error_is_503(monkeypatch):
-    from app.pii import PiiConfigError
+def test_chat_pii_config_error_is_503(make_app, monkeypatch):
+    from app.application.errors import PiiConfigError
+
+    app = make_app()
 
     async def boom(*_a, **_k):
         raise PiiConfigError("PII is enabled but Presidio failed to load")
 
-    monkeypatch.setattr("app.llm.complete_chat", boom)
+    monkeypatch.setattr(app.state.runtime.chat, "complete", boom)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -284,13 +293,16 @@ def test_chat_pii_config_error_is_503(monkeypatch):
     assert response.status_code == 503
 
 
-def test_sse_includes_pii_flag(monkeypatch):
+def test_sse_includes_pii_flag(make_app, monkeypatch):
     async def fake_stream(*_a, **_k):
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, True, ["EMAIL_ADDRESS"], None
-        yield FakeChunk("<EMAIL_ADDRESS>"), "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, True, ["EMAIL_ADDRESS"], None
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, UsageInfo(total_tokens=5, cost_usd=None), None, True, ["EMAIL_ADDRESS"], None
+        model = "groq/openai/gpt-oss-20b"
+        yield StreamStarted(model, "groq", None, None, True, ["EMAIL_ADDRESS"], None)
+        yield StreamDelta("<EMAIL_ADDRESS>")
+        yield StreamUsage(UsageInfo(total_tokens=5, cost_usd=None), None)
+        yield StreamFinished(model=model, served=model)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -304,13 +316,45 @@ def test_sse_includes_pii_flag(monkeypatch):
     assert "EMAIL_ADDRESS" in response.text
 
 
+def test_sse_includes_fallback_and_prompt_meta(make_app, monkeypatch):
+    meta = PromptMeta(name="chat-assistant", version=1, source="local")
+    requested = "groq/openai/gpt-oss-20b"
+    served = "groq/openai/gpt-oss-120b"
 
-def test_sse_error_event(monkeypatch):
+    async def fake_stream(*_a, **_k):
+        yield StreamStarted(requested, "groq", meta, 2, None, None, None)
+        yield StreamDelta("hi")
+        yield StreamFallback(served, "groq", requested)
+        yield StreamUsage(UsageInfo(total_tokens=5, cost_usd=None), None)
+        yield StreamFinished(model=served, served=served)
+
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
+    client = TestClient(app)
+    response = client.post(
+        "/chat",
+        json={
+            "model": requested,
+            "messages": [{"role": "user", "content": "hi"}],
+            "stream": True,
+        },
+    )
+    text = response.text
+    assert response.status_code == 200
+    assert '"fallback_from": "groq/openai/gpt-oss-20b"' in text
+    assert '"prompt_name": "chat-assistant"' in text
+    assert '"prompt_source": "local"' in text
+    assert '"memories_used": 2' in text
+    assert "[DONE]" in text
+
+
+def test_sse_error_event(make_app, monkeypatch):
     async def fake_stream(*_a, **_k):
         raise UnknownModelError("nope")
-        yield None
+        yield StreamStarted("x", "unknown", None, None, None, None, None)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -319,14 +363,15 @@ def test_sse_error_event(monkeypatch):
     assert "error" in response.text
 
 
-def test_sse_pii_config_error(monkeypatch):
-    from app.pii import PiiConfigError
+def test_sse_pii_config_error(make_app, monkeypatch):
+    from app.application.errors import PiiConfigError
 
     async def fake_stream(*_a, **_k):
         raise PiiConfigError("PII is enabled but Presidio failed to load")
-        yield None
+        yield StreamStarted("x", "unknown", None, None, None, None, None)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -335,16 +380,16 @@ def test_sse_pii_config_error(monkeypatch):
     assert "PII is enabled" in response.text
 
 
-def test_memory_write_guard_blocked_is_400(monkeypatch):
-    from app.guardrails import GuardBlockedError
+def test_memory_write_guard_blocked_is_400(monkeypatch, make_app):
+    from app.application.errors import GuardBlockedError
 
-    async def blocked(_messages):
+    async def blocked(_messages, _flags):
         raise GuardBlockedError("content", "Unsafe content blocked (S10).", ["S10"], ["Hate"])
 
     monkeypatch.setenv("MEMORY", "1")
     monkeypatch.setenv("GUARD", "1")
-    monkeypatch.setattr("app.main.memory_enabled", lambda: True)
-    monkeypatch.setattr("app.main.assert_memory_write", blocked)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.guards, "assert_memory_write", blocked)
     client = TestClient(app)
     response = client.post("/memory", json={"messages": [{"role": "user", "content": "hate"}]})
     assert response.status_code == 400
@@ -354,27 +399,28 @@ def test_memory_write_guard_blocked_is_400(monkeypatch):
     assert detail["category_names"] == ["Hate"]
 
 
-def test_memory_write_guard_config_is_503(monkeypatch):
-    from app.guardrails import GuardConfigError
+def test_memory_write_guard_config_is_503(monkeypatch, make_app):
+    from app.application.errors import GuardConfigError
 
-    async def boom(_messages):
+    async def boom(_messages, _flags):
         raise GuardConfigError("GUARD_CONTENT_IGNORE contains unknown category 'S99'. Use S1–S14.")
 
     monkeypatch.setenv("MEMORY", "1")
-    monkeypatch.setattr("app.main.memory_enabled", lambda: True)
-    monkeypatch.setattr("app.main.assert_memory_write", boom)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.guards, "assert_memory_write", boom)
     client = TestClient(app)
     response = client.post("/memory", json={"messages": [{"role": "user", "content": "x"}]})
     assert response.status_code == 503
 
 
-def test_chat_guard_blocked_is_400(monkeypatch):
-    from app.guardrails import GuardBlockedError
+def test_chat_guard_blocked_is_400(make_app, monkeypatch):
+    from app.application.errors import GuardBlockedError
 
     async def blocked(*_a, **_k):
         raise GuardBlockedError("injection", "Prompt injection blocked.")
 
-    monkeypatch.setattr("app.llm.complete_chat", blocked)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "complete", blocked)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -388,13 +434,14 @@ def test_chat_guard_blocked_is_400(monkeypatch):
     assert "Prompt injection blocked" in detail["error"]
 
 
-def test_chat_guard_config_is_503(monkeypatch):
-    from app.guardrails import GuardConfigError
+def test_chat_guard_config_is_503(make_app, monkeypatch):
+    from app.application.errors import GuardConfigError
 
     async def boom(*_a, **_k):
         raise GuardConfigError("Guard injection model is not in the catalog.")
 
-    monkeypatch.setattr("app.llm.complete_chat", boom)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "complete", boom)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -403,13 +450,16 @@ def test_chat_guard_config_is_503(monkeypatch):
     assert response.status_code == 503
 
 
-def test_sse_includes_guard_passed(monkeypatch):
+def test_sse_includes_guard_passed(make_app, monkeypatch):
     async def fake_stream(*_a, **_k):
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, None, None, True
-        yield FakeChunk("hi"), "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, None, None, None, None, True
-        yield None, "groq/openai/gpt-oss-20b", "groq/openai/gpt-oss-20b", None, UsageInfo(total_tokens=5, cost_usd=None), None, None, None, True
+        model = "groq/openai/gpt-oss-20b"
+        yield StreamStarted(model, "groq", None, None, None, None, True)
+        yield StreamDelta("hi")
+        yield StreamUsage(UsageInfo(total_tokens=5, cost_usd=None), None)
+        yield StreamFinished(model=model, served=model)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -422,14 +472,15 @@ def test_sse_includes_guard_passed(monkeypatch):
     assert '"guard_passed": true' in response.text
 
 
-def test_sse_guard_blocked(monkeypatch):
-    from app.guardrails import GuardBlockedError
+def test_sse_guard_blocked(make_app, monkeypatch):
+    from app.application.errors import GuardBlockedError
 
     async def fake_stream(*_a, **_k):
         raise GuardBlockedError("content", "Unsafe content blocked (S2).", ["S2"], ["Non-Violent Crimes"])
-        yield None
+        yield StreamStarted("x", "unknown", None, None, None, None, None)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -441,14 +492,15 @@ def test_sse_guard_blocked(monkeypatch):
     assert "Non-Violent Crimes" in response.text
 
 
-def test_sse_guard_config_error(monkeypatch):
-    from app.guardrails import GuardConfigError
+def test_sse_guard_config_error(make_app, monkeypatch):
+    from app.application.errors import GuardConfigError
 
     async def fake_stream(*_a, **_k):
         raise GuardConfigError("GUARD=1 requires GUARD_INJECTION or GUARD_CONTENT to be on.")
-        yield None
+        yield StreamStarted("x", "unknown", None, None, None, None, None)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -457,8 +509,7 @@ def test_sse_guard_config_error(monkeypatch):
     assert "GUARD=1 requires" in response.text
 
 
-def test_chat_stream_and_schema_is_400_json():
-    client = TestClient(app)
+def test_chat_stream_and_schema_is_400_json(client):
     response = client.post(
         "/chat",
         json={
@@ -473,8 +524,7 @@ def test_chat_stream_and_schema_is_400_json():
     assert "stream" in response.json()["detail"]["error"].lower()
 
 
-def test_chat_invalid_response_format_is_400():
-    client = TestClient(app)
+def test_chat_invalid_response_format_is_400(client):
     response = client.post(
         "/chat",
         json={
@@ -487,13 +537,14 @@ def test_chat_invalid_response_format_is_400():
     assert "json_object" in response.json()["detail"]["error"]
 
 
-def test_chat_schema_mismatch_is_400(monkeypatch):
+def test_chat_schema_mismatch_is_400(make_app, monkeypatch):
     from app.structured import SchemaError
 
     async def mismatch(*_a, **_k):
         raise SchemaError("Assistant output does not match the schema.", path="secret")
 
-    monkeypatch.setattr("app.llm.complete_chat", mismatch)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "complete", mismatch)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -510,14 +561,15 @@ def test_chat_schema_mismatch_is_400(monkeypatch):
     assert "leak" not in response.text
 
 
-def test_sse_schema_error(monkeypatch):
+def test_sse_schema_error(make_app, monkeypatch):
     from app.structured import SchemaError
 
     async def fake_stream(*_a, **_k):
         raise SchemaError("Assistant output is not valid JSON.")
-        yield None
+        yield StreamStarted("x", "unknown", None, None, None, None, None)
 
-    monkeypatch.setattr("app.llm.stream_chat", fake_stream)
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
     client = TestClient(app)
     response = client.post(
         "/chat",
@@ -527,9 +579,7 @@ def test_sse_schema_error(monkeypatch):
     assert '{"password"' not in response.text
 
 
-def test_index_points_at_console(monkeypatch):
-    monkeypatch.setenv("CONSOLE_URL", "http://localhost:3000")
-    client = TestClient(app)
+def test_index_points_at_console(client):
     response = client.get("/")
     assert response.status_code == 200
     assert "text/html" in response.headers["content-type"]
@@ -540,7 +590,7 @@ def test_index_points_at_console(monkeypatch):
 
 
 def test_cors_origins_parse(monkeypatch):
-    from app.main import cors_origins
+    from app.api.app import cors_origins
 
     monkeypatch.setenv("CORS_ORIGINS", " http://a:1 ,http://b:2 ")
     assert cors_origins() == ["http://a:1", "http://b:2"]
@@ -549,22 +599,25 @@ def test_cors_origins_parse(monkeypatch):
     assert "http://127.0.0.1:3000" in cors_origins()
 
 
-def test_cors_allows_console_origin():
-    client = TestClient(app)
+def test_cors_allows_console_origin(client):
     response = client.get("/health", headers={"Origin": "http://localhost:3000"})
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
-def test_cors_omits_unknown_origin():
-    client = TestClient(app)
+def test_cors_allows_127_origin(client):
+    response = client.get("/health", headers={"Origin": "http://127.0.0.1:3000"})
+    assert response.status_code == 200
+    assert response.headers.get("access-control-allow-origin") == "http://127.0.0.1:3000"
+
+
+def test_cors_omits_unknown_origin(client):
     response = client.get("/health", headers={"Origin": "http://evil.example"})
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") != "http://evil.example"
 
 
-def test_cors_preflight_console():
-    client = TestClient(app)
+def test_cors_preflight_console(client):
     response = client.options(
         "/chat",
         headers={
@@ -575,4 +628,3 @@ def test_cors_preflight_console():
     )
     assert response.status_code == 200
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
-

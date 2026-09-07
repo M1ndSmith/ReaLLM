@@ -2,21 +2,14 @@ from __future__ import annotations
 
 import hmac
 import logging
-import os
 
 from fastapi import HTTPException, Request
+
+from app.container import GatewayRuntime
 
 logger = logging.getLogger(__name__)
 
 GATEWAY_UNAUTHORIZED = {"error": "gateway_unauthorized"}
-
-
-def gateway_key() -> str:
-    return (os.getenv("GATEWAY_API_KEY") or "").strip()
-
-
-def auth_required() -> bool:
-    return bool(gateway_key())
 
 
 def _keys_match(provided: str, expected: str) -> bool:
@@ -36,7 +29,8 @@ def _provided_key(request: Request) -> str | None:
 
 
 def require_gateway_auth(request: Request) -> None:
-    expected = gateway_key()
+    runtime: GatewayRuntime = request.app.state.runtime
+    expected = runtime.settings.gateway_key()
     if not expected:
         return
     provided = _provided_key(request)
@@ -44,16 +38,6 @@ def require_gateway_auth(request: Request) -> None:
         raise HTTPException(status_code=401, detail=GATEWAY_UNAUTHORIZED)
 
 
-def require_configured_gateway_key() -> None:
-    if not gateway_key():
+def require_configured_gateway_key(runtime: GatewayRuntime) -> None:
+    if not runtime.settings.gateway_key():
         raise HTTPException(status_code=403, detail={"error": "gateway_key_required"})
-
-
-def log_auth_status() -> None:
-    if auth_required():
-        logger.info("gateway auth: on")
-        return
-    logger.warning(
-        "gateway auth: off; anyone who can reach this port can call the API. "
-        "Compose publishes 8000:8000 — set GATEWAY_API_KEY when the port is network-reachable."
-    )

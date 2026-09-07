@@ -1,28 +1,26 @@
 from __future__ import annotations
 
 import asyncio
-
 from types import SimpleNamespace
 
-from app.memory import (
-    RouterLLM,
-    _hit_models,
-    _latest_user_text,
-    _parse_llm_response,
-    attach_memories,
-    inject_memories,
-    memory_enabled,
-    memory_status,
-    resolve_scope,
-    search_memories,
-)
-from app.schemas import ChatMessage
+from tests.factories import flags, runtime
 from tests.fakes import FakeResponse
 
+from app.infrastructure.memory import (
+    RouterLLM,
+    _latest_user_text,
+    _parse_llm_response,
+    inject_memories,
+    resolve_scope,
+)
+from app.schemas import ChatMessage
 
-def test_memory_off_by_default():
-    assert memory_enabled() is False
-    status = memory_status()
+
+def test_memory_off_by_default(tmp_path):
+    rt = runtime(tmp_path)
+    snap = rt.flags.snapshot()
+    assert snap.memory is False
+    status = rt.memory.status(snap)
     assert status.enabled is False
 
 
@@ -43,19 +41,21 @@ def test_scope_and_inject():
     assert _latest_user_text([{"role": "assistant", "content": "x"}]) == ""
 
 
-def test_attach_memories_noop_when_off():
+def test_attach_memories_noop_when_off(tmp_path):
     async def _run():
+        rt = runtime(tmp_path)
         messages = [ChatMessage(role="user", content="hi")]
-        out, used = await attach_memories(messages)
+        out, used = await rt.memory.attach(messages, rt.flags.snapshot())
         assert used is None
         assert out == messages
 
     asyncio.run(_run())
 
 
-def test_attach_and_search_with_stub(monkeypatch):
+def test_attach_and_search_with_stub(monkeypatch, tmp_path):
     async def _run():
         monkeypatch.setenv("MEMORY", "1")
+        rt = runtime(tmp_path)
 
         class Mem:
             def search(self, query, top_k, filters):
@@ -63,34 +63,46 @@ def test_attach_and_search_with_stub(monkeypatch):
                 assert filters["user_id"] == "ada"
                 return {"results": [{"id": "1", "memory": "likes tea", "score": 0.9}]}
 
-        monkeypatch.setattr("app.memory.get_memory", lambda: Mem())
-        out, n = await attach_memories(
+        monkeypatch.setattr(rt.memory, "get_memory", lambda flags=None: Mem())
+        on = flags(memory=True)
+        out, n = await rt.memory.attach(
             [ChatMessage(role="user", content="hi")],
+            on,
             user_id="ada",
         )
         assert n == 1
         assert out[0].role == "system"
         assert "likes tea" in out[0].content
-        hits = await search_memories("hi", user_id="ada")
+        hits = await rt.memory.search("hi", user_id="ada")
         assert hits[0].memory == "likes tea"
-        assert _hit_models({"results": [{"memory": "x", "id": 2, "score": 1}]})[0].id == "2"
+        assert rt.memory._hit_models({"results": [{"memory": "x", "id": 2, "score": 1}]})[0].id == "2"
 
     asyncio.run(_run())
 
 
-def test_router_llm_metadata(monkeypatch):
+def test_router_llm_metadata(monkeypatch, tmp_path):
     captured: dict = {}
 
-    class Router:
+    class Backend:
         def completion(self, **kwargs):
             captured.update(kwargs)
             return FakeResponse("extracted")
 
-    monkeypatch.setattr("app.reliability.get_router", lambda: Router())
-    monkeypatch.setattr("app.reliability.chat_fallback_ids", lambda *_a, **_k: ["groq/openai/gpt-oss-120b"])
-    monkeypatch.setattr("app.budget.record_usage", lambda **_k: None)
-    monkeypatch.setattr("app.budget.completion_usd", lambda *_a, **_k: None)
-    text = RouterLLM("groq/openai/gpt-oss-20b").generate_response([{"role": "user", "content": "x"}])
+        def chat_fallback_ids(self, model):
+            return ["groq/openai/gpt-oss-120b"]
+
+        async def acompletion(self, **kwargs):
+            return FakeResponse("extracted")
+
+        def reliability_status(self):
+            raise NotImplementedError
+
+    rt = runtime(tmp_path)
+    monkeypatch.setattr(rt.budget, "record_usage", lambda **_k: None)
+    monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+    text = RouterLLM("groq/openai/gpt-oss-20b", Backend(), rt.budget).generate_response(
+        [{"role": "user", "content": "x"}]
+    )
     assert text == "extracted"
     assert captured["caching"] is False
     assert captured["metadata"]["generation_name"] == "mem0-extract"
@@ -104,40 +116,44 @@ def test_router_llm_metadata(monkeypatch):
     assert parsed["tool_calls"][0]["arguments"] == {"q": "tea"}
 
 
-def test_memory_status_and_get_memory(monkeypatch):
-    from app.memory import MemoryConfigError, _embedder_provider, _llm_model_id, get_memory, record_turn
+def test_memory_status_and_get_memory(monkeypatch, tmp_path):
 
     monkeypatch.setenv("MEMORY", "1")
-    status = memory_status()
+    rt = runtime(tmp_path)
+    status = rt.memory.status(flags(memory=True))
     assert status.enabled is True
     assert status.embedder == "fastembed"
     monkeypatch.setenv("MEMORY_EMBEDDER", "nope")
+    from pydantic import ValidationError
+
     try:
-        _embedder_provider()
-        raise AssertionError("expected MemoryConfigError")
-    except MemoryConfigError:
+        from app.settings import GatewaySettings
+
+        GatewaySettings()
+        raise AssertionError("expected ValidationError")
+    except ValidationError:
         pass
     monkeypatch.setenv("MEMORY_EMBEDDER", "fastembed")
     monkeypatch.setenv("MEMORY_LLM_MODEL", "groq/openai/gpt-oss-20b")
-    assert _llm_model_id() == "groq/openai/gpt-oss-20b"
+    rt = runtime(tmp_path)
+    assert rt.memory._llm_model_id() == "groq/openai/gpt-oss-20b"
 
-    monkeypatch.setattr("app.memory._build_memory", lambda: "mem-obj")
-    assert get_memory() == "mem-obj"
-    assert get_memory() == "mem-obj"
+    monkeypatch.setattr(rt.memory, "_build_memory", lambda: "mem-obj")
+    assert rt.memory.get_memory(flags(memory=True)) == "mem-obj"
+    assert rt.memory.get_memory(flags(memory=True)) == "mem-obj"
 
     added = []
-    monkeypatch.setattr("app.memory._add_sync", lambda *a, **k: added.append((a, k)))
-    record_turn([ChatMessage(role="user", content="hi")], "reply")
+    monkeypatch.setattr(rt.memory, "_add_sync", lambda *a, **k: added.append((a, k)))
+    rt.memory.schedule_record([ChatMessage(role="user", content="hi")], "reply", flags(memory=True))
     assert added
 
 
-def test_build_memory_and_crud(monkeypatch):
+def test_build_memory_and_crud(monkeypatch, tmp_path):
     import mem0
 
-    from app.memory import _build_memory, add_memories, delete_memory
-
     monkeypatch.setenv("MEMORY", "1")
-    monkeypatch.setattr("app.memory._llm_model_id", lambda: "groq/openai/gpt-oss-20b")
+    rt = runtime(tmp_path)
+    monkeypatch.setattr(rt.memory, "_llm_model_id", lambda: "groq/openai/gpt-oss-20b")
 
     class FakeMemory:
         def __init__(self):
@@ -160,14 +176,13 @@ def test_build_memory_and_crud(monkeypatch):
             return {"results": []}
 
     monkeypatch.setattr(mem0, "Memory", FakeMemory)
-    built = _build_memory()
+    built = rt.memory._build_memory()
     assert built.llm is not None
-    monkeypatch.setattr("app.memory.get_memory", lambda: built)
+    monkeypatch.setattr(rt.memory, "get_memory", lambda flags=None: built)
 
     async def _run():
-        payload = await add_memories([ChatMessage(role="user", content="hi")], user_id="u")
+        payload = await rt.memory.add([ChatMessage(role="user", content="hi")], user_id="u")
         assert payload["results"][0]["memory"] == "ok"
-        await delete_memory("abc")
+        await rt.memory.delete("abc")
 
     asyncio.run(_run())
-

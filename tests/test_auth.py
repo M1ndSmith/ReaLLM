@@ -2,18 +2,17 @@ from __future__ import annotations
 
 from fastapi.testclient import TestClient
 
-from app.main import app
+from app.api.auth import _keys_match
 
 
-def test_auth_off_leaves_json_routes_open():
-    client = TestClient(app)
+def test_auth_off_leaves_json_routes_open(client):
     assert client.get("/health").status_code == 200
     assert client.get("/").status_code == 200
 
 
-def test_auth_on_rejects_missing_and_wrong_key(monkeypatch):
+def test_auth_on_rejects_missing_and_wrong_key(monkeypatch, make_app):
     monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
-    client = TestClient(app)
+    client = TestClient(make_app())
     assert client.get("/").status_code == 200
     denied = client.get("/health")
     assert denied.status_code == 401
@@ -27,29 +26,27 @@ def test_auth_on_rejects_missing_and_wrong_key(monkeypatch):
     assert chat.status_code == 401
 
 
-def test_auth_on_accepts_bearer_and_x_api_key(monkeypatch):
+def test_auth_on_accepts_bearer_and_x_api_key(monkeypatch, make_app):
     monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
-    client = TestClient(app)
+    client = TestClient(make_app())
     headers = {"Authorization": "Bearer secret-gateway"}
     assert client.get("/health", headers=headers).status_code == 200
     assert client.get("/models", headers={"X-Api-Key": "secret-gateway"}).status_code == 200
     assert client.get("/v1/models", headers=headers).status_code == 200
 
 
-def test_auth_compare_digest_mismatch(monkeypatch):
+def test_auth_compare_digest_mismatch(monkeypatch, make_app):
     monkeypatch.setenv("GATEWAY_API_KEY", "expected-key")
-    from app.auth import _keys_match
-
     assert _keys_match("expected-key", "expected-key") is True
     assert _keys_match("wrong-key", "expected-key") is False
-    client = TestClient(app)
+    client = TestClient(make_app())
     assert client.get("/health", headers={"Authorization": "Bearer expected-key"}).status_code == 200
     assert client.get("/health", headers={"Authorization": "Bearer expected-keyx"}).status_code == 401
 
 
-def test_cors_preflight_allows_authorization(monkeypatch):
+def test_cors_preflight_allows_authorization(monkeypatch, make_app):
     monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
-    client = TestClient(app)
+    client = TestClient(make_app())
     response = client.options(
         "/chat",
         headers={
@@ -62,15 +59,18 @@ def test_cors_preflight_allows_authorization(monkeypatch):
     assert response.headers.get("access-control-allow-origin") == "http://localhost:3000"
 
 
-def test_log_auth_status(monkeypatch, caplog):
+def test_log_auth_status(monkeypatch, caplog, tmp_path):
     import logging
 
-    from app.auth import log_auth_status
+    from tests.factories import runtime
 
     caplog.set_level(logging.INFO)
     monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
-    log_auth_status()
+    import asyncio
+
+    asyncio.run(runtime(tmp_path).start())
     assert "gateway auth: off" in caplog.text
     monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
-    log_auth_status()
+    caplog.clear()
+    asyncio.run(runtime(tmp_path / "on").start())
     assert "gateway auth: on" in caplog.text

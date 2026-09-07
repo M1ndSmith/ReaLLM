@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+from pathlib import Path
+
 import pytest
 
+from app.infrastructure.catalog import ProviderCatalog
 from app.schemas import ModelInfo
 
 FROZEN_CATALOG = [
@@ -26,6 +29,9 @@ _FETCH_IDS = {
     "openai": ["gpt-4o-mini"],
 }
 
+ROOT = Path(__file__).resolve().parent.parent
+ORIGINAL_FETCH = ProviderCatalog._fetch_openai_compat_models
+
 
 @pytest.fixture
 def frozen_catalog() -> list[ModelInfo]:
@@ -33,27 +39,13 @@ def frozen_catalog() -> list[ModelInfo]:
 
 
 @pytest.fixture(autouse=True)
-def isolate_app(monkeypatch, tmp_path):
+def isolate_env(monkeypatch, tmp_path):
     import litellm
 
-    import app.budget as budget
-    import app.llm as llm
-    import app.memory as memory
-    import app.pii as pii
-    import app.prompts as prompts
-    import app.reliability as reliability
-    import app.runtime_flags as runtime_flags
-
-    monkeypatch.setattr(budget, "_STATE_PATH", tmp_path / "budget-state.json")
-    monkeypatch.setattr(runtime_flags, "_FLAGS_PATH", tmp_path / "runtime-flags.json")
-    budget._redis_client = None
-    budget._redis_unavailable = False
-    llm._models_cache = None
-    reliability._router = None
-    reliability._router_signature = None
-    prompts._tracing_ready = False
-    memory._memory = None
-    pii._engines = None
+    from app.infrastructure import catalog as catalog_mod
+    from app.infrastructure import prompts as prompts_mod
+    from app.infrastructure.catalog import ProviderCatalog
+    from app.infrastructure.prompts import PromptRepository
 
     monkeypatch.setenv("MEMORY", "0")
     monkeypatch.setenv("PII", "0")
@@ -79,10 +71,18 @@ def isolate_app(monkeypatch, tmp_path):
     monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
     monkeypatch.setenv("CONSOLE_URL", "http://localhost:3000")
     monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
+    monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
+    monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
+    monkeypatch.delenv("WEB_CONCURRENCY", raising=False)
+    monkeypatch.delenv("UVICORN_WORKERS", raising=False)
 
-    monkeypatch.setattr(llm, "_infer_valid_provider_from_env_vars", lambda: ["groq", "openai"])
-    monkeypatch.setattr(llm, "_fetch_openai_compat_models", lambda provider: list(_FETCH_IDS.get(provider, [])))
-    monkeypatch.setattr(prompts, "_get_langfuse_client", lambda: None)
+    monkeypatch.setattr(catalog_mod, "_infer_valid_provider_from_env_vars", lambda: ["groq", "openai"])
+
+    def fake_fetch(self, provider: str) -> list[str]:
+        return list(_FETCH_IDS.get(provider, []))
+
+    monkeypatch.setattr(ProviderCatalog, "_fetch_openai_compat_models", fake_fetch)
+    monkeypatch.setattr(PromptRepository, "_get_langfuse_client", lambda self: None)
 
     class _NoNet:
         def raise_for_status(self):
@@ -91,16 +91,26 @@ def isolate_app(monkeypatch, tmp_path):
         def json(self):
             return {}
 
-    monkeypatch.setattr(prompts.httpx, "get", lambda *a, **k: _NoNet())
+    monkeypatch.setattr(prompts_mod.httpx, "get", lambda *a, **k: _NoNet())
 
     original_callbacks = list(litellm.callbacks) if litellm.callbacks else []
     yield
     litellm.callbacks = original_callbacks
-    budget._redis_client = None
-    budget._redis_unavailable = False
-    llm._models_cache = None
-    reliability._router = None
-    reliability._router_signature = None
-    prompts._tracing_ready = False
-    memory._memory = None
-    pii._engines = None
+
+
+@pytest.fixture
+def make_app(tmp_path):
+    from tests.factories import app_for
+
+    def _make():
+        return app_for(tmp_path)
+
+    return _make
+
+
+@pytest.fixture
+def client(make_app):
+    from fastapi.testclient import TestClient
+
+    with TestClient(make_app()) as test_client:
+        yield test_client

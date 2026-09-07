@@ -1,24 +1,22 @@
 # Structured output
 
-The client can ask `POST /chat` to return JSON that matches a schema. Completions still go through LiteLLM’s Router. This is not Instructor, not Outlines, not Microsoft Guidance, not LM Format Enforcer, and not Guardrails AI validators.
+The client can ask `POST /chat` to return JSON that matches a schema. Completions still go through LiteLLM's Router.
 
-The **client** chooses the format (`response_format`). This layer verifies JSON. Llama Guard still only refuses policy (`S*`). Prompt Guard still only refuses injection.
+The client chooses the format (`response_format`). This layer verifies JSON. Pipeline order is in [architecture](architecture.md). Schema check runs after Presidio outbound and Llama Guard outbound.
 
-## When nothing is sent
-
-Omit `response_format`. `POST /chat` with `model` and `messages` is free text, as before. There is no `STRUCT=1` env flag.
+There is no `STRUCT=1` env flag. Omit `response_format` and `POST /chat` with `model` and `messages` is free text.
 
 ## Enable (per request)
 
-Pass OpenAI-shaped `response_format` on `POST /chat`:
+Pass OpenAI-shaped `response_format` on `POST /chat`.
 
-`json_object` — the assistant body must parse as JSON (any shape):
+`json_object`: the assistant body must parse as JSON (any shape):
 
 ```json
 { "type": "json_object" }
 ```
 
-`json_schema` — the Router gets the schema, then this app validates the reply against it:
+`json_schema`: the Router gets the schema, then this app validates the reply against it:
 
 ```json
 {
@@ -39,9 +37,9 @@ Pass OpenAI-shaped `response_format` on `POST /chat`:
 }
 ```
 
-`name` is 1–64 letters, digits, `_`, or `-`. The schema object is capped at 32KB. Invalid or oversized `response_format` is `400` **before** the Router.
+`name` is 1-64 letters, digits, `_`, or `-`. The schema object is capped at 32KB. Invalid or oversized `response_format` is `400` before the Router.
 
-The field is forwarded to `router.acompletion` for **any** catalog model. Groq **strict** constrained decoding is a provider feature on `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, and `qwen/qwen3.8-27b`. Everything else is best-effort JSON; this gateway still validates. If the provider rejects the schema, that error is not swallowed.
+The field is forwarded to `router.acompletion` for any catalog model. Groq strict constrained decoding is a provider feature on `openai/gpt-oss-20b`, `openai/gpt-oss-120b`, and `qwen/qwen3.8-27b`. Everything else is best-effort JSON; this gateway still validates. If the provider rejects the schema, that error is not swallowed.
 
 After Presidio and Llama Guard outbound, the assistant text is parsed (`json.loads`, optional one ` ```json ` fence) and checked with `jsonschema`. Failure is `400` (`SchemaError`): short reason and JSON path, never the raw blob. There is no reask.
 
@@ -53,14 +51,6 @@ PII placeholders must still satisfy the schema, or the request fails closed.
 
 Mem0 extract is unchanged.
 
-## Chat order
+## Out of scope
 
-… → Router (with `response_format`) → Presidio outbound → Llama Guard outbound → **schema validate** → client.
-
-## Do not stack extra products
-
-- **Instructor:** wraps the client and reasks. A second completion loop off this Router.
-- **Outlines / Guidance / LM Format Enforcer:** need logits (vLLM / local weights). Provider HTTP (including Groq) does not expose them. Groq strict mode already constrains decoding on gpt-oss.
-- **Guardrails AI validators:** Hub + `guard()` reask; already rejected.
-- **`litellm.enable_json_schema_validation`:** global LiteLLM switch, not this app’s 400 body.
-- **Always-on JSON mode:** would break normal chat and the UI.
+Instructor reask, Outlines / Guidance / LM Format Enforcer (need logits), Guardrails AI validators, and `litellm.enable_json_schema_validation` (a global LiteLLM switch) are out of this process. Always-on JSON mode would break normal chat and the UI.

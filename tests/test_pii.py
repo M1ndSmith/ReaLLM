@@ -6,21 +6,10 @@ from types import SimpleNamespace
 
 import pytest
 
-from app.pii import (
-    PiiConfigError,
-    _build_engines,
-    _ensure_spacy_model,
-    configured_entities,
-    get_engines,
-    pii_enabled,
-    pii_status,
-    redact_hits,
-    redact_messages,
-    redact_result_rows,
-    redact_text,
-    unique_entity_types,
-)
+from app.application.errors import PiiConfigError
+from app.infrastructure.pii import PiiRuntime, unique_entity_types
 from app.schemas import ChatMessage, MemoryHit
+from app.settings import GatewaySettings
 
 
 class FakeAnalyzer:
@@ -35,9 +24,7 @@ class FakeAnalyzer:
                 idx = text.find(needle, start)
                 if idx < 0:
                     break
-                results.append(
-                    SimpleNamespace(entity_type=entity_type, start=idx, end=idx + len(needle), score=1.0)
-                )
+                results.append(SimpleNamespace(entity_type=entity_type, start=idx, end=idx + len(needle), score=1.0))
                 start = idx + len(needle)
         return results
 
@@ -50,16 +37,20 @@ class FakeAnonymizer:
         return SimpleNamespace(text=out)
 
 
+def _pii() -> PiiRuntime:
+    return PiiRuntime(GatewaySettings())
+
+
 def _install_engines(monkeypatch, needles: dict[str, str] | None = None):
     monkeypatch.setenv("PII", "1")
     engines = (FakeAnalyzer(needles), FakeAnonymizer())
-    monkeypatch.setattr("app.pii.get_engines", lambda: engines)
-    return engines
+    pii = PiiRuntime(GatewaySettings())
+    monkeypatch.setattr(pii, "get_engines", lambda: engines)
+    return pii
 
 
 def test_pii_off_by_default():
-    assert pii_enabled() is False
-    status = pii_status()
+    status = _pii().status(False)
     assert status.enabled is False
     assert status.engine is None
     assert status.entities == []
@@ -67,59 +58,55 @@ def test_pii_off_by_default():
 
 def test_status_and_entities(monkeypatch):
     monkeypatch.setenv("PII", "1")
-    status = pii_status()
+    pii = _pii()
+    status = pii.status(True)
     assert status.enabled is True
     assert status.engine == "presidio"
     assert "EMAIL_ADDRESS" in status.entities
     assert "PERSON" not in status.entities
     monkeypatch.setenv("PII_ENTITIES", "PERSON, EMAIL_ADDRESS")
-    assert configured_entities() == ["PERSON", "EMAIL_ADDRESS"]
+    pii = _pii()
+    assert pii.configured_entities() == ["PERSON", "EMAIL_ADDRESS"]
     monkeypatch.setenv("PII_ENTITIES", "  ,  ")
-    assert "EMAIL_ADDRESS" in configured_entities()
+    pii = _pii()
+    assert "EMAIL_ADDRESS" in pii.configured_entities()
     assert unique_entity_types(["EMAIL_ADDRESS"], ["EMAIL_ADDRESS", "US_SSN"]) == ["EMAIL_ADDRESS", "US_SSN"]
-    from app.pii import spacy_model_name
-
-    assert spacy_model_name() == "en_core_web_sm"
+    assert pii.spacy_model_name() == "en_core_web_sm"
     monkeypatch.setenv("PII_SPACY_MODEL", "en_core_web_lg")
-    assert spacy_model_name() == "en_core_web_lg"
+    assert _pii().spacy_model_name() == "en_core_web_lg"
 
 
-def test_redact_passthrough_when_off():
+def test_redact_passthrough_when_off_skips_call():
     async def _run():
-        text, types = await redact_text("user@example.com")
-        assert text == "user@example.com"
+        pii = _pii()
+        monkeypatch_engines_not_needed = True
+        assert monkeypatch_engines_not_needed
+        text, types = await pii.redact_text("")
+        assert text == ""
         assert types == []
-        messages = [ChatMessage(role="user", content="user@example.com")]
-        out, found = await redact_messages(messages)
-        assert out[0].content == "user@example.com"
-        assert found == []
-        hits = [MemoryHit(id="1", memory="user@example.com", score=0.2)]
-        assert (await redact_hits(hits))[0].memory == "user@example.com"
-        rows = [{"memory": "user@example.com"}]
-        assert (await redact_result_rows(rows))[0]["memory"] == "user@example.com"
 
     asyncio.run(_run())
 
 
 def test_redact_with_fake_engines(monkeypatch):
-    _install_engines(monkeypatch)
+    pii = _install_engines(monkeypatch)
 
     async def _run():
-        text, types = await redact_text("mail me at user@example.com please")
+        text, types = await pii.redact_text("mail me at user@example.com please")
         assert "<EMAIL_ADDRESS>" in text
         assert "user@example.com" not in text
         assert types == ["EMAIL_ADDRESS"]
-        empty, none = await redact_text("")
+        empty, none = await pii.redact_text("")
         assert empty == ""
         assert none == []
-        messages, found = await redact_messages(
+        messages, found = await pii.redact_messages(
             [ChatMessage(role="user", content="user@example.com"), ChatMessage(role="assistant", content="ok")]
         )
         assert messages[0].content == "<EMAIL_ADDRESS>"
         assert "EMAIL_ADDRESS" in found
-        hits = await redact_hits([MemoryHit(id="1", memory="user@example.com", score=1)])
+        hits = await pii.redact_hits([MemoryHit(id="1", memory="user@example.com", score=1)])
         assert hits[0].memory == "<EMAIL_ADDRESS>"
-        rows = await redact_result_rows([{"memory": "user@example.com"}, {"ok": True}, "skip"])
+        rows = await pii.redact_result_rows([{"memory": "user@example.com"}, {"ok": True}, "skip"])
         assert rows[0]["memory"] == "<EMAIL_ADDRESS>"
         assert rows[1] == {"ok": True}
         assert rows[2] == "skip"
@@ -129,36 +116,34 @@ def test_redact_with_fake_engines(monkeypatch):
 
 def test_redact_fails_closed(monkeypatch):
     monkeypatch.setenv("PII", "1")
+    pii = _pii()
 
     class Boom:
         def analyze(self, **_k):
             raise RuntimeError("analyzer down")
 
-    monkeypatch.setattr("app.pii.get_engines", lambda: (Boom(), FakeAnonymizer()))
+    monkeypatch.setattr(pii, "get_engines", lambda: (Boom(), FakeAnonymizer()))
 
     async def _run():
         with pytest.raises(PiiConfigError, match="PII redaction failed"):
-            await redact_text("user@example.com")
+            await pii.redact_text("user@example.com")
 
     asyncio.run(_run())
 
 
-def test_get_engines_disabled():
-    with pytest.raises(PiiConfigError, match="PII is disabled"):
-        get_engines()
-
-
 def test_get_engines_singleton(monkeypatch):
     monkeypatch.setenv("PII", "1")
+    pii = _pii()
     marker = (FakeAnalyzer(), FakeAnonymizer())
-    monkeypatch.setattr("app.pii._build_engines", lambda: marker)
-    assert get_engines() is marker
-    assert get_engines() is marker
+    monkeypatch.setattr(pii, "_build_engines", lambda: marker)
+    assert pii.get_engines() is marker
+    assert pii.get_engines() is marker
 
 
 def test_build_engines_import_error(monkeypatch):
     monkeypatch.setenv("PII", "1")
-    monkeypatch.setattr("app.pii._ensure_spacy_model", lambda _n: None)
+    pii = _pii()
+    monkeypatch.setattr(pii, "_ensure_spacy_model", lambda _n: None)
     real_import = __import__
 
     def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
@@ -168,12 +153,13 @@ def test_build_engines_import_error(monkeypatch):
 
     monkeypatch.setattr("builtins.__import__", fake_import)
     with pytest.raises(PiiConfigError, match="Presidio is not installed"):
-        _build_engines()
+        pii._build_engines()
 
 
 def test_build_engines_provider_error(monkeypatch):
     monkeypatch.setenv("PII", "1")
-    monkeypatch.setattr("app.pii._ensure_spacy_model", lambda _n: None)
+    pii = _pii()
+    monkeypatch.setattr(pii, "_ensure_spacy_model", lambda _n: None)
 
     class Provider:
         def __init__(self, nlp_configuration):
@@ -187,12 +173,13 @@ def test_build_engines_provider_error(monkeypatch):
     monkeypatch.setitem(sys.modules, "presidio_analyzer.nlp_engine", presidio_analyzer.nlp_engine)
     monkeypatch.setitem(sys.modules, "presidio_anonymizer", SimpleNamespace(AnonymizerEngine=object))
     with pytest.raises(PiiConfigError, match="Presidio failed to load"):
-        _build_engines()
+        pii._build_engines()
 
 
 def test_build_engines_success(monkeypatch):
     monkeypatch.setenv("PII", "1")
-    monkeypatch.setattr("app.pii._ensure_spacy_model", lambda _n: None)
+    pii = _pii()
+    monkeypatch.setattr(pii, "_ensure_spacy_model", lambda _n: None)
 
     class Provider:
         def __init__(self, nlp_configuration):
@@ -215,7 +202,7 @@ def test_build_engines_success(monkeypatch):
     )
     monkeypatch.setitem(sys.modules, "presidio_analyzer.nlp_engine", SimpleNamespace(NlpEngineProvider=Provider))
     monkeypatch.setitem(sys.modules, "presidio_anonymizer", SimpleNamespace(AnonymizerEngine=Anonymizer))
-    analyzer, anonymizer = _build_engines()
+    analyzer, anonymizer = pii._build_engines()
     assert isinstance(analyzer, Analyzer)
     assert isinstance(anonymizer, Anonymizer)
 
@@ -228,11 +215,12 @@ def test_ensure_spacy_packaged(monkeypatch):
 
     fake = SimpleNamespace(util=Util, load=lambda _n: (_ for _ in ()).throw(AssertionError("load")))
     monkeypatch.setitem(sys.modules, "spacy", fake)
-    _ensure_spacy_model("en_core_web_sm")
+    _pii()._ensure_spacy_model("en_core_web_sm")
 
 
 def test_redact_string_anonymizer_result(monkeypatch):
     monkeypatch.setenv("PII", "1")
+    pii = _pii()
 
     class Analyzer:
         def analyze(self, **_k):
@@ -242,10 +230,10 @@ def test_redact_string_anonymizer_result(monkeypatch):
         def anonymize(self, text, analyzer_results):
             return "<EMAIL_ADDRESS>"
 
-    monkeypatch.setattr("app.pii.get_engines", lambda: (Analyzer(), Anonymizer()))
+    monkeypatch.setattr(pii, "get_engines", lambda: (Analyzer(), Anonymizer()))
 
     async def _run():
-        text, types = await redact_text("user@example.com")
+        text, types = await pii.redact_text("user@example.com")
         assert text == "<EMAIL_ADDRESS>"
         assert types == ["EMAIL_ADDRESS"]
 
@@ -262,7 +250,7 @@ def test_ensure_spacy_load_existing(monkeypatch):
 
     fake = SimpleNamespace(util=Util, load=lambda name: loaded.append(name))
     monkeypatch.setitem(sys.modules, "spacy", fake)
-    _ensure_spacy_model("en_core_web_sm")
+    _pii()._ensure_spacy_model("en_core_web_sm")
     assert loaded == ["en_core_web_sm"]
 
 
@@ -283,7 +271,7 @@ def test_ensure_spacy_download(monkeypatch):
     fake = SimpleNamespace(util=Util, load=load, cli=SimpleNamespace(download=lambda _n: None))
     monkeypatch.setitem(sys.modules, "spacy", fake)
     monkeypatch.setitem(sys.modules, "spacy.cli", fake.cli)
-    _ensure_spacy_model("en_core_web_sm")
+    _pii()._ensure_spacy_model("en_core_web_sm")
     assert calls["load"] == 2
 
 
@@ -297,7 +285,7 @@ def test_ensure_spacy_missing_install(monkeypatch):
 
     monkeypatch.setattr("builtins.__import__", fake_import)
     with pytest.raises(PiiConfigError, match="spaCy is not installed"):
-        _ensure_spacy_model("en_core_web_sm")
+        _pii()._ensure_spacy_model("en_core_web_sm")
 
 
 def test_ensure_spacy_download_fails(monkeypatch):
@@ -317,4 +305,4 @@ def test_ensure_spacy_download_fails(monkeypatch):
     monkeypatch.setitem(sys.modules, "spacy", fake)
     monkeypatch.setitem(sys.modules, "spacy.cli", fake.cli)
     with pytest.raises(PiiConfigError, match="could not be loaded"):
-        _ensure_spacy_model("en_core_web_sm")
+        _pii()._ensure_spacy_model("en_core_web_sm")

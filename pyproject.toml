@@ -16,3 +16,16 @@ omit = ["app/static/*"]
 [tool.coverage.report]
 show_missing = true
 fail_under = 80
+
+[tool.ruff]
+target-version = "py314"
+line-length = 120
+src = ["app", "tests"]
+extend-exclude = ["web", ".venv"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+ignore = ["E501"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app"]
