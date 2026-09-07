@@ -1,6 +1,6 @@
 # ReaLMM
 
-FastAPI LLM gateway on LiteLLM. Providers come from `*_API_KEY` values in `.env`; the client picks a model. Completions go through LiteLLM’s Router. The Next.js console is a client of `POST /chat`, not the product.
+FastAPI LLM gateway on LiteLLM. Providers come from `*_API_KEY` values in `.env`; the client picks a model. Completions go through LiteLLM’s Router. The Next.js console is a client of `POST /chat` (and an operator UI for overlay layer flags). Optional `GATEWAY_API_KEY` is inbound auth when the port is network-reachable.
 
 ## Run
 
@@ -23,7 +23,7 @@ npm run dev
 - Gateway pointer: http://127.0.0.1:8000
 - Swagger: http://127.0.0.1:8000/docs
 
-The browser calls the gateway on port 8000 directly. Do not proxy `/chat` through Next.js. The console does not write `.env` and does not toggle memory, PII, or guardrails.
+The browser calls the gateway on port 8000 directly. Do not proxy `/chat` through Next.js. Provider keys stay in `.env`. Optional `GATEWAY_API_KEY` is pasted in the console (sessionStorage), never `NEXT_PUBLIC_*`. Settings can toggle MEMORY / PII / GUARD when that gateway key is set; embedder, Redis, and budgets still need `.env` and a restart.
 
 ## Providers
 
@@ -59,6 +59,8 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
 ## Docs
 
 - [Architecture](docs/architecture.md) — pipeline, modules, what owns completions
+- [Auth](docs/auth.md) — optional inbound `GATEWAY_API_KEY`
+- [OpenAI `/v1`](docs/openai.md) — SDK adapter over the same Router pipeline
 - [Reliability](docs/reliability.md) — Router retries, fallback allowlist, cache TTL, RPM/TPM, Redis
 - [Prompts](docs/prompts.md) — Langfuse / local named prompts and Router traces
 - [Budget](docs/budget.md) — tokens, USD, caps, Redis or file ledger
@@ -72,10 +74,13 @@ PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest
 - `GET /health` — process status, detected providers, reliability, prompts, budget, memory, PII, guardrails
 - `GET /providers` — providers inferred from env keys
 - `GET /models` — models for those providers
+- `GET /v1/models` — same catalog in OpenAI list shape
 - `GET /prompts` — local (and Langfuse, if configured) prompt names
 - `GET /budget` — today’s token/USD spend and configured caps
+- `GET /config` / `PATCH /config` — overlay flags for MEMORY / PII / GUARD (`PATCH` needs a configured `GATEWAY_API_KEY`)
 - `GET /memory` / `POST /memory` / `DELETE /memory/{id}` — Mem0 search, add, delete when `MEMORY=1`
 - `POST /chat` — `{ "model", "messages", "stream?", "prompt?", "user_id?", "conversation_id?", "agent_id?", "response_format?" }`. JSON by default; `stream: true` returns SSE
+- `POST /v1/chat/completions` — OpenAI envelope over the same pipeline; sidecars via `extra_body`
 
 ## Reliability
 

@@ -10,7 +10,7 @@ const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variabl
 
 export const metadata: Metadata = {
   title: "ReaLMM console",
-  description: "Playground client for the ReaLMM gateway. Keys stay in .env.",
+  description: "Playground client for the ReaLMM gateway. Provider keys stay in .env.",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

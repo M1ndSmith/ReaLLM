@@ -3,17 +3,18 @@
 import Link from "next/link";
 import { FormEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 
-import { fetchJson, formatDetail, gatewayUrl } from "@/lib/gateway";
-import { curlSnippet, pythonSnippet } from "@/lib/snippets";
-import type { ChatMessage, HealthResponse, ModelInfo, PromptListItem } from "@/lib/types";
+import { authHeaders, getGatewayKey, setGatewayKey } from "@/lib/auth";
+import { fetchJson, formatDetail, gatewayUrl, GatewayError } from "@/lib/gateway";
+import { curlSnippet, openaiSnippet, pythonSnippet } from "@/lib/snippets";
+import type { ChatMessage, ConfigLayers, ConfigResponse, HealthResponse, ModelInfo, PromptListItem } from "@/lib/types";
 
 const USER_ID = "local";
 const MODEL_KEY = "realmm.model";
 const CONV_KEY = "realmm.conversation_id";
 const INTRO =
-  "Keys live in .env. This page only picks a model. Leave Prompt on Messages only to skip named prompts.";
+  "Provider keys live in .env. This page picks a model. Paste GATEWAY_API_KEY if the gateway requires it. Leave Prompt on Messages only to skip named prompts.";
 
-type View = "play" | "connect";
+type View = "play" | "connect" | "settings";
 
 type LogItem =
   | { kind: "system" | "user" | "error"; text: string }
@@ -23,6 +24,14 @@ type Catalog = {
   health: HealthResponse | null;
   models: ModelInfo[];
   prompts: PromptListItem[];
+};
+
+const DEFAULT_LAYERS: ConfigLayers = {
+  memory: false,
+  pii: false,
+  guard: false,
+  guard_injection: true,
+  guard_content: true,
 };
 
 function conversationId(): string {
@@ -67,8 +76,13 @@ export function Console({ view }: { view: View }) {
   const [copied, setCopied] = useState<string | null>(null);
   const [messages, setMessages] = useState<ChatMessage[]>([]);
   const [log, setLog] = useState<LogItem[]>([{ kind: "system", text: INTRO }]);
+  const [gatewayKey, setGatewayKeyState] = useState("");
+  const [needsAuth, setNeedsAuth] = useState(false);
+  const [config, setConfig] = useState<ConfigResponse | null>(null);
+  const [toggleBusy, setToggleBusy] = useState<string | null>(null);
   const logRef = useRef<HTMLDivElement>(null);
   const sendDisabled = busy || !model;
+  const showKeyField = needsAuth || Boolean(gatewayKey);
 
   const load = useCallback(async () => {
     try {
@@ -78,12 +92,26 @@ export function Console({ view }: { view: View }) {
         fetchJson<{ prompts: PromptListItem[] }>("/prompts"),
       ]);
       const models = modelsBody.models || [];
+      setNeedsAuth(false);
       setCatalog({ health, models, prompts: promptsBody.prompts || [] });
       const stored = sessionStorage.getItem(MODEL_KEY);
       const next = models.some((item) => item.id === stored) ? stored : models[0]?.id || "";
       setModel(next || "");
+      try {
+        setConfig(await fetchJson<ConfigResponse>("/config"));
+      } catch {
+        setConfig(null);
+      }
     } catch (err) {
       setCatalog({ health: null, models: [], prompts: [] });
+      if (err instanceof GatewayError && err.status === 401) {
+        setNeedsAuth(true);
+        setLog((rows) => [
+          ...rows.filter((row) => row.kind !== "error"),
+          { kind: "error", text: err.message },
+        ]);
+        return;
+      }
       setLog((rows) => [
         ...rows.filter((row) => row.kind !== "error"),
         {
@@ -96,6 +124,10 @@ export function Console({ view }: { view: View }) {
       ]);
     }
   }, [gateway]);
+
+  useEffect(() => {
+    setGatewayKeyState(getGatewayKey());
+  }, []);
 
   useEffect(() => {
     void load();
@@ -127,6 +159,11 @@ export function Console({ view }: { view: View }) {
     setLog([{ kind: "system", text: INTRO }]);
   }
 
+  function saveKey() {
+    setGatewayKey(gatewayKey);
+    void load();
+  }
+
   async function onSend(event: FormEvent) {
     event.preventDefault();
     const content = draft.trim();
@@ -147,11 +184,12 @@ export function Console({ view }: { view: View }) {
       if (promptName) body.prompt = promptName;
       const res = await fetch(`${gateway}/chat`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: { "Content-Type": "application/json", ...authHeaders() },
         body: JSON.stringify(body),
       });
       if (!res.ok || !res.body) {
         const errBody = await res.json().catch(() => null);
+        if (res.status === 401) setNeedsAuth(true);
         throw new Error(formatDetail(errBody, `Chat failed (${res.status}).`));
       }
       const reader = res.body.getReader();
@@ -244,16 +282,57 @@ export function Console({ view }: { view: View }) {
     window.setTimeout(() => setCopied(null), 1600);
   }
 
-  const curl = curlSnippet(gateway, model || "your-model-id");
-  const python = pythonSnippet(gateway, model || "your-model-id");
+  async function toggleLayer(field: keyof ConfigLayers, value: boolean) {
+    setToggleBusy(field);
+    try {
+      const next = await fetchJson<ConfigResponse>("/config", {
+        method: "PATCH",
+        body: JSON.stringify({ layers: { [field]: value } }),
+      });
+      setConfig(next);
+      await load();
+    } catch (err) {
+      setLog((rows) => [
+        ...rows.filter((row) => row.kind !== "error"),
+        { kind: "error", text: err instanceof Error ? err.message : "Could not update layers." },
+      ]);
+    } finally {
+      setToggleBusy(null);
+    }
+  }
+
+  const authOn = Boolean(config?.auth_required || needsAuth);
+  const layers = config?.layers || DEFAULT_LAYERS;
+  const canPatch = Boolean(config?.auth_required) && !needsAuth;
+  const curl = curlSnippet(gateway, model || "your-model-id", authOn);
+  const python = pythonSnippet(gateway, model || "your-model-id", authOn);
+  const openai = openaiSnippet(gateway, model || "your-model-id");
 
   return (
     <div className="frame">
       <aside className="strip">
         <div className="brand">
           <h1>ReaLMM</h1>
-          <p>Keys live in .env. This page only picks a model.</p>
+          <p>Provider keys live in .env. Paste a gateway key only if this server requires it.</p>
         </div>
+        {showKeyField || view === "settings" ? (
+          <div className="picker">
+            <label className="label" htmlFor="gatewayKey">
+              Gateway key
+            </label>
+            <input
+              id="gatewayKey"
+              type="password"
+              autoComplete="off"
+              value={gatewayKey}
+              onChange={(e) => setGatewayKeyState(e.target.value)}
+              placeholder="GATEWAY_API_KEY"
+            />
+            <button className="ghost" type="button" onClick={saveKey}>
+              Use key
+            </button>
+          </div>
+        ) : null}
         <div className="bus">
           <div className="label">Providers</div>
           <div className="lamps" aria-live="polite">
@@ -277,7 +356,10 @@ export function Console({ view }: { view: View }) {
               </span>
             ))}
           </div>
-          <p className="hint">Sidecars come from .env. Edit the file and restart uvicorn. This page does not change them.</p>
+          <p className="hint">
+            Sidecar lamps are live state. Toggle MEMORY / PII / GUARD on Settings when a gateway key is set. Provider
+            keys, Redis, and budgets stay in .env.
+          </p>
         </div>
         <div className="picker">
           <label className="label" htmlFor="model">
@@ -314,8 +396,13 @@ export function Console({ view }: { view: View }) {
               New chat
             </button>
           </>
+        ) : view === "connect" ? (
+          <p className="hint">
+            Agents call POST /chat or POST /v1/chat/completions on {gateway}. A gateway key is inbound auth, not a
+            LiteLLM virtual key.
+          </p>
         ) : (
-          <p className="hint">Agents call the same POST /chat on {gateway}. Same host for every agent; change the JSON body.</p>
+          <p className="hint">Layer flags write data/runtime-flags.json. They do not rewrite .env secrets.</p>
         )}
       </aside>
       <main className="stage">
@@ -325,6 +412,9 @@ export function Console({ view }: { view: View }) {
           </Link>
           <Link href="/connect" aria-current={view === "connect" ? "page" : undefined}>
             Connect
+          </Link>
+          <Link href="/settings" aria-current={view === "settings" ? "page" : undefined}>
+            Settings
           </Link>
         </nav>
         {view === "play" ? (
@@ -360,11 +450,13 @@ export function Console({ view }: { view: View }) {
               </button>
             </form>
           </>
-        ) : (
+        ) : view === "connect" ? (
           <div className="snippets">
             <p className="hint">
               Copy a client for agents or workflows. This is not a new URL and not a virtual key. Optional{" "}
-              <code>response_format</code> is JSON on the request, not a control in this console.
+              <code>response_format</code> is JSON on the request, not a control in this console. Use{" "}
+              <code>/v1</code> when an OpenAI SDK needs <code>base_url</code>; native <code>/chat</code> keeps sidecar
+              fields in the body.
             </p>
             <section>
               <div className="snippet-head">
@@ -384,6 +476,51 @@ export function Console({ view }: { view: View }) {
               </div>
               <pre>{python}</pre>
             </section>
+            <section>
+              <div className="snippet-head">
+                <h2>OpenAI SDK</h2>
+                <button className="ghost" type="button" onClick={() => void copy("openai", openai)}>
+                  {copied === "openai" ? "Copied" : "Copy OpenAI"}
+                </button>
+              </div>
+              <pre>{openai}</pre>
+            </section>
+          </div>
+        ) : (
+          <div className="snippets">
+            <p className="hint">
+              {canPatch
+                ? "These flags apply on the next chat. Changing embedder, Presidio entities, Redis, budgets, or provider keys still needs .env and a restart."
+                : "Set GATEWAY_API_KEY in .env, restart uvicorn, and paste the key here to toggle layers from this page. .env remains valid without a gateway key."}
+            </p>
+            {(
+              [
+                ["memory", "MEMORY", layers.memory],
+                ["pii", "PII", layers.pii],
+                ["guard", "GUARD", layers.guard],
+                ["guard_injection", "GUARD_INJECTION", layers.guard_injection],
+                ["guard_content", "GUARD_CONTENT", layers.guard_content],
+              ] as const
+            ).map(([field, label, on]) => (
+              <section key={field} className="setting-row">
+                <div>
+                  <h2>{label}</h2>
+                  <p className="hint">
+                    {field === "guard_injection" || field === "guard_content"
+                      ? "Used when GUARD is on."
+                      : "Overlay flag. Not a provider key."}
+                  </p>
+                </div>
+                <button
+                  className={on ? "ghost on" : "ghost"}
+                  type="button"
+                  disabled={!canPatch || toggleBusy != null}
+                  onClick={() => void toggleLayer(field, !on)}
+                >
+                  {toggleBusy === field ? "Saving" : on ? "On" : "Off"}
+                </button>
+              </section>
+            ))}
           </div>
         )}
       </main>

@@ -77,4 +77,4 @@ Keep this Router as the only reliability layer. Extra Tenacity, a second Redis c
 
 - **Tenacity:** LiteLLM already retries with Tenacity inside `router.acompletion`. Wrapping `POST /chat` retries the whole Router call (retries + fallbacks) and can burst provider 429s. LiteLLM pins provider `max_retries=0` so attempts are not squared.
 - **Redis:** One `REDIS_URL` into the Router (and the budget ledger). A second cache library would use different keys than LiteLLM.
-- **FastAPI limiter:** Router RPM/TPM protects provider quota. An HTTP limiter only helps if this API is public. Two uncoordinated 429s (FastAPI vs Groq) make debugging worse. Add inbound limits later only with auth on a network-exposed server.
+- **FastAPI limiter:** Router RPM/TPM protects provider quota. An HTTP limiter only helps if this API is public. Two uncoordinated 429s (FastAPI vs Groq) make debugging worse. Inbound HTTP limiting stays deferred. Public-bind control is optional [`GATEWAY_API_KEY`](auth.md), not a second rate limiter.

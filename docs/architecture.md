@@ -1,6 +1,6 @@
 # Architecture
 
-ReaLMM is a FastAPI gateway in front of LLM providers. Completions always go through LiteLLM’s Router in [`app/reliability.py`](../app/reliability.py). The Next.js console in [`web/`](../web/) is a client of `POST /chat`, not the product. It talks to uvicorn directly (CORS). It does not write `.env`, show keys, or toggle MEMORY / PII / GUARD.
+ReaLMM is a FastAPI gateway in front of LLM providers. Completions always go through LiteLLM’s Router in [`app/reliability.py`](../app/reliability.py). The Next.js console in [`web/`](../web/) is a client of `POST /chat` and an operator UI for overlay layer flags. It talks to uvicorn directly (CORS). It does not write provider keys into `.env`. Optional inbound auth is [`GATEWAY_API_KEY`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md); native `/chat` stays.
 
 Providers are inferred from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`app/llm.py`](../app/llm.py)). `GET /models` is that catalog. The client sends a catalog `model` on `POST /chat`. Groq is not required for chat. Groq-shaped **defaults** (guard classifier ids, FastEmbed because Groq has no embeddings API, strict JSON on some Groq models) are in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
 
@@ -10,7 +10,7 @@ JSON [`complete_chat`](../app/llm.py) and SSE [`stream_chat`](../app/llm.py) use
 
 ```mermaid
 flowchart LR
-  req[POST /chat] --> prompts[Langfuse compile]
+  req[POST /chat or /v1] --> prompts[Langfuse compile]
   prompts --> piiIn[Presidio inbound]
   piiIn --> mem[Mem0 inject]
   mem --> guardIn[PromptGuard plus LlamaGuard]
@@ -34,12 +34,15 @@ flowchart LR
 7. `router.acompletion` (retries, allowlisted fallbacks, cache TTL, RPM/TPM)
 8. Presidio mask on the assistant reply when `PII=1`; Llama Guard 4 on outbound when `GUARD_CONTENT` is on; JSON Schema check when `response_format` is set; Langfuse OTEL callback on the Router when keys are set; record usage; Mem0 `add` in the background (extract errors do not fail the chat)
 
-Always on: catalog from env keys ([`app/llm.py`](../app/llm.py)), Router, `MAX_OUTPUT_TOKENS`, usage ledger. Optional: Langfuse keys, `MEMORY=1`, `PII=1`, `GUARD=1`, `REDIS_URL`, per-request `response_format`. Unset optional layers leave `POST /chat` with `model` and `messages` unchanged.
+Always on: catalog from env keys ([`app/llm.py`](../app/llm.py)), Router, `MAX_OUTPUT_TOKENS`, usage ledger. Optional: `GATEWAY_API_KEY`, Langfuse keys, `MEMORY=1`, `PII=1`, `GUARD=1`, `REDIS_URL`, per-request `response_format`. Unset optional layers leave `POST /chat` (and `/v1/chat/completions`) with `model` and `messages` unchanged. MEMORY / PII / GUARD can also be flipped at runtime via `PATCH /config` into `data/runtime-flags.json` when a gateway key is configured.
 
 ## Modules
 
-- [`app/main.py`](../app/main.py) — HTTP routes, SSE, health, CORS, gateway pointer
-- [`web/`](../web/) — Next.js console (playground, read-only health lamps, copy `POST /chat`)
+- [`app/main.py`](../app/main.py) — HTTP routes, SSE, health, CORS, gateway pointer, `/v1`, `/config`
+- [`web/`](../web/) — Next.js console (playground, Connect snippets, Settings overlay flags, health lamps)
+- [`app/auth.py`](../app/auth.py) — optional inbound `GATEWAY_API_KEY`
+- [`app/openai_compat.py`](../app/openai_compat.py) — OpenAI envelope over `complete_chat` / `stream_chat`
+- [`app/runtime_flags.py`](../app/runtime_flags.py) — `data/runtime-flags.json` overlay for MEMORY / PII / GUARD
 - [`app/schemas.py`](../app/schemas.py) — request and response models
 - [`app/llm.py`](../app/llm.py) — provider detection, catalog, `complete_chat` / `stream_chat`
 - [`app/reliability.py`](../app/reliability.py) — Router construction, fallbacks, cache, RPM/TPM
@@ -67,4 +70,4 @@ The Router owns every completion: user chat and Mem0 fact extraction (`RouterLLM
 
 `GET` / `POST` / `DELETE /memory` is the HTTP hook for later MCP / A2A clients. Those protocols are not implemented here.
 
-Knobs and failure modes live in [reliability](reliability.md), [prompts](prompts.md), [budget](budget.md), [memory](memory.md), [pii](pii.md), [guardrails](guardrails.md), and [structured](structured.md). Env examples are in [`.env.example`](../.env.example).
+Knobs and failure modes live in [reliability](reliability.md), [auth](auth.md), [openai](openai.md), [prompts](prompts.md), [budget](budget.md), [memory](memory.md), [pii](pii.md), [guardrails](guardrails.md), and [structured](structured.md). Env examples are in [`.env.example`](../.env.example).

@@ -120,23 +120,32 @@ body {
 
 select,
 textarea,
-button {
+button,
+input {
   font: inherit;
 }
 
-select {
+select,
+input[type="password"],
+input[type="text"] {
   width: 100%;
   appearance: none;
-  background: var(--ink)
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238BA4B7' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
-    no-repeat right 12px center;
+  background: var(--ink);
   color: var(--paper);
   border: 1px solid var(--line);
   border-radius: 12px;
+  padding: 12px;
+}
+
+select {
   padding: 12px 36px 12px 12px;
+  background: var(--ink)
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath fill='%238BA4B7' d='M1 1l5 5 5-5'/%3E%3C/svg%3E")
+    no-repeat right 12px center;
 }
 
 select:focus,
+input:focus,
 textarea:focus,
 button:focus-visible,
 a:focus-visible {
@@ -276,6 +285,33 @@ button.ghost {
   color: var(--paper);
   border: 1px solid var(--line);
   font-weight: 500;
+}
+
+button.ghost.on {
+  border-color: rgba(46, 196, 182, 0.45);
+  color: var(--signal);
+}
+
+.setting-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 16px;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.setting-row h2 {
+  margin: 0 0 4px;
+  font-size: 0.85rem;
+  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.setting-row button {
+  min-width: 5.5rem;
 }
 
 .snippets {

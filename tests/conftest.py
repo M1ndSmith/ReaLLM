@@ -42,8 +42,10 @@ def isolate_app(monkeypatch, tmp_path):
     import app.pii as pii
     import app.prompts as prompts
     import app.reliability as reliability
+    import app.runtime_flags as runtime_flags
 
     monkeypatch.setattr(budget, "_STATE_PATH", tmp_path / "budget-state.json")
+    monkeypatch.setattr(runtime_flags, "_FLAGS_PATH", tmp_path / "runtime-flags.json")
     budget._redis_client = None
     budget._redis_unavailable = False
     llm._models_cache = None
@@ -76,6 +78,7 @@ def isolate_app(monkeypatch, tmp_path):
     monkeypatch.delenv("GUARD_CONTENT_IGNORE", raising=False)
     monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
     monkeypatch.setenv("CONSOLE_URL", "http://localhost:3000")
+    monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
 
     monkeypatch.setattr(llm, "_infer_valid_provider_from_env_vars", lambda: ["groq", "openai"])
     monkeypatch.setattr(llm, "_fetch_openai_compat_models", lambda provider: list(_FETCH_IDS.get(provider, [])))

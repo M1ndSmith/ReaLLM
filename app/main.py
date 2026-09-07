@@ -2,15 +2,17 @@ from __future__ import annotations
 
 import json
 import os
+from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Query
 from fastapi.responses import HTMLResponse, StreamingResponse
 from litellm.exceptions import APIError, AuthenticationError, BadRequestError, RateLimitError
 from starlette.middleware.cors import CORSMiddleware
 
 from app import llm
+from app.auth import log_auth_status, require_configured_gateway_key, require_gateway_auth
 from app.budget import BudgetExceededError, InputTooLargeError, budget_status
 from app.guardrails import GuardBlockedError, GuardConfigError, assert_memory_write, guard_status
 from app.memory import (
@@ -20,6 +22,13 @@ from app.memory import (
     memory_enabled,
     memory_status,
     search_memories,
+)
+from app.openai_compat import (
+    completion_id,
+    now_ts,
+    sse_openai_chat,
+    to_chat_request,
+    wrap_chat_response,
 )
 from app.pii import (
     PiiConfigError,
@@ -31,15 +40,19 @@ from app.pii import (
 )
 from app.prompts import UnknownPromptError, list_prompts, prompts_enabled, prompts_source, tracing_enabled
 from app.reliability import reliability_status
+from app.runtime_flags import apply_layer_patch, apply_runtime_flags, config_payload
 from app.structured import SchemaError, normalize_response_format
 from app.schemas import (
     BudgetInfo,
     ChatRequest,
+    ConfigPatch,
+    ConfigResponse,
     HealthResponse,
     MemoryAddRequest,
     MemoryAddResponse,
     MemorySearchResponse,
     ModelsResponse,
+    OpenAIChatRequest,
     PromptsInfo,
     PromptsResponse,
     ProvidersResponse,
@@ -64,10 +77,18 @@ class EnvCORSMiddleware(CORSMiddleware):
         return origin in cors_origins()
 
 
+@asynccontextmanager
+async def lifespan(_app: FastAPI):
+    apply_runtime_flags()
+    log_auth_status()
+    yield
+
+
 app = FastAPI(
     title="ReaLMM",
     description="LiteLLM endpoints that detect providers from API keys. Select a model only.",
     version="0.1.0",
+    lifespan=lifespan,
 )
 app.add_middleware(
     EnvCORSMiddleware,
@@ -76,6 +97,8 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+api = APIRouter(dependencies=[Depends(require_gateway_auth)])
 
 
 def _pointer_page() -> str:
@@ -119,8 +142,8 @@ def _pointer_page() -> str:
   <body>
     <main>
       <h1>ReaLMM</h1>
-      <p>This process is the gateway. Completions go through <code>POST /chat</code>.</p>
-      <p>Open the Next.js console at <a href="{dest}">{dest}</a>. Keys stay in <code>.env</code>; the console does not write them.</p>
+      <p>This process is the gateway. Completions go through <code>POST /chat</code> or <code>POST /v1/chat/completions</code>.</p>
+      <p>Open the Next.js console at <a href="{dest}">{dest}</a>. Provider keys stay in <code>.env</code>. Optional <code>GATEWAY_API_KEY</code> is inbound auth, not a virtual key.</p>
       <p>API docs: <a href="/docs">/docs</a>.</p>
     </main>
   </body>
@@ -133,7 +156,45 @@ async def index() -> HTMLResponse:
     return HTMLResponse(_pointer_page())
 
 
-@app.get("/health", response_model=HealthResponse)
+def _as_http(exc: BaseException) -> HTTPException | None:
+    if isinstance(exc, llm.UnknownModelError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, UnknownPromptError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, InputTooLargeError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, BudgetExceededError):
+        return HTTPException(status_code=402, detail=str(exc))
+    if isinstance(exc, GuardBlockedError):
+        return HTTPException(status_code=400, detail=_guard_blocked_detail(exc))
+    if isinstance(exc, SchemaError):
+        detail: dict = {"error": str(exc)}
+        if exc.path:
+            detail["path"] = exc.path
+        return HTTPException(status_code=400, detail=detail)
+    if isinstance(exc, GuardConfigError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, PiiConfigError):
+        return HTTPException(status_code=503, detail=str(exc))
+    if isinstance(exc, AuthenticationError):
+        return HTTPException(status_code=401, detail=str(exc))
+    if isinstance(exc, RateLimitError):
+        return HTTPException(status_code=429, detail=str(exc))
+    if isinstance(exc, BadRequestError):
+        return HTTPException(status_code=400, detail=str(exc))
+    if isinstance(exc, APIError):
+        return HTTPException(status_code=502, detail=str(exc))
+    return None
+
+
+def _raise_chat(exc: BaseException) -> None:
+    mapped = _as_http(exc)
+    if mapped is not None:
+        raise mapped from exc
+    raise exc
+
+
+@api.get("/health", response_model=HealthResponse)
 async def health() -> HealthResponse:
     return HealthResponse(
         status="ok",
@@ -151,25 +212,39 @@ async def health() -> HealthResponse:
     )
 
 
-@app.get("/providers", response_model=ProvidersResponse)
+@api.get("/providers", response_model=ProvidersResponse)
 async def providers() -> ProvidersResponse:
     return ProvidersResponse(providers=llm.detected_providers())
 
 
-@app.get("/models", response_model=ModelsResponse)
+@api.get("/models", response_model=ModelsResponse)
 async def models() -> ModelsResponse:
     providers_found = llm.detected_providers()
     return ModelsResponse(providers=providers_found, models=llm.list_available_models())
 
 
-@app.get("/prompts", response_model=PromptsResponse)
+@api.get("/prompts", response_model=PromptsResponse)
 async def prompts() -> PromptsResponse:
     return PromptsResponse(prompts=list_prompts())
 
 
-@app.get("/budget", response_model=BudgetInfo)
+@api.get("/budget", response_model=BudgetInfo)
 async def budget() -> BudgetInfo:
     return budget_status()
+
+
+@api.get("/config", response_model=ConfigResponse)
+async def get_config() -> ConfigResponse:
+    return ConfigResponse.model_validate(config_payload())
+
+
+@api.patch("/config", response_model=ConfigResponse)
+async def patch_config(body: ConfigPatch) -> ConfigResponse:
+    require_configured_gateway_key()
+    layers = apply_layer_patch(body.layers.model_dump())
+    payload = config_payload()
+    payload["layers"] = layers
+    return ConfigResponse.model_validate(payload)
 
 
 def _require_memory() -> None:
@@ -186,7 +261,7 @@ def _guard_blocked_detail(exc: GuardBlockedError) -> dict:
     }
 
 
-@app.get("/memory", response_model=MemorySearchResponse)
+@api.get("/memory", response_model=MemorySearchResponse)
 async def memory_search(
     q: str = Query(..., min_length=1),
     user_id: str | None = None,
@@ -218,7 +293,7 @@ async def memory_search(
     return MemorySearchResponse(results=results)
 
 
-@app.post("/memory", response_model=MemoryAddResponse)
+@api.post("/memory", response_model=MemoryAddResponse)
 async def memory_add(request: MemoryAddRequest) -> MemoryAddResponse:
     _require_memory()
     try:
@@ -252,7 +327,7 @@ async def memory_add(request: MemoryAddRequest) -> MemoryAddResponse:
     return MemoryAddResponse(results=rows)
 
 
-@app.delete("/memory/{memory_id}")
+@api.delete("/memory/{memory_id}")
 async def memory_delete(memory_id: str) -> dict[str, str]:
     _require_memory()
     try:
@@ -264,7 +339,7 @@ async def memory_delete(memory_id: str) -> dict[str, str]:
     return {"status": "deleted"}
 
 
-@app.post("/chat")
+@api.post("/chat")
 async def chat(request: ChatRequest):
     try:
         fmt = normalize_response_format(request.response_format)
@@ -288,33 +363,51 @@ async def chat(request: ChatRequest):
             agent_id=request.agent_id,
             response_format=request.response_format,
         )
-    except llm.UnknownModelError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except UnknownPromptError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except InputTooLargeError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except BudgetExceededError as exc:
-        raise HTTPException(status_code=402, detail=str(exc)) from exc
-    except GuardBlockedError as exc:
-        raise HTTPException(status_code=400, detail=_guard_blocked_detail(exc)) from exc
-    except SchemaError as exc:
-        detail: dict = {"error": str(exc)}
-        if exc.path:
-            detail["path"] = exc.path
-        raise HTTPException(status_code=400, detail=detail) from exc
-    except GuardConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except PiiConfigError as exc:
-        raise HTTPException(status_code=503, detail=str(exc)) from exc
-    except AuthenticationError as exc:
-        raise HTTPException(status_code=401, detail=str(exc)) from exc
-    except RateLimitError as exc:
-        raise HTTPException(status_code=429, detail=str(exc)) from exc
-    except BadRequestError as exc:
-        raise HTTPException(status_code=400, detail=str(exc)) from exc
-    except APIError as exc:
-        raise HTTPException(status_code=502, detail=str(exc)) from exc
+    except Exception as exc:
+        _raise_chat(exc)
+
+
+@api.get("/v1/models")
+async def openai_models() -> dict:
+    return {
+        "object": "list",
+        "data": [
+            {"id": item.id, "object": "model", "owned_by": item.provider}
+            for item in llm.list_available_models()
+        ],
+    }
+
+
+@api.post("/v1/chat/completions")
+async def openai_chat(body: OpenAIChatRequest):
+    request = to_chat_request(body)
+    chat_id = completion_id()
+    created = now_ts()
+    try:
+        fmt = normalize_response_format(request.response_format)
+        if request.stream:
+            if fmt is not None:
+                raise SchemaError("Structured output cannot be streamed. Omit stream or response_format.")
+            return StreamingResponse(
+                sse_openai_chat(request, chat_id=chat_id, created=created),
+                media_type="text/event-stream",
+                headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"},
+            )
+        result = await llm.complete_chat(
+            request.model,
+            request.messages,
+            prompt=request.prompt,
+            prompt_label=request.prompt_label,
+            prompt_version=request.prompt_version,
+            variables=request.variables,
+            user_id=request.user_id,
+            conversation_id=request.conversation_id,
+            agent_id=request.agent_id,
+            response_format=request.response_format,
+        )
+        return wrap_chat_response(result, chat_id=chat_id, created=created)
+    except Exception as exc:
+        _raise_chat(exc)
 
 
 async def _sse_chat(request: ChatRequest):
@@ -410,3 +503,6 @@ async def _sse_chat(request: ChatRequest):
 
 def _sse(payload: dict) -> str:
     return f"data: {json.dumps(payload)}\n\n"
+
+
+app.include_router(api)

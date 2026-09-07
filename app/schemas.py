@@ -1,6 +1,6 @@
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class ChatMessage(BaseModel):
@@ -20,6 +20,41 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = None
     agent_id: str | None = None
     response_format: dict | None = None
+
+
+class OpenAIChatRequest(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+
+    model: str = Field(..., min_length=1)
+    messages: list[ChatMessage] = Field(..., min_length=1)
+    stream: bool = False
+    user: str | None = None
+    prompt: str | None = None
+    prompt_label: str | None = None
+    prompt_version: int | None = None
+    variables: dict[str, str] | None = None
+    user_id: str | None = None
+    conversation_id: str | None = None
+    agent_id: str | None = None
+    response_format: dict | None = None
+
+
+class ConfigLayers(BaseModel):
+    memory: bool | None = None
+    pii: bool | None = None
+    guard: bool | None = None
+    guard_injection: bool | None = None
+    guard_content: bool | None = None
+
+
+class ConfigPatch(BaseModel):
+    layers: ConfigLayers = Field(default_factory=ConfigLayers)
+
+
+class ConfigResponse(BaseModel):
+    auth_required: bool
+    layers: ConfigLayers
+    restart_for: list[str]
 
 
 class ModelInfo(BaseModel):

@@ -37,5 +37,19 @@ export type HealthResponse = {
   } | null;
   memory: { enabled: boolean } | null;
   pii: { enabled: boolean } | null;
-  guard: { enabled: boolean } | null;
+  guard: { enabled: boolean; injection?: boolean; content?: boolean } | null;
+};
+
+export type ConfigLayers = {
+  memory: boolean;
+  pii: boolean;
+  guard: boolean;
+  guard_injection: boolean;
+  guard_content: boolean;
+};
+
+export type ConfigResponse = {
+  auth_required: boolean;
+  layers: ConfigLayers;
+  restart_for: string[];
 };
