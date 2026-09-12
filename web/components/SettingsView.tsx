@@ -1,5 +1,6 @@
 "use client";
 
+import { AdminKeysPanel } from "@/components/AdminKeysPanel";
 import type { ConfigLayers, ConfigResponse } from "@/lib/types";
 
 const DEFAULT_LAYERS: ConfigLayers = {
@@ -15,9 +16,11 @@ type Props = {
   needsAuth: boolean;
   toggleBusy: string | null;
   onToggle: (field: keyof ConfigLayers, value: boolean) => void;
+  canAdmin: boolean;
+  onAdminError: (message: string) => void;
 };
 
-export function SettingsView({ config, needsAuth, toggleBusy, onToggle }: Props) {
+export function SettingsView({ config, needsAuth, toggleBusy, onToggle, canAdmin, onAdminError }: Props) {
   const layers = config?.layers || DEFAULT_LAYERS;
   const canPatch = Boolean(config?.auth_required) && !needsAuth;
   return (
@@ -55,6 +58,7 @@ export function SettingsView({ config, needsAuth, toggleBusy, onToggle }: Props)
           </button>
         </section>
       ))}
+      <AdminKeysPanel enabled={canAdmin} onError={onAdminError} />
     </div>
   );
 }

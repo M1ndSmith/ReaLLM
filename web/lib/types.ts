@@ -23,6 +23,7 @@ export type HealthResponse = {
     cache: boolean;
     cache_ttl: number | null;
     redis: boolean;
+    redis_mode?: string | null;
     fallback_policy: string | null;
     fallbacks: string[];
     routing_strategy: string;
@@ -50,6 +51,46 @@ export type ConfigLayers = {
 
 export type ConfigResponse = {
   auth_required: boolean;
+  identity?: {
+    id: string;
+    scopes: string[];
+    label?: string | null;
+    created_at?: string | null;
+    revoked_at?: string | null;
+    last_used_at?: string | null;
+    quotas?: {
+      daily_token_budget?: number | null;
+      daily_usd_budget?: number | null;
+      rpm?: number | null;
+    } | null;
+  } | null;
   layers: ConfigLayers;
   restart_for: string[];
+};
+
+export type ReadyResponse = {
+  ready: boolean;
+  checks?: Record<string, boolean>;
+  redis_mode?: string | null;
+};
+
+export type IdentityQuotas = {
+  daily_token_budget?: number | null;
+  daily_usd_budget?: number | null;
+  rpm?: number | null;
+};
+
+export type IdentityPublic = {
+  id: string;
+  scopes: string[];
+  label?: string | null;
+  created_at?: string | null;
+  revoked_at?: string | null;
+  last_used_at?: string | null;
+  quotas?: IdentityQuotas | null;
+};
+
+export type GatewayKeyCreated = {
+  key: IdentityPublic;
+  secret: string;
 };

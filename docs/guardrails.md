@@ -10,7 +10,7 @@ Leave `GUARD` unset (or `GUARD=0`). `POST /chat` with only `model` and `messages
 
 ## On
 
-Set `GUARD=1`. Chat completions can use any keyed provider. The default classifiers are Groq-hosted Meta models; `GUARD=1` needs those ids in `GET /models` unless you override them.
+Set `GUARD=1`. Chat completions can use any keyed provider. The default classifiers are Groq-hosted Meta models, and `GUARD=1` needs those ids in `GET /models` unless you override them.
 
 Both scanners run unless you turn one off. If both are off, chat returns `503`.
 
@@ -26,9 +26,9 @@ Knobs:
 - `GUARD_INJECTION_MODEL` / `GUARD_CONTENT_MODEL` catalog overrides
 - `GUARD_CONTENT_IGNORE` comma-separated MLCommons codes (`S6,S7`) that Llama Guard may return without blocking. Unset = block every `S*`. Unknown codes → `503`.
 
-Classifier calls use the Router (`caching=False`, no chat fallbacks). Usage is recorded. Langfuse tags them `guard-injection` / `guard-content` when tracing is on. A failed guard never falls back to `gpt-oss`.
+Classifier calls use the Router (`caching=False`, no chat fallbacks). Usage is recorded. Langfuse tags them `guard-injection` / `guard-content` when tracing is on. A failed guard does not fall back to `gpt-oss`.
 
-Blocked requests return `400` with `scanner`, `categories` (`S*` codes), and `category_names`. The attack text is not returned. Llama Guard does not emit confidence scores; this API does not invent them. Unknown classifier output is `503`, not treated as safe. A bare `unsafe` with no codes still blocks even if an ignore list is set.
+Blocked requests return `400` with `scanner`, `categories` (`S*` codes), and `category_names`. The attack text is not returned. Llama Guard does not emit confidence scores, and this API does not invent them. Unknown classifier output is `503`, not treated as safe. A bare `unsafe` with no codes still blocks even if an ignore list is set.
 
 ## Content categories (MLCommons)
 
@@ -55,7 +55,7 @@ Ignore is a post-filter on the codes Groq returns. HuggingFace `excluded_categor
 
 JSON `POST /chat` includes `guard_passed: true` when the layer ran and did not block. The first SSE event includes the same field.
 
-When `GUARD_CONTENT` is on and `stream: true`, raw token deltas are not sent. The gateway assembles the assistant text, scans it, then emits redacted-or-clean content. Combined with `PII=1`, output is still buffered once.
+When `GUARD_CONTENT` is on and `stream: true`, raw token deltas are not sent. The gateway assembles the assistant text, scans it, then emits redacted-or-clean content. With `PII=1`, output is still buffered once.
 
 ## Memory HTTP
 
@@ -71,4 +71,18 @@ When `GUARD_CONTENT` is on, `POST /memory` is scanned after Presidio and before 
 
 ## Out of scope
 
-Keep the Router as the only completion path, including these classifiers. OpenAI Moderation / Azure Content Safety / Perspective, NeMo, Guardrails AI `guard()` reask, Lakera, archived LLM Guard, LiteLLM Proxy `guardrails:` YAML, a second judge model, local torch Prompt Guard, and asking the chat model "is this safe?" are out of this process. `POST /chat` is text; there is no image moderation.
+Keep the Router as the only completion path, including these classifiers.
+
+Not implemented in this process:
+
+- OpenAI Moderation / Azure Content Safety / Perspective
+- NeMo
+- Guardrails AI `guard()` reask
+- Lakera
+- archived LLM Guard
+- LiteLLM Proxy `guardrails:` YAML
+- a second judge model
+- local torch Prompt Guard
+- asking the chat model "is this safe?"
+
+`POST /chat` is text-only. There is no image moderation.

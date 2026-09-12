@@ -1,6 +1,8 @@
 from __future__ import annotations
 
-from collections.abc import AsyncIterator
+import logging
+from collections.abc import AsyncIterator, Callable
+from contextlib import contextmanager
 
 from app.application.events import (
     StreamDelta,
@@ -10,19 +12,32 @@ from app.application.events import (
     StreamStarted,
     StreamUsage,
 )
-from app.application.models import ChatCommand, PromptMeta, RuntimeFlags
+from app.application.models import ChatCommand, IdentityQuotas, PromptMeta, RuntimeFlags
 from app.application.ports import (
     CompletionBackend,
     FlagStorePort,
     GuardPort,
+    IdentityQuotaPort,
     MemoryPort,
     ModelCatalogPort,
     PiiPort,
     PromptPort,
+    StageClock,
     UsageBudgetPort,
 )
 from app.schemas import ChatMessage, ChatResponse, UsageInfo
 from app.structured import SchemaError, normalize_response_format, validate_output
+
+logger = logging.getLogger(__name__)
+
+
+class _NullClock:
+    @contextmanager
+    def stage(self, name: str):
+        yield
+
+    def snapshot(self) -> dict[str, float]:
+        return {}
 
 
 def _usage_from_response(response: object) -> UsageInfo | None:
@@ -128,6 +143,8 @@ class ChatService:
         guards: GuardPort,
         budget: UsageBudgetPort,
         backend: CompletionBackend,
+        identities: IdentityQuotaPort | None = None,
+        telemetry_factory: Callable[[], StageClock] | None = None,
     ):
         self._flags = flags
         self._catalog = catalog
@@ -137,6 +154,63 @@ class ChatService:
         self._guards = guards
         self._budget = budget
         self._backend = backend
+        self._identities = identities
+        self._telemetry_factory = telemetry_factory
+
+    def _clock(self) -> StageClock:
+        if self._telemetry_factory is None:
+            return _NullClock()
+        return self._telemetry_factory()
+
+    def _quotas_for(self, identity_id: str | None) -> IdentityQuotas:
+        if self._identities is None:
+            return IdentityQuotas()
+        return self._identities.quotas_for(identity_id)
+
+    def _output_token_cap(self, command: ChatCommand) -> int:
+        cap = self._budget.max_output_tokens()
+        if command.max_tokens is None:
+            return cap
+        try:
+            requested = int(command.max_tokens)
+        except (TypeError, ValueError):
+            return cap
+        return max(1, min(requested, cap))
+
+    def _completion_kwargs(
+        self,
+        command: ChatCommand,
+        *,
+        resolved: str,
+        outgoing: list[ChatMessage],
+        prompt_meta: PromptMeta | None,
+        stream: bool,
+    ) -> dict:
+        call_kwargs: dict = {
+            "model": resolved,
+            "messages": [message.model_dump() for message in outgoing],
+            "max_tokens": self._output_token_cap(command),
+            "metadata": _completion_metadata(
+                user_id=command.user_id,
+                conversation_id=command.conversation_id,
+                agent_id=command.agent_id,
+                prompt_meta=prompt_meta,
+            ),
+        }
+        fallbacks = self._backend.chat_fallback_ids(resolved)
+        if fallbacks:
+            call_kwargs["fallbacks"] = fallbacks
+        if command.temperature is not None:
+            call_kwargs["temperature"] = command.temperature
+        if command.tools:
+            call_kwargs["tools"] = command.tools
+        if command.tool_choice is not None:
+            call_kwargs["tool_choice"] = command.tool_choice
+        if stream:
+            call_kwargs["stream"] = True
+            call_kwargs["caching"] = False
+            call_kwargs["stream_options"] = {"include_usage": True}
+        return call_kwargs
 
     async def _prepare_outgoing(self, command: ChatCommand, flags: RuntimeFlags):
         outgoing, prompt_meta = self._prompts.prepare_messages(
@@ -165,7 +239,14 @@ class ChatService:
             await self._guards.assert_inbound(outgoing, flags)
         resolved = self._catalog.resolve_model(command.model)
         estimated = self._budget.token_count(resolved, outgoing)
-        self._budget.assert_allowed(resolved, estimated)
+        quotas = self._quotas_for(command.identity_id)
+        self._budget.assert_allowed(
+            resolved,
+            estimated,
+            identity_id=command.identity_id,
+            quotas=quotas,
+        )
+        self._budget.assert_rpm(command.identity_id, quotas.rpm_limit)
         return (
             outgoing,
             prompt_meta,
@@ -178,61 +259,68 @@ class ChatService:
         )
 
     async def complete(self, command: ChatCommand) -> ChatResponse:
+        clock = self._clock()
         flags = self._flags.snapshot()
         fmt = normalize_response_format(command.response_format)
 
-        (
-            outgoing,
-            prompt_meta,
-            memories_used,
-            resolved,
-            estimated,
-            pii_redacted,
-            pii_entities,
-            guard_passed,
-        ) = await self._prepare_outgoing(command, flags)
-        fallbacks = self._backend.chat_fallback_ids(resolved)
-        call_kwargs: dict = {
-            "model": resolved,
-            "messages": [message.model_dump() for message in outgoing],
-            "max_tokens": self._budget.max_output_tokens(),
-            "metadata": _completion_metadata(
+        with clock.stage("preflight"):
+            (
+                outgoing,
+                prompt_meta,
+                memories_used,
+                resolved,
+                estimated,
+                pii_redacted,
+                pii_entities,
+                guard_passed,
+            ) = await self._prepare_outgoing(command, flags)
+        call_kwargs = self._completion_kwargs(
+            command,
+            resolved=resolved,
+            outgoing=outgoing,
+            prompt_meta=prompt_meta,
+            stream=False,
+        )
+        if fmt is not None:
+            call_kwargs["response_format"] = fmt
+        with clock.stage("provider"):
+            response = await self._backend.acompletion(**call_kwargs)
+        with clock.stage("postprocess"):
+            choice = response.choices[0]
+            content = choice.message.content or ""
+            served = _served_model(response, resolved)
+            used_fallback = self._catalog.fallback_from(resolved, served)
+            reported = served if used_fallback else resolved
+            cached = _cache_hit(response)
+            usage = self._budget.attach_cost(
+                _usage_from_response(response), self._budget.completion_usd(response, reported)
+            )
+            tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
+            self._budget.record_usage(
+                tokens=tokens,
+                usd=usage.cost_usd if usage else None,
+                cached=cached,
+                identity_id=command.identity_id,
+            )
+            if pii_redacted:
+                content, found = await self._pii.redact_text(content)
+                pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
+            if guard_passed:
+                await self._guards.assert_outbound(content, flags)
+            if fmt is not None:
+                validate_output(content, fmt)
+            self._memory.schedule_record(
+                outgoing,
+                content,
+                flags,
                 user_id=command.user_id,
                 conversation_id=command.conversation_id,
                 agent_id=command.agent_id,
-                prompt_meta=prompt_meta,
-            ),
-        }
-        if fallbacks:
-            call_kwargs["fallbacks"] = fallbacks
-        if fmt is not None:
-            call_kwargs["response_format"] = fmt
-        response = await self._backend.acompletion(**call_kwargs)
-        choice = response.choices[0]
-        content = choice.message.content or ""
-        served = _served_model(response, resolved)
-        used_fallback = self._catalog.fallback_from(resolved, served)
-        reported = served if used_fallback else resolved
-        cached = _cache_hit(response)
-        usage = self._budget.attach_cost(
-            _usage_from_response(response), self._budget.completion_usd(response, reported)
-        )
-        tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
-        self._budget.record_usage(tokens=tokens, usd=usage.cost_usd if usage else None, cached=cached)
-        if pii_redacted:
-            content, found = await self._pii.redact_text(content)
-            pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
-        if guard_passed:
-            await self._guards.assert_outbound(content, flags)
-        if fmt is not None:
-            validate_output(content, fmt)
-        self._memory.schedule_record(
-            outgoing,
-            content,
-            flags,
-            user_id=command.user_id,
-            conversation_id=command.conversation_id,
-            agent_id=command.agent_id,
+            )
+        logger.info(
+            "chat complete stages_ms=%s identity=%s",
+            clock.snapshot(),
+            command.identity_id or "-",
         )
         return ChatResponse(
             model=reported,
@@ -256,17 +344,19 @@ class ChatService:
             normalize_response_format(command.response_format)
             raise SchemaError("Structured output cannot be streamed. Omit stream or response_format.")
 
+        clock = self._clock()
         flags = self._flags.snapshot()
-        (
-            outgoing,
-            prompt_meta,
-            memories_used,
-            resolved,
-            estimated,
-            pii_redacted,
-            pii_entities,
-            guard_passed,
-        ) = await self._prepare_outgoing(command, flags)
+        with clock.stage("preflight"):
+            (
+                outgoing,
+                prompt_meta,
+                memories_used,
+                resolved,
+                estimated,
+                pii_redacted,
+                pii_entities,
+                guard_passed,
+            ) = await self._prepare_outgoing(command, flags)
         yield StreamStarted(
             model=resolved,
             provider=self._catalog.provider_for_model(resolved),
@@ -276,71 +366,73 @@ class ChatService:
             pii_entities=pii_entities,
             guard_passed=guard_passed,
         )
-        fallbacks = self._backend.chat_fallback_ids(resolved)
-        call_kwargs: dict = {
-            "model": resolved,
-            "messages": [message.model_dump() for message in outgoing],
-            "stream": True,
-            "caching": False,
-            "max_tokens": self._budget.max_output_tokens(),
-            "stream_options": {"include_usage": True},
-            "metadata": _completion_metadata(
-                user_id=command.user_id,
-                conversation_id=command.conversation_id,
-                agent_id=command.agent_id,
-                prompt_meta=prompt_meta,
-            ),
-        }
-        if fallbacks:
-            call_kwargs["fallbacks"] = fallbacks
-        stream = await self._backend.acompletion(**call_kwargs)
+        call_kwargs = self._completion_kwargs(
+            command,
+            resolved=resolved,
+            outgoing=outgoing,
+            prompt_meta=prompt_meta,
+            stream=True,
+        )
         served = resolved
         assembled: list[str] = []
         usage = None
         buffer_output = bool(pii_redacted) or bool(guard_passed and self._guards.content_enabled(flags))
-        async for chunk in stream:
-            chunk_model = getattr(chunk, "model", None)
-            if isinstance(chunk_model, str) and chunk_model:
-                served = _served_model(chunk, resolved)
-            delta = _chunk_delta(chunk)
-            if delta:
-                assembled.append(delta)
-            chunk_usage = _usage_from_response(chunk)
-            if chunk_usage is not None:
-                usage = chunk_usage
-            if not buffer_output and delta:
-                yield StreamDelta(content=delta)
-        raw_assistant = "".join(assembled)
-        if usage is None:
-            usage = self._budget.usage_from_counts(
-                served, estimated, self._budget.token_count_text(served, raw_assistant)
+        with clock.stage("provider"):
+            stream = await self._backend.acompletion(**call_kwargs)
+            async for chunk in stream:
+                chunk_model = getattr(chunk, "model", None)
+                if isinstance(chunk_model, str) and chunk_model:
+                    served = _served_model(chunk, resolved)
+                delta = _chunk_delta(chunk)
+                if delta:
+                    assembled.append(delta)
+                chunk_usage = _usage_from_response(chunk)
+                if chunk_usage is not None:
+                    usage = chunk_usage
+                if not buffer_output and delta:
+                    yield StreamDelta(content=delta)
+        with clock.stage("postprocess"):
+            raw_assistant = "".join(assembled)
+            if usage is None:
+                usage = self._budget.usage_from_counts(
+                    served, estimated, self._budget.token_count_text(served, raw_assistant)
+                )
+            elif usage.cost_usd is None:
+                completion_tokens = usage.completion_tokens
+                if completion_tokens is None:
+                    completion_tokens = self._budget.token_count_text(served, raw_assistant)
+                prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
+                usage = self._budget.usage_from_counts(served, prompt_tokens, completion_tokens)
+            tokens = usage.total_tokens if usage.total_tokens is not None else estimated
+            self._budget.record_usage(
+                tokens=tokens,
+                usd=usage.cost_usd,
+                cached=False,
+                identity_id=command.identity_id,
             )
-        elif usage.cost_usd is None:
-            completion_tokens = usage.completion_tokens
-            if completion_tokens is None:
-                completion_tokens = self._budget.token_count_text(served, raw_assistant)
-            prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
-            usage = self._budget.usage_from_counts(served, prompt_tokens, completion_tokens)
-        tokens = usage.total_tokens if usage.total_tokens is not None else estimated
-        self._budget.record_usage(tokens=tokens, usd=usage.cost_usd, cached=False)
-        assistant = raw_assistant
-        if pii_redacted:
-            assistant, found = await self._pii.redact_text(raw_assistant)
-            pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
-        if guard_passed:
-            await self._guards.assert_outbound(assistant, flags)
-        if buffer_output and assistant:
-            yield StreamDelta(content=assistant)
-        self._memory.schedule_record(
-            outgoing,
-            assistant,
-            flags,
-            user_id=command.user_id,
-            conversation_id=command.conversation_id,
-            agent_id=command.agent_id,
+            assistant = raw_assistant
+            if pii_redacted:
+                assistant, found = await self._pii.redact_text(raw_assistant)
+                pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
+            if guard_passed:
+                await self._guards.assert_outbound(assistant, flags)
+            if buffer_output and assistant:
+                yield StreamDelta(content=assistant)
+            self._memory.schedule_record(
+                outgoing,
+                assistant,
+                flags,
+                user_id=command.user_id,
+                conversation_id=command.conversation_id,
+                agent_id=command.agent_id,
+            )
+            used_fallback = self._catalog.fallback_from(resolved, served)
+            reported = served if used_fallback else resolved
+        logger.info(
+            "chat stream stages_ms=%s identity=%s",
+            clock.snapshot(),
+            command.identity_id or "-",
         )
-        used_fallback = self._catalog.fallback_from(resolved, served)
-        reported = served if used_fallback else resolved
         if used_fallback or served != resolved:
             yield StreamFallback(
                 model=reported,

@@ -57,6 +57,7 @@ def isolate_env(monkeypatch, tmp_path):
     monkeypatch.delenv("DAILY_TOKEN_BUDGET", raising=False)
     monkeypatch.delenv("DAILY_USD_BUDGET", raising=False)
     monkeypatch.delenv("MAX_INPUT_TOKENS", raising=False)
+    monkeypatch.delenv("MAX_OUTPUT_TOKENS", raising=False)
     monkeypatch.delenv("GROQ_TPM", raising=False)
     monkeypatch.delenv("OPENAI_TPM", raising=False)
     monkeypatch.delenv("DEFAULT_TPM", raising=False)
@@ -71,10 +72,14 @@ def isolate_env(monkeypatch, tmp_path):
     monkeypatch.setenv("CORS_ORIGINS", "http://localhost:3000,http://127.0.0.1:3000")
     monkeypatch.setenv("CONSOLE_URL", "http://localhost:3000")
     monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
+    monkeypatch.setenv("GATEWAY_ALLOW_OPEN", "1")
+    monkeypatch.delenv("GATEWAY_KEY_PEPPER", raising=False)
     monkeypatch.delenv("LANGFUSE_PUBLIC_KEY", raising=False)
     monkeypatch.delenv("LANGFUSE_SECRET_KEY", raising=False)
     monkeypatch.delenv("WEB_CONCURRENCY", raising=False)
     monkeypatch.delenv("UVICORN_WORKERS", raising=False)
+    monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
+    monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
 
     monkeypatch.setattr(catalog_mod, "_infer_valid_provider_from_env_vars", lambda: ["groq", "openai"])
 

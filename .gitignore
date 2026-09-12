@@ -15,4 +15,7 @@ data/
 web/node_modules/
 web/.next/
 web/.env.local
-web/.env*.localfuture stuff/
+web/.env*.local
+future stuff/
+
+env/

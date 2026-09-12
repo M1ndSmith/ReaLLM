@@ -72,8 +72,11 @@ class Recorder:
             cost_usd=cost,
         )
 
-    def assert_allowed(self, model, estimated):
+    def assert_allowed(self, model, estimated, **_k):
         self.calls.append("budget_assert")
+
+    def assert_rpm(self, identity_id, rpm_limit):
+        self.calls.append("budget_rpm")
 
     def max_output_tokens(self):
         return 2048
@@ -137,6 +140,7 @@ def test_complete_pipeline_stage_order():
         "catalog",
         "budget",
         "budget_assert",
+        "budget_rpm",
         "router",
         "usage",
         "pii_out",

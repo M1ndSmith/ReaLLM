@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends, HTTPException, Query
 
-from app.api.dependencies import get_runtime
+from app.api.dependencies import get_runtime, require_scopes
 from app.api.errors import raise_chat
 from app.application.errors import MemoryConfigError
 from app.container import GatewayRuntime
@@ -16,7 +16,7 @@ def _require_memory(runtime: GatewayRuntime) -> None:
         raise HTTPException(status_code=503, detail="Memory is disabled. Set MEMORY=1.")
 
 
-@router.get("/memory", response_model=MemorySearchResponse)
+@router.get("/memory", response_model=MemorySearchResponse, dependencies=[Depends(require_scopes("read", "chat"))])
 async def memory_search(
     q: str = Query(..., min_length=1),
     user_id: str | None = None,
@@ -45,7 +45,7 @@ async def memory_search(
     return MemorySearchResponse(results=results)
 
 
-@router.post("/memory", response_model=MemoryAddResponse)
+@router.post("/memory", response_model=MemoryAddResponse, dependencies=[Depends(require_scopes("chat"))])
 async def memory_add(
     request: MemoryAddRequest,
     runtime: GatewayRuntime = Depends(get_runtime),
@@ -77,7 +77,7 @@ async def memory_add(
     return MemoryAddResponse(results=rows)
 
 
-@router.delete("/memory/{memory_id}")
+@router.delete("/memory/{memory_id}", dependencies=[Depends(require_scopes("chat"))])
 async def memory_delete(memory_id: str, runtime: GatewayRuntime = Depends(get_runtime)) -> dict[str, str]:
     _require_memory(runtime)
     try:

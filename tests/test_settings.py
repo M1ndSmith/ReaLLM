@@ -65,6 +65,14 @@ def test_provider_keys_remain_in_environ(monkeypatch):
     assert os.getenv("TOGETHERAI_API_KEY") == "together-secret"
 
 
+def test_allow_open_defaults_off(monkeypatch):
+    monkeypatch.delenv("GATEWAY_ALLOW_OPEN", raising=False)
+    settings = GatewaySettings()
+    assert settings.allow_open_on() is False
+    monkeypatch.setenv("GATEWAY_ALLOW_OPEN", "1")
+    assert GatewaySettings().allow_open_on() is True
+
+
 def test_memory_embedder_validated(monkeypatch):
     monkeypatch.setenv("MEMORY_EMBEDDER", "nope")
     with pytest.raises(ValidationError):

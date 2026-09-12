@@ -71,6 +71,25 @@ def test_list_available_models_uses_compat_ids(tmp_path):
     assert again == models
 
 
+def test_expired_catalog_serves_stale_without_blocking(monkeypatch):
+    import time
+
+    catalog = ProviderCatalog(GatewaySettings())
+    stale = [ModelInfo(id="stale/x", provider="stale")]
+    catalog._cache = (time.monotonic() - 120.0, stale)
+
+    def slow_models(self, provider: str):
+        time.sleep(0.2)
+        return ["live"]
+
+    monkeypatch.setattr(ProviderCatalog, "_models_for_provider", slow_models)
+    started = time.monotonic()
+    got = catalog.list_available_models()
+    elapsed = time.monotonic() - started
+    assert [item.id for item in got] == ["stale/x"]
+    assert elapsed < 0.1
+
+
 def test_fetch_compat_models_handles_errors(monkeypatch):
     from tests.conftest import ORIGINAL_FETCH
 

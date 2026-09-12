@@ -9,9 +9,13 @@ from app.infrastructure.budget import BudgetRuntime
 from app.infrastructure.catalog import ProviderCatalog
 from app.infrastructure.flags import RuntimeFlagStore
 from app.infrastructure.guards import GuardService
+from app.infrastructure.identities import GatewayIdentityStore
+from app.infrastructure.logging_config import configure_logging
 from app.infrastructure.memory import MemoryRuntime
+from app.infrastructure.metrics import MetricsRuntime
 from app.infrastructure.pii import PiiRuntime
 from app.infrastructure.prompts import PromptRepository
+from app.infrastructure.redis_health import RedisHealth
 from app.infrastructure.router import LiteLLMRouterRuntime
 from app.settings import GatewaySettings
 
@@ -29,24 +33,40 @@ class GatewayRuntime:
     memory: MemoryRuntime
     pii: PiiRuntime
     guards: GuardService
+    identities: GatewayIdentityStore
+    metrics: MetricsRuntime
+    redis_health: RedisHealth
     chat: ChatService
 
     async def start(self) -> None:
+        configure_logging(self.settings)
         self.flags.load()
-        if self.settings.auth_required():
+        auth_on = self.identities.auth_enabled()
+        if auth_on:
+            if not self.settings.allow_open_on() and not self.settings.gateway_key_pepper_value():
+                raise RuntimeError(
+                    "GATEWAY_KEY_PEPPER is required unless GATEWAY_ALLOW_OPEN=1. "
+                    "The published Compose path hashes issued keys with this pepper."
+                )
             logger.info("gateway auth: on")
-        else:
+        elif self.settings.allow_open_on():
             logger.warning(
-                "gateway auth: off; anyone who can reach this port can call the API. "
-                "Compose publishes 8000:8000 — set GATEWAY_API_KEY when the port is network-reachable."
+                "gateway auth: off; GATEWAY_ALLOW_OPEN=1 is set. Anyone who can reach this port can call the API."
+            )
+        else:
+            raise RuntimeError(
+                "GATEWAY_API_KEY is required unless GATEWAY_ALLOW_OPEN=1. "
+                "The published Compose path binds a host port — do not run the gateway open on a reachable interface."
             )
         _warn_multi_worker_without_redis(self.settings)
+        await self.catalog.refresh_async()
+        await self.prompts.refresh_async()
         flags = self.flags.snapshot()
         logger.info(
             "providers=%s auth=%s redis=%s layers=memory:%s pii:%s guard:%s",
             ",".join(self.catalog.detected_providers()) or "none",
-            "on" if self.settings.auth_required() else "off",
-            "on" if self.settings.redis_enabled() else "off",
+            "on" if auth_on else "off",
+            self.redis_health.mode(),
             _on(flags.memory),
             _on(flags.pii),
             _on(flags.guard),

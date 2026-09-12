@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import logging
 import threading
+import time
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -10,12 +11,16 @@ from typing import Any
 import litellm
 from litellm import completion_cost, cost_per_token, token_counter
 
-from app.application.errors import BudgetExceededError, InputTooLargeError
+from app.application.errors import BudgetExceededError, IdentityRateLimitError, InputTooLargeError
+from app.application.models import IdentityQuotas
+from app.infrastructure.redis_health import RedisHealth
 from app.schemas import BudgetInfo, ChatMessage, UsageInfo
 from app.settings import GatewaySettings
 
 _BUDGET_KEY_PREFIX = "realmm:budget:"
+_RPM_KEY_PREFIX = "realmm:rpm:"
 _REDIS_TTL_SECONDS = 3 * 24 * 3600
+_RPM_WINDOW_SECONDS = 60
 logger = logging.getLogger(__name__)
 
 
@@ -30,19 +35,49 @@ def _utc_day() -> str:
 
 
 def _empty_state(day: str) -> dict:
-    return {"day": day, "tokens": 0, "usd": 0.0}
+    return {"day": day, "tokens": 0, "usd": 0.0, "identities": {}}
 
 
-def _coerce_state(day: str, tokens: object, usd: object) -> dict:
+def _coerce_identities(raw: object) -> dict[str, dict]:
+    if not isinstance(raw, dict):
+        return {}
+    identities: dict[str, dict] = {}
+    for key, value in raw.items():
+        if not isinstance(key, str) or not isinstance(value, dict):
+            continue
+        identities[key] = {
+            "tokens": max(0, _as_int(value.get("tokens", 0))),
+            "usd": max(0.0, _as_float(value.get("usd", 0.0))),
+        }
+    return identities
+
+
+def _as_int(value: object) -> int:
     try:
-        tokens_i = int(float(tokens))  # type: ignore[arg-type]
-    except TypeError, ValueError:
-        tokens_i = 0
+        return int(float(value))  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0
+
+
+def _as_float(value: object) -> float:
     try:
-        usd_f = float(usd)  # type: ignore[arg-type]
-    except TypeError, ValueError:
-        usd_f = 0.0
-    return {"day": day, "tokens": max(0, tokens_i), "usd": max(0.0, usd_f)}
+        return float(value)  # type: ignore[arg-type]
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def _coerce_state(day: str, tokens: object, usd: object, identities: object = None) -> dict:
+    return {
+        "day": day,
+        "tokens": max(0, _as_int(tokens)),
+        "usd": max(0.0, _as_float(usd)),
+        "identities": _coerce_identities(identities),
+    }
+
+
+def _identity_slug(identity_id: str) -> str:
+    cleaned = "".join(ch if ch.isalnum() or ch in {"-", "_"} else "_" for ch in identity_id.strip())
+    return cleaned[:64] or "unknown"
 
 
 def model_priced(model: str) -> bool:
@@ -68,12 +103,14 @@ def model_priced(model: str) -> bool:
 
 
 class BudgetRuntime:
-    def __init__(self, settings: GatewaySettings, *, state_path: Path):
+    def __init__(self, settings: GatewaySettings, *, state_path: Path, redis_health: RedisHealth | None = None):
         self._settings = settings
         self._state_path = state_path
+        self._redis_health = redis_health
         self._lock = threading.Lock()
         self._redis_client: Any = None
         self._redis_import_failed = False
+        self._rpm_hits: dict[str, list[float]] = {}
 
     def max_input_tokens(self) -> int | None:
         return self._settings.max_input_tokens
@@ -108,6 +145,8 @@ class BudgetRuntime:
         url = self.redis_url()
         if not url:
             return None
+        if self._redis_health is not None and not self._redis_health.reachable():
+            return None
         if self._redis_client is not None:
             try:
                 self._redis_client.ping()
@@ -139,16 +178,19 @@ class BudgetRuntime:
     def _budget_key(self, day: str) -> str:
         return f"{_BUDGET_KEY_PREFIX}{day}"
 
+    def _identity_budget_key(self, day: str, identity_id: str) -> str:
+        return f"{_BUDGET_KEY_PREFIX}{day}:id:{_identity_slug(identity_id)}"
+
     def _load_file_state(self, day: str) -> dict:
         if not self._state_path.is_file():
             return _empty_state(day)
         try:
             data = json.loads(self._state_path.read_text(encoding="utf-8"))
-        except OSError, json.JSONDecodeError:
+        except (OSError, json.JSONDecodeError):
             return _empty_state(day)
         if not isinstance(data, dict) or data.get("day") != day:
             return _empty_state(day)
-        return _coerce_state(day, data.get("tokens", 0), data.get("usd", 0.0))
+        return _coerce_state(day, data.get("tokens", 0), data.get("usd", 0.0), data.get("identities"))
 
     def _load_redis_state(self, client: Any, day: str) -> dict:
         data = client.hgetall(self._budget_key(day))
@@ -172,15 +214,29 @@ class BudgetRuntime:
         tmp.write_text(json.dumps(state, indent=2) + "\n", encoding="utf-8")
         tmp.replace(self._state_path)
 
-    def _record_redis(self, client: Any, add_tokens: int, add_usd: float) -> None:
-        key = self._budget_key(_utc_day())
+    def _record_redis(self, client: Any, add_tokens: int, add_usd: float, *, key: str | None = None) -> None:
+        redis_key = key or self._budget_key(_utc_day())
         pipe = client.pipeline()
         if add_tokens:
-            pipe.hincrby(key, "tokens", add_tokens)
+            pipe.hincrby(redis_key, "tokens", add_tokens)
         if add_usd:
-            pipe.hincrbyfloat(key, "usd", add_usd)
-        pipe.expire(key, _REDIS_TTL_SECONDS)
+            pipe.hincrbyfloat(redis_key, "usd", add_usd)
+        pipe.expire(redis_key, _REDIS_TTL_SECONDS)
         pipe.execute()
+
+    def _load_identity_state(self, identity_id: str) -> dict:
+        day = _utc_day()
+        client = self._get_redis()
+        if client is not None:
+            try:
+                data = client.hgetall(self._identity_budget_key(day, identity_id))
+                if isinstance(data, dict) and data:
+                    return _coerce_state(day, data.get("tokens", 0), data.get("usd", 0.0))
+            except Exception:
+                logger.warning("Redis identity budget read failed; using file ledger", exc_info=True)
+        file_state = self._load_file_state(day)
+        bucket = (file_state.get("identities") or {}).get(identity_id) or {}
+        return _coerce_state(day, bucket.get("tokens", 0), bucket.get("usd", 0.0))
 
     def token_count(self, model: str, messages: list[ChatMessage] | list[dict]) -> int:
         payload = []
@@ -260,7 +316,14 @@ class BudgetRuntime:
             return None
         return _clean_usd(float(prompt_cost) + float(completion_cost_usd))
 
-    def assert_allowed(self, model: str, estimated_tokens: int) -> None:
+    def assert_allowed(
+        self,
+        model: str,
+        estimated_tokens: int,
+        *,
+        identity_id: str | None = None,
+        quotas: IdentityQuotas | None = None,
+    ) -> None:
         input_limit = self.max_input_tokens()
         if input_limit is not None and estimated_tokens > input_limit:
             raise InputTooLargeError(f"Prompt is {estimated_tokens} tokens; MAX_INPUT_TOKENS is {input_limit}.")
@@ -282,8 +345,61 @@ class BudgetRuntime:
                     f"Daily USD budget exceeded. ${state['usd']:.6f} used, ${remaining:.6f} left, "
                     f"prompt estimate is ${projected:.6f} (cap ${usd_cap:.6f})."
                 )
+            if identity_id and quotas is not None:
+                identity_state = self._load_identity_state(identity_id)
+                ident_token_cap = quotas.daily_token_budget
+                if ident_token_cap is not None and identity_state["tokens"] + estimated_tokens > ident_token_cap:
+                    remaining = max(0, ident_token_cap - identity_state["tokens"])
+                    raise BudgetExceededError(
+                        f"Key '{identity_id}' daily token budget exceeded. {identity_state['tokens']} used, "
+                        f"{remaining} left, prompt is {estimated_tokens} tokens (cap {ident_token_cap})."
+                    )
+                ident_usd_cap = quotas.daily_usd_budget
+                if (
+                    ident_usd_cap is not None
+                    and projected is not None
+                    and identity_state["usd"] + projected > ident_usd_cap
+                ):
+                    remaining = max(0.0, ident_usd_cap - identity_state["usd"])
+                    raise BudgetExceededError(
+                        f"Key '{identity_id}' daily USD budget exceeded. ${identity_state['usd']:.6f} used, "
+                        f"${remaining:.6f} left, prompt estimate is ${projected:.6f} (cap ${ident_usd_cap:.6f})."
+                    )
 
-    def record_usage(self, *, tokens: int | None, usd: float | None, cached: bool) -> None:
+    def assert_rpm(self, identity_id: str | None, rpm_limit: int | None) -> None:
+        if not identity_id or rpm_limit is None or rpm_limit < 1:
+            return
+        slug = _identity_slug(identity_id)
+        client = self._get_redis()
+        if client is not None:
+            try:
+                key = f"{_RPM_KEY_PREFIX}{slug}:{int(time.time()) // _RPM_WINDOW_SECONDS}"
+                count = int(client.incr(key))
+                client.expire(key, _RPM_WINDOW_SECONDS * 2)
+                if count > rpm_limit:
+                    raise IdentityRateLimitError(f"Key '{identity_id}' exceeded {rpm_limit} requests per minute.")
+                return
+            except IdentityRateLimitError:
+                raise
+            except Exception:
+                logger.warning("Redis RPM check failed; using in-process window", exc_info=True)
+        now = time.monotonic()
+        with self._lock:
+            hits = [stamp for stamp in self._rpm_hits.get(slug, []) if now - stamp < _RPM_WINDOW_SECONDS]
+            if len(hits) >= rpm_limit:
+                self._rpm_hits[slug] = hits
+                raise IdentityRateLimitError(f"Key '{identity_id}' exceeded {rpm_limit} requests per minute.")
+            hits.append(now)
+            self._rpm_hits[slug] = hits
+
+    def record_usage(
+        self,
+        *,
+        tokens: int | None,
+        usd: float | None,
+        cached: bool,
+        identity_id: str | None = None,
+    ) -> None:
         if cached:
             return
         add_tokens = max(0, int(tokens or 0))
@@ -294,6 +410,13 @@ class BudgetRuntime:
         if client is not None:
             try:
                 self._record_redis(client, add_tokens, add_usd)
+                if identity_id:
+                    self._record_redis(
+                        client,
+                        add_tokens,
+                        add_usd,
+                        key=self._identity_budget_key(_utc_day(), identity_id),
+                    )
                 return
             except Exception:
                 logger.warning("Redis budget write failed; using file ledger", exc_info=True)
@@ -301,6 +424,11 @@ class BudgetRuntime:
             state = self._load_file_state(_utc_day())
             state["tokens"] += add_tokens
             state["usd"] += add_usd
+            if identity_id:
+                identities = state.setdefault("identities", {})
+                bucket = identities.setdefault(identity_id, {"tokens": 0, "usd": 0.0})
+                bucket["tokens"] = int(bucket.get("tokens", 0) or 0) + add_tokens
+                bucket["usd"] = float(bucket.get("usd", 0.0) or 0.0) + add_usd
             self._save_file_state(state)
 
     def attach_cost(self, usage: UsageInfo | None, cost: float | None) -> UsageInfo | None:

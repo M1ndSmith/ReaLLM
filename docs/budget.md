@@ -6,7 +6,7 @@ Pipeline order is in [architecture](architecture.md). Caps run after prompts, PI
 
 ## What is counted
 
-After named prompts are compiled, optional PII masking, and memory hits (if `MEMORY=1`), [`BudgetRuntime`](../app/infrastructure/budget.py) calls `litellm.token_counter` on the outgoing messages (tiktoken under the hood; no extra package). After the call, it reads provider `usage` and `litellm.completion_cost`. Models missing from LiteLLM's price map (many live Groq ids) return `cost_usd: null`. Token counts still apply.
+After named prompts are compiled, optional PII masking, and memory hits (if `MEMORY=1`), [`BudgetRuntime`](../app/infrastructure/budget.py) calls `litellm.token_counter` on outgoing messages (tiktoken under the hood; no extra package). After the call, it reads provider `usage` and `litellm.completion_cost`. Models missing from LiteLLM's price map (many live Groq ids) return `cost_usd: null`. Token counts still apply.
 
 JSON `POST /chat` includes `usage` (`prompt_tokens`, `completion_tokens`, `total_tokens`, `cost_usd`). Streams send the same on a final SSE event. Cache hits return usage but do not add to the daily ledger.
 
@@ -21,12 +21,18 @@ JSON `POST /chat` includes `usage` (`prompt_tokens`, `completion_tokens`, `total
 
 Unset daily/input knobs mean report only. Daily window is the UTC calendar day.
 
+## Per-identity quotas
+
+Each inbound key can set `daily_token_budget`, `daily_usd_budget`, and `rpm` on create or patch. Chat admission reads those via `quotas_for`, then [`BudgetRuntime.assert_allowed`](../app/infrastructure/budget.py) and `assert_rpm`. Unset identity quotas mean no extra cap beyond the process knobs above.
+
+Identity token/USD overage is HTTP 402 (same as the process daily cap). Identity RPM overage is HTTP 429. That 429 is from this app layer, not Router provider RPM in [reliability](reliability.md).
+
 ## Ledger
 
-- One worker: `data/budget-state.json` (gitignored via `data/`). A restart does not reset the day.
-- `REDIS_URL` set: hash `realmm:budget:{utc-day}` with `tokens` / `usd`, TTL ~3 days. Required as soon as you run more than one uvicorn process; the JSON file is not shared.
+- One worker: `data/budget-state.json` (gitignored via `data/`). A restart does not reset the day. Per-key spend is an `identities` map on that file.
+- `REDIS_URL` set: hash `realmm:budget:{utc-day}` with `tokens` / `usd`, TTL ~3 days. Per-key hashes are `realmm:budget:{utc-day}:id:{slug}`. Required as soon as you run more than one uvicorn process; the JSON file is not shared.
 
-If Redis is configured but unreachable, the process logs a warning and falls back to the file for that process. `GET /health` / `GET /budget` include `ledger`: `redis` or `file`.
+If Redis is configured but unreachable, the process logs a warning and falls back to the file for that process. `GET /health` and `GET /budget` include `ledger`: `redis` or `file`.
 
 ## Inspect
 
@@ -34,4 +40,10 @@ If Redis is configured but unreachable, the process logs a warning and falls bac
 
 ## Out of scope
 
-LiteLLM already uses tiktoken inside `token_counter`. A second tiktoken import would miss chat-template overhead. `acount_tokens` is extra provider HTTP; Groq has no count API. Router `provider_budget_config` / `max_budget` uses the incomplete price map, so Groq often costs $0 and never trips; when a provider is over budget the Router can fall back and spend elsewhere. Hard stop lives in this app. `litellm.BudgetManager` / `litellm.max_budget` is process-lifetime or hosted spend, not a UTC daily reset that matches this layer. LiteLLM Proxy spend DB / virtual keys need Postgres and a different gateway.
+- A second tiktoken import. LiteLLM already uses tiktoken inside `token_counter`, and a separate count path can miss chat-template overhead.
+- `acount_tokens`. It adds provider HTTP and Groq has no count API.
+- Router `provider_budget_config` / `max_budget` for hard caps. It depends on an incomplete price map, so Groq often costs `$0` and may not trip. If one provider is over budget, Router fallback can still spend elsewhere.
+- `litellm.BudgetManager` / `litellm.max_budget` for this daily cap. Those represent process-lifetime or hosted spend, not this layer's UTC daily reset.
+- LiteLLM Proxy spend DB / virtual keys. That path needs Postgres and a different gateway.
+
+Hard budget stop remains in this app layer.

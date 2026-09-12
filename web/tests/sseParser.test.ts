@@ -29,6 +29,11 @@ describe("parseSseBuffer", () => {
     const { events } = parseSseBuffer("data: {not-json}\n\n");
     expect(events).toEqual([{ kind: "error", message: "Malformed SSE payload." }]);
   });
+
+  it("skips chunks without a data line", () => {
+    const { events } = parseSseBuffer("event: ping\n\n");
+    expect(events).toEqual([]);
+  });
 });
 
 describe("flushSseBuffer", () => {

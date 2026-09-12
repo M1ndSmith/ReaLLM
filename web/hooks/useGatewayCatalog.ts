@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useState } from "react";
 
-import { fetchJson, gatewayUrl, GatewayError } from "@/lib/gateway";
+import { fetchJson, fetchReady, gatewayUrl, GatewayError } from "@/lib/gateway";
 import { budgetText } from "@/lib/formatters";
 import type { HealthResponse, ModelInfo, PromptListItem } from "@/lib/types";
 
@@ -12,6 +12,7 @@ export type Catalog = {
   health: HealthResponse | null;
   models: ModelInfo[];
   prompts: PromptListItem[];
+  ready: { ready: boolean; redis_mode?: string | null } | null;
 };
 
 export type CatalogLoadResult =
@@ -20,25 +21,26 @@ export type CatalogLoadResult =
 
 export function useGatewayCatalog() {
   const gateway = gatewayUrl();
-  const [catalog, setCatalog] = useState<Catalog>({ health: null, models: [], prompts: [] });
+  const [catalog, setCatalog] = useState<Catalog>({ health: null, models: [], prompts: [], ready: null });
   const [model, setModel] = useState("");
   const [promptName, setPromptName] = useState("");
 
   const load = useCallback(async (): Promise<CatalogLoadResult> => {
     try {
-      const [health, modelsBody, promptsBody] = await Promise.all([
+      const [health, modelsBody, promptsBody, ready] = await Promise.all([
         fetchJson<HealthResponse>("/health"),
         fetchJson<{ models: ModelInfo[] }>("/models"),
         fetchJson<{ prompts: PromptListItem[] }>("/prompts"),
+        fetchReady().catch(() => null),
       ]);
       const models = modelsBody.models || [];
-      setCatalog({ health, models, prompts: promptsBody.prompts || [] });
+      setCatalog({ health, models, prompts: promptsBody.prompts || [], ready });
       const stored = sessionStorage.getItem(MODEL_KEY);
       const next = models.some((item) => item.id === stored) ? stored : models[0]?.id || "";
       setModel(next || "");
       return { ok: true };
     } catch (err) {
-      setCatalog({ health: null, models: [], prompts: [] });
+      setCatalog({ health: null, models: [], prompts: [], ready: null });
       const message =
         err instanceof Error
           ? err.message
@@ -57,13 +59,14 @@ export function useGatewayCatalog() {
   const lamps = useMemo(() => {
     const health = catalog.health;
     return [
+      { key: "ready", label: "ready", on: Boolean(catalog.ready?.ready) },
       { key: "memory", label: "memory", on: Boolean(health?.memory?.enabled) },
       { key: "pii", label: "pii", on: Boolean(health?.pii?.enabled) },
       { key: "guard", label: "guard", on: Boolean(health?.guard?.enabled) },
       { key: "redis", label: "redis", on: Boolean(health?.reliability?.redis) },
       { key: "budget", label: budgetText(health), on: health?.budget != null },
     ];
-  }, [catalog.health]);
+  }, [catalog.health, catalog.ready]);
 
   return { catalog, model, setModel, promptName, setPromptName, load, lamps, gateway };
 }

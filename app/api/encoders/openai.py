@@ -31,6 +31,10 @@ def to_chat_request(body: OpenAIChatRequest) -> ChatRequest:
         conversation_id=body.conversation_id,
         agent_id=body.agent_id,
         response_format=body.response_format,
+        temperature=body.temperature,
+        max_tokens=body.max_tokens,
+        tools=body.tools,
+        tool_choice=body.tool_choice,
     )
 
 

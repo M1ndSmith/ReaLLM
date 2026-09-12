@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import os
 import threading
 import time
@@ -15,6 +16,7 @@ from app.settings import GatewaySettings
 
 _CACHE_TTL_SECONDS = 60.0
 _NON_CHAT_MARKERS = ("whisper", "tts", "orpheus", "prompt-guard", "llama-guard")
+_DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 
 _DEFAULT_COMPAT_BASES = {
     "groq": "https://api.groq.com/openai/v1",
@@ -45,6 +47,14 @@ def _provider_name(provider: object) -> str:
     return str(value)
 
 
+def ollama_host() -> str:
+    raw = (os.getenv("OLLAMA_API_BASE") or "").strip() or _DEFAULT_OLLAMA_HOST
+    host = raw.rstrip("/")
+    if host.endswith("/v1"):
+        host = host[:-3].rstrip("/")
+    return host or _DEFAULT_OLLAMA_HOST
+
+
 def _provider_api_key(provider: str) -> str | None:
     compact = f"{provider.replace('_', '').upper()}_API_KEY"
     underscored = f"{provider.upper()}_API_KEY"
@@ -60,6 +70,7 @@ class ProviderCatalog:
         self._settings = settings
         self._lock = threading.Lock()
         self._cache: tuple[float, list[ModelInfo]] | None = None
+        self._refresh_pending = False
 
     def detected_providers(self) -> list[str]:
         providers: list[str] = []
@@ -67,6 +78,8 @@ class ProviderCatalog:
             name = _provider_name(provider)
             if _provider_api_key(name):
                 providers.append(name)
+        if "ollama" not in providers and _provider_api_key("ollama"):
+            providers.append("ollama")
         return providers
 
     def _compat_base(self, provider: str) -> str | None:
@@ -88,6 +101,8 @@ class ProviderCatalog:
             return os.getenv("CEREBRAS_API_BASE", _DEFAULT_COMPAT_BASES["cerebras"])
         if provider == "fireworks_ai":
             return os.getenv("FIREWORKS_API_BASE", _DEFAULT_COMPAT_BASES["fireworks_ai"])
+        if provider == "ollama":
+            return f"{ollama_host()}/v1"
         return _DEFAULT_COMPAT_BASES.get(provider)
 
     def _fetch_openai_compat_models(self, provider: str) -> list[str]:
@@ -125,18 +140,42 @@ class ProviderCatalog:
         with self._lock:
             if not refresh and self._cache and now - self._cache[0] < _CACHE_TTL_SECONDS:
                 return self._cache[1]
-            models: list[ModelInfo] = []
-            seen: set[str] = set()
-            for provider in self.detected_providers():
-                for model_id in self._models_for_provider(provider):
-                    litellm_id = self._normalize_model_id(str(model_id), provider)
-                    if litellm_id in seen:
-                        continue
-                    seen.add(litellm_id)
-                    models.append(ModelInfo(id=litellm_id, provider=provider))
-            models.sort(key=lambda item: (item.provider, item.id))
-            self._cache = (now, models)
-            return models
+            stale = self._cache[1] if self._cache else None
+            if not refresh and stale is not None:
+                self._schedule_refresh_unlocked()
+                return stale
+        return self._rebuild()
+
+    def _schedule_refresh_unlocked(self) -> None:
+        if self._refresh_pending:
+            return
+        self._refresh_pending = True
+        threading.Thread(target=self._refresh_worker, name="realmm-catalog-refresh", daemon=True).start()
+
+    def _refresh_worker(self) -> None:
+        try:
+            self._rebuild()
+        finally:
+            with self._lock:
+                self._refresh_pending = False
+
+    def _rebuild(self) -> list[ModelInfo]:
+        models: list[ModelInfo] = []
+        seen: set[str] = set()
+        for provider in self.detected_providers():
+            for model_id in self._models_for_provider(provider):
+                litellm_id = self._normalize_model_id(str(model_id), provider)
+                if litellm_id in seen:
+                    continue
+                seen.add(litellm_id)
+                models.append(ModelInfo(id=litellm_id, provider=provider))
+        models.sort(key=lambda item: (item.provider, item.id))
+        with self._lock:
+            self._cache = (time.monotonic(), models)
+        return models
+
+    async def refresh_async(self) -> list[ModelInfo]:
+        return await asyncio.to_thread(self._rebuild)
 
     def resolve_model(self, requested: str) -> str:
         catalog = self.list_available_models()

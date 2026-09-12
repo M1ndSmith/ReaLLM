@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from fastapi import APIRouter, Depends
 
-from app.api.dependencies import get_runtime
+from app.api.dependencies import get_runtime, require_scopes
 from app.container import GatewayRuntime
 from app.schemas import (
     BudgetInfo,
@@ -13,7 +13,7 @@ from app.schemas import (
     ProvidersResponse,
 )
 
-router = APIRouter()
+router = APIRouter(dependencies=[Depends(require_scopes("read"))])
 
 
 @router.get("/health", response_model=HealthResponse)

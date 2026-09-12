@@ -10,10 +10,14 @@ from app.infrastructure.budget import BudgetRuntime
 from app.infrastructure.catalog import ProviderCatalog
 from app.infrastructure.flags import RuntimeFlagStore
 from app.infrastructure.guards import GuardService
+from app.infrastructure.identities import GatewayIdentityStore
 from app.infrastructure.memory import MemoryRuntime
+from app.infrastructure.metrics import MetricsRuntime
 from app.infrastructure.pii import PiiRuntime
 from app.infrastructure.prompts import PromptRepository
+from app.infrastructure.redis_health import RedisHealth
 from app.infrastructure.router import LiteLLMRouterRuntime
+from app.infrastructure.telemetry import StageTelemetry
 from app.settings import GatewaySettings
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -45,11 +49,14 @@ def build_runtime(
     flags = RuntimeFlagStore(settings, data / "runtime-flags.json")
     catalog = ProviderCatalog(settings)
     prompts = PromptRepository(settings, prompts_dir=prompts_path)
-    budget = BudgetRuntime(settings, state_path=data / "budget-state.json")
-    router = LiteLLMRouterRuntime(settings, catalog, tracing=prompts.ensure_tracing)
+    redis_health = RedisHealth(settings)
+    budget = BudgetRuntime(settings, state_path=data / "budget-state.json", redis_health=redis_health)
+    router = LiteLLMRouterRuntime(settings, catalog, tracing=prompts.ensure_tracing, redis_health=redis_health)
     pii = PiiRuntime(settings)
     memory = MemoryRuntime(settings, catalog, router, budget, mem0_dir=data / "mem0")
     guards = GuardService(settings, catalog, router, budget)
+    identities = GatewayIdentityStore(settings, data / "gateway-keys.json")
+    metrics = MetricsRuntime(settings.obs_metrics_on())
     chat = ChatService(
         flags=flags,
         catalog=catalog,
@@ -59,6 +66,8 @@ def build_runtime(
         guards=guards,
         budget=budget,
         backend=router,
+        identities=identities,
+        telemetry_factory=StageTelemetry,
     )
     return GatewayRuntime(
         settings=settings,
@@ -70,6 +79,9 @@ def build_runtime(
         memory=memory,
         pii=pii,
         guards=guards,
+        identities=identities,
+        metrics=metrics,
+        redis_health=redis_health,
         chat=chat,
     )
 

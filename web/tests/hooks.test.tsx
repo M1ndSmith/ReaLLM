@@ -31,6 +31,7 @@ describe("useGatewayCatalog", () => {
           });
         }
         if (url.endsWith("/prompts")) return json({ prompts: [] });
+        if (url.endsWith("/ready")) return json({ ready: true, redis_mode: "unconfigured" });
         return json({}, 404);
       }),
     );
@@ -52,6 +53,18 @@ describe("useGatewayCatalog", () => {
       const loaded = await result.current.load();
       expect(loaded.ok).toBe(false);
       if (!loaded.ok) expect(loaded.unauthorized).toBe(true);
+    });
+  });
+
+  it("marks non-auth catalog failures", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () => json({ detail: "gateway down" }, 503)),
+    );
+    const { result } = renderHook(() => useGatewayCatalog());
+    await act(async () => {
+      const loaded = await result.current.load();
+      expect(loaded).toEqual({ ok: false, unauthorized: false, message: "gateway down" });
     });
   });
 });

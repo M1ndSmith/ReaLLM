@@ -17,6 +17,10 @@ class BudgetExceededError(ValueError):
     """Raised when the daily token or USD budget would be exceeded."""
 
 
+class IdentityRateLimitError(ValueError):
+    """Raised when a gateway key exceeds its requests-per-minute cap."""
+
+
 class MemoryConfigError(ValueError):
     """Raised when Mem0 cannot be configured (missing model, embedder, or keys)."""
 

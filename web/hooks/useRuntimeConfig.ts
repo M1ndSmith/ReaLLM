@@ -7,13 +7,23 @@ import type { ConfigLayers, ConfigResponse } from "@/lib/types";
 
 export function useRuntimeConfig() {
   const [config, setConfig] = useState<ConfigResponse | null>(null);
+  const [configError, setConfigError] = useState<string | null>(null);
+  const [refreshing, setRefreshing] = useState(false);
   const [toggleBusy, setToggleBusy] = useState<string | null>(null);
 
   const refresh = useCallback(async () => {
+    setRefreshing(true);
     try {
-      setConfig(await fetchJson<ConfigResponse>("/config"));
-    } catch {
+      const next = await fetchJson<ConfigResponse>("/config");
+      setConfig(next);
+      setConfigError(null);
+      return next;
+    } catch (err) {
       setConfig(null);
+      setConfigError(err instanceof Error ? err.message : "Could not load runtime config.");
+      throw err;
+    } finally {
+      setRefreshing(false);
     }
   }, []);
 
@@ -25,11 +35,15 @@ export function useRuntimeConfig() {
         body: JSON.stringify({ layers: { [field]: value } }),
       });
       setConfig(next);
+      setConfigError(null);
       return next;
+    } catch (err) {
+      setConfigError(err instanceof Error ? err.message : "Could not update runtime config.");
+      throw err;
     } finally {
       setToggleBusy(null);
     }
   }, []);
 
-  return { config, setConfig, toggleBusy, refresh, toggleLayer };
+  return { config, setConfig, configError, refreshing, toggleBusy, refresh, toggleLayer };
 }

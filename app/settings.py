@@ -50,7 +50,7 @@ def _int_or_default(value: Any, default: int) -> int:
         return default
     try:
         return int(value)
-    except TypeError, ValueError:
+    except (TypeError, ValueError):
         return default
 
 
@@ -85,6 +85,13 @@ class GatewaySettings(BaseSettings):
     )
 
     gateway_api_key: SecretStr = SecretStr("")
+    gateway_multi_key: str = "1"
+    gateway_key_pepper: SecretStr = SecretStr("")
+    gateway_allow_open: str = "0"
+    request_id: str = "1"
+    structured_logs: str = "0"
+    obs_metrics: str = "0"
+    readiness_allow_redis_degraded: str = "0"
     cors_origins: str = _DEFAULT_CORS
     console_url: str = "http://localhost:3000"
 
@@ -149,7 +156,7 @@ class GatewaySettings(BaseSettings):
             return None
         try:
             parsed = int(value)
-        except TypeError, ValueError:
+        except (TypeError, ValueError):
             return None
         return parsed
 
@@ -210,6 +217,27 @@ class GatewaySettings(BaseSettings):
 
     def auth_required(self) -> bool:
         return bool(self.gateway_key())
+
+    def gateway_multi_key_on(self) -> bool:
+        return parse_tri(self.gateway_multi_key, True)
+
+    def gateway_key_pepper_value(self) -> str:
+        return self.gateway_key_pepper.get_secret_value().strip()
+
+    def allow_open_on(self) -> bool:
+        return parse_on(self.gateway_allow_open)
+
+    def request_id_on(self) -> bool:
+        return parse_tri(self.request_id, True)
+
+    def structured_logs_on(self) -> bool:
+        return parse_on(self.structured_logs)
+
+    def obs_metrics_on(self) -> bool:
+        return parse_on(self.obs_metrics)
+
+    def readiness_allow_redis_degraded_on(self) -> bool:
+        return parse_on(self.readiness_allow_redis_degraded)
 
     def cors_origin_list(self) -> list[str]:
         raw = (self.cors_origins or _DEFAULT_CORS).strip()

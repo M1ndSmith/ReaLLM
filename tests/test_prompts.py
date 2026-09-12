@@ -146,3 +146,49 @@ def test_text_prompt_and_langfuse_list(monkeypatch, tmp_path):
     names = [item.name for item in repo.list_prompts()]
     assert "remote-one" in names
     assert "remote-two" in names
+
+
+def test_langfuse_list_uses_cache_on_hot_path(monkeypatch, tmp_path):
+    import time
+
+    import app.infrastructure.prompts as prompts_mod
+
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk")
+    repo = _repo(tmp_path)
+    repo._remote_names = ["cached-remote"]
+    repo._remote_at = time.monotonic()
+
+    def boom(*_a, **_k):
+        raise AssertionError("Langfuse list should not hit the network on a warm cache")
+
+    monkeypatch.setattr(prompts_mod.httpx, "get", boom)
+    names = [item.name for item in repo.list_prompts()]
+    assert "cached-remote" in names
+
+
+def test_expired_langfuse_list_serves_stale_without_blocking(monkeypatch, tmp_path):
+    import time
+
+    import app.infrastructure.prompts as prompts_mod
+
+    monkeypatch.setenv("LANGFUSE_PUBLIC_KEY", "pk")
+    monkeypatch.setenv("LANGFUSE_SECRET_KEY", "sk")
+    repo = _repo(tmp_path)
+    repo._remote_names = ["stale-remote"]
+    repo._remote_at = time.monotonic() - 120.0
+
+    class Slow:
+        def raise_for_status(self):
+            time.sleep(0.2)
+            return None
+
+        def json(self):
+            return {"data": [{"name": "fresh-remote"}], "meta": {"totalPages": 1}}
+
+    monkeypatch.setattr(prompts_mod.httpx, "get", lambda *a, **k: Slow())
+    started = time.monotonic()
+    names = [item.name for item in repo.list_prompts()]
+    elapsed = time.monotonic() - started
+    assert "stale-remote" in names
+    assert elapsed < 0.1

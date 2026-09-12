@@ -1,9 +1,10 @@
 from __future__ import annotations
 
 from collections.abc import AsyncIterator
+from contextlib import AbstractContextManager
 from typing import Protocol
 
-from app.application.models import PromptMeta, RuntimeFlags
+from app.application.models import IdentityQuotas, PromptMeta, RuntimeFlags
 from app.schemas import (
     BudgetInfo,
     ChatMessage,
@@ -113,6 +114,16 @@ class MemoryPort(Protocol):
     async def drain(self, timeout: float = 5.0) -> None: ...
 
 
+class IdentityQuotaPort(Protocol):
+    def quotas_for(self, identity_id: str | None) -> IdentityQuotas: ...
+
+
+class StageClock(Protocol):
+    def stage(self, name: str) -> AbstractContextManager[None]: ...
+
+    def snapshot(self) -> dict[str, float]: ...
+
+
 class UsageBudgetPort(Protocol):
     def token_count(self, model: str, messages: list[ChatMessage] | list[dict]) -> int: ...
 
@@ -120,9 +131,25 @@ class UsageBudgetPort(Protocol):
 
     def max_output_tokens(self) -> int: ...
 
-    def assert_allowed(self, model: str, estimated_tokens: int) -> None: ...
+    def assert_allowed(
+        self,
+        model: str,
+        estimated_tokens: int,
+        *,
+        identity_id: str | None = None,
+        quotas: IdentityQuotas | None = None,
+    ) -> None: ...
 
-    def record_usage(self, *, tokens: int | None, usd: float | None, cached: bool) -> None: ...
+    def assert_rpm(self, identity_id: str | None, rpm_limit: int | None) -> None: ...
+
+    def record_usage(
+        self,
+        *,
+        tokens: int | None,
+        usd: float | None,
+        cached: bool,
+        identity_id: str | None = None,
+    ) -> None: ...
 
     def attach_cost(self, usage: UsageInfo | None, cost: float | None) -> UsageInfo | None: ...
 

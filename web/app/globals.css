@@ -310,8 +310,55 @@ button.ghost.on {
   color: var(--mute);
 }
 
-.setting-row button {
-  min-width: 5.5rem;
+.admin-keys {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding-top: 8px;
+}
+
+.admin-keys h2 {
+  margin: 0;
+  font-size: 0.85rem;
+  font-family: var(--font-mono), "IBM Plex Mono", ui-monospace, monospace;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--mute);
+}
+
+.scope-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  font-size: 0.85rem;
+}
+
+.scope-row label {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.key-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.key-list li {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.secret-once {
+  color: var(--tungsten);
 }
 
 .snippets {

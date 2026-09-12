@@ -61,3 +61,8 @@ def _pointer_page(dest: str) -> str:
 @router.get("/", include_in_schema=False)
 async def index(request: Request, runtime: GatewayRuntime = Depends(get_runtime)) -> HTMLResponse:
     return HTMLResponse(_pointer_page(runtime.settings.console_href()))
+
+
+@router.get("/healthz")
+async def healthz() -> dict:
+    return {"status": "ok"}

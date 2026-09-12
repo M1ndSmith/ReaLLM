@@ -1,8 +1,11 @@
 from __future__ import annotations
 
+import asyncio
 import json
 import os
 import re
+import threading
+import time
 from pathlib import Path
 from typing import Any
 
@@ -14,6 +17,7 @@ from app.schemas import ChatMessage, PromptListItem
 from app.settings import GatewaySettings
 
 _VAR_PATTERN = re.compile(r"\{\{\s*(\w+)\s*\}\}")
+_REMOTE_CACHE_TTL_SECONDS = 60.0
 
 
 class PromptRepository:
@@ -21,6 +25,10 @@ class PromptRepository:
         self._settings = settings
         self._prompts_dir = prompts_dir
         self._tracing_ready = False
+        self._remote_lock = threading.Lock()
+        self._remote_names: list[str] = []
+        self._remote_at: float = 0.0
+        self._refresh_pending = False
 
     def prompts_enabled(self) -> bool:
         return self._settings.prompts_enabled()
@@ -73,7 +81,7 @@ class PromptRepository:
             return None
         try:
             data = json.loads(path.read_text(encoding="utf-8"))
-        except OSError, json.JSONDecodeError:
+        except (OSError, json.JSONDecodeError):
             return None
         if not isinstance(data, dict):
             return None
@@ -247,9 +255,38 @@ class PromptRepository:
         for path in self._iter_local_files():
             found[path.stem] = PromptListItem(name=path.stem, source="local")
         if self.prompts_enabled():
-            for name in self._list_langfuse_names():
+            for name in self.cached_langfuse_names():
                 found[name] = PromptListItem(name=name, source="langfuse")
         return sorted(found.values(), key=lambda item: item.name)
+
+    def cached_langfuse_names(self) -> list[str]:
+        now = time.monotonic()
+        with self._remote_lock:
+            if self._remote_at and now - self._remote_at < _REMOTE_CACHE_TTL_SECONDS:
+                return list(self._remote_names)
+            stale = list(self._remote_names) if self._remote_at else None
+            if stale is not None:
+                self._schedule_refresh_unlocked()
+                return stale
+        return self._list_langfuse_names()
+
+    def _schedule_refresh_unlocked(self) -> None:
+        if self._refresh_pending:
+            return
+        self._refresh_pending = True
+        threading.Thread(target=self._refresh_worker, name="realmm-prompt-refresh", daemon=True).start()
+
+    def _refresh_worker(self) -> None:
+        try:
+            self._list_langfuse_names()
+        finally:
+            with self._remote_lock:
+                self._refresh_pending = False
+
+    async def refresh_async(self) -> None:
+        if not self.prompts_enabled():
+            return
+        await asyncio.to_thread(self._list_langfuse_names)
 
     def _list_langfuse_names(self) -> list[str]:
         public = self._settings.langfuse_public()
@@ -284,4 +321,7 @@ class PromptRepository:
             if len(rows) < 100:
                 break
             page += 1
+        with self._remote_lock:
+            self._remote_names = names
+            self._remote_at = time.monotonic()
         return names

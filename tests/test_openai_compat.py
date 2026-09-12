@@ -5,7 +5,7 @@ from tests.conftest import FROZEN_CATALOG
 
 from app.application.errors import UnknownModelError
 from app.application.events import StreamDelta, StreamFallback, StreamFinished, StreamStarted, StreamUsage
-from app.application.models import ChatCommand, PromptMeta
+from app.application.models import ChatCommand, IdentityQuotas, PromptMeta
 from app.schemas import ChatMessage, ChatResponse, UsageInfo
 
 
@@ -21,12 +21,15 @@ def test_v1_models_shape(make_app, monkeypatch):
     assert any(item["owned_by"] == "groq" for item in body["data"])
 
 
-def test_v1_chat_json_envelope_and_ignored_params(make_app, monkeypatch):
+def test_v1_chat_json_envelope_and_passthrough_params(make_app, monkeypatch):
     seen = {}
 
     async def fake_complete(command: ChatCommand):
         seen["user_id"] = command.user_id
         seen["model"] = command.model
+        seen["temperature"] = command.temperature
+        seen["tools"] = command.tools
+        seen["max_tokens"] = command.max_tokens
         return ChatResponse(
             model=command.model,
             provider="groq",
@@ -59,6 +62,9 @@ def test_v1_chat_json_envelope_and_ignored_params(make_app, monkeypatch):
     assert body["provider"] == "groq"
     assert seen["user_id"] == "agent-42"
     assert seen["model"] == "groq/openai/gpt-oss-20b"
+    assert seen["temperature"] == 0.2
+    assert seen["tools"][0]["type"] == "function"
+    assert seen["max_tokens"] is None
 
 
 def test_v1_user_id_wins_over_user(make_app, monkeypatch):
@@ -257,3 +263,94 @@ def test_native_chat_unchanged(make_app, monkeypatch):
     body = response.json()
     assert body["message"]["content"] == "ok"
     assert "choices" not in body
+
+
+def test_v1_embeddings_shape(make_app, monkeypatch):
+    recorded = {}
+
+    async def fake_embed(**kwargs):
+        assert kwargs["model"] == "groq/openai/gpt-oss-20b"
+        assert kwargs["input"] == ["hello"]
+        return {
+            "object": "list",
+            "model": kwargs["model"],
+            "data": [{"object": "embedding", "embedding": [0.1, 0.2], "index": 0}],
+            "usage": {"prompt_tokens": 2, "total_tokens": 2},
+        }
+
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.router, "aembedding", fake_embed)
+    monkeypatch.setattr(app.state.runtime.budget, "completion_usd", lambda *_a, **_k: None)
+    monkeypatch.setattr(
+        app.state.runtime.budget,
+        "record_usage",
+        lambda **kwargs: recorded.update(kwargs),
+    )
+    client = TestClient(app)
+    response = client.post("/v1/embeddings", json={"model": "groq/openai/gpt-oss-20b", "input": ["hello"]})
+    assert response.status_code == 200
+    body = response.json()
+    assert body["object"] == "list"
+    assert body["data"][0]["embedding"] == [0.1, 0.2]
+    assert body["usage"]["total_tokens"] == 2
+    assert recorded["tokens"] == 2
+    assert recorded["cached"] is False
+
+
+def test_v1_embeddings_respects_identity_budget(monkeypatch, make_app):
+    monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
+    app = make_app()
+    _identity, issued = app.state.runtime.identities.create(
+        key_id="embed-capped",
+        scopes=["chat", "read"],
+        quotas=IdentityQuotas(daily_token_budget=5),
+    )
+
+    async def fake_embed(**kwargs):
+        return {
+            "object": "list",
+            "model": kwargs["model"],
+            "data": [{"object": "embedding", "embedding": [0.1], "index": 0}],
+            "usage": {"prompt_tokens": 2, "total_tokens": 2},
+        }
+
+    monkeypatch.setattr(app.state.runtime.router, "aembedding", fake_embed)
+    monkeypatch.setattr(app.state.runtime.budget, "token_count_text", lambda *_a, **_k: 6)
+    monkeypatch.setattr(app.state.runtime.budget, "completion_usd", lambda *_a, **_k: None)
+    client = TestClient(app)
+    response = client.post(
+        "/v1/embeddings",
+        headers={"Authorization": f"Bearer {issued}"},
+        json={"model": "groq/openai/gpt-oss-20b", "input": "hello"},
+    )
+    assert response.status_code == 402
+    assert "embed-capped" in str(response.json()["detail"])
+
+
+def test_v1_embeddings_respects_identity_rpm(monkeypatch, make_app):
+    monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
+    app = make_app()
+    _identity, issued = app.state.runtime.identities.create(
+        key_id="embed-busy",
+        scopes=["chat", "read"],
+        quotas=IdentityQuotas(rpm_limit=1),
+    )
+
+    async def fake_embed(**kwargs):
+        return {
+            "object": "list",
+            "model": kwargs["model"],
+            "data": [{"object": "embedding", "embedding": [0.1], "index": 0}],
+            "usage": {"prompt_tokens": 1, "total_tokens": 1},
+        }
+
+    monkeypatch.setattr(app.state.runtime.router, "aembedding", fake_embed)
+    monkeypatch.setattr(app.state.runtime.budget, "completion_usd", lambda *_a, **_k: None)
+    client = TestClient(app)
+    payload = {"model": "groq/openai/gpt-oss-20b", "input": "hello"}
+    headers = {"Authorization": f"Bearer {issued}"}
+    first = client.post("/v1/embeddings", headers=headers, json=payload)
+    assert first.status_code == 200
+    second = client.post("/v1/embeddings", headers=headers, json=payload)
+    assert second.status_code == 429
+    assert "embed-busy" in str(second.json()["detail"])

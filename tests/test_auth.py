@@ -7,6 +7,7 @@ from app.api.auth import _keys_match
 
 def test_auth_off_leaves_json_routes_open(client):
     assert client.get("/health").status_code == 200
+    assert client.get("/healthz").status_code == 200
     assert client.get("/").status_code == 200
 
 
@@ -14,6 +15,7 @@ def test_auth_on_rejects_missing_and_wrong_key(monkeypatch, make_app):
     monkeypatch.setenv("GATEWAY_API_KEY", "secret-gateway")
     client = TestClient(make_app())
     assert client.get("/").status_code == 200
+    assert client.get("/healthz").status_code == 200
     denied = client.get("/health")
     assert denied.status_code == 401
     assert denied.json()["detail"]["error"] == "gateway_unauthorized"

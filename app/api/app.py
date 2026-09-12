@@ -2,11 +2,13 @@ from __future__ import annotations
 
 from contextlib import asynccontextmanager
 
-from fastapi import APIRouter, Depends, FastAPI
+from fastapi import APIRouter, Depends, FastAPI, HTTPException, Request
+from fastapi.responses import JSONResponse
 from starlette.middleware.cors import CORSMiddleware
 
 from app.api.auth import require_gateway_auth
-from app.api.routes import chat, config, memory, meta, openai, root
+from app.api.middleware.request_context import RequestContextMiddleware
+from app.api.routes import admin, chat, config, memory, meta, metrics, openai, ready, root
 from app.container import GatewayRuntime
 from app.settings import GatewaySettings
 
@@ -45,12 +47,34 @@ def create_app(runtime: GatewayRuntime) -> FastAPI:
         allow_methods=["*"],
         allow_headers=["*"],
     )
+    application.add_middleware(RequestContextMiddleware, settings=runtime.settings)
+
+    @application.exception_handler(HTTPException)
+    async def http_exception_handler(request: Request, exc: HTTPException):
+        request_id = getattr(request.state, "request_id", None)
+        detail = exc.detail
+        if isinstance(detail, dict):
+            payload = dict(detail)
+            if request_id and "request_id" not in payload:
+                payload["request_id"] = request_id
+            detail = payload
+        elif isinstance(detail, str) and request_id:
+            detail = {"error": detail, "request_id": request_id}
+        return JSONResponse(
+            status_code=exc.status_code,
+            content={"detail": detail},
+            headers=exc.headers,
+        )
+
     api = APIRouter(dependencies=[Depends(require_gateway_auth)])
     api.include_router(meta.router)
+    api.include_router(ready.router)
+    api.include_router(metrics.router)
     api.include_router(config.router)
     api.include_router(memory.router)
     api.include_router(chat.router)
     api.include_router(openai.router)
+    api.include_router(admin.router)
     application.include_router(root.router)
     application.include_router(api)
     return application

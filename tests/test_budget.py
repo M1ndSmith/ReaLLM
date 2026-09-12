@@ -32,6 +32,7 @@ class FakePipe:
 class FakeRedis:
     def __init__(self):
         self.store: dict = {}
+        self.counters: dict[str, int] = {}
 
     def pipeline(self):
         return FakePipe(self.store)
@@ -41,6 +42,16 @@ class FakeRedis:
 
     def ping(self):
         return True
+
+    def incr(self, key):
+        self.counters[key] = int(self.counters.get(key, 0)) + 1
+        return self.counters[key]
+
+    def expire(self, key, ttl):
+        return True
+
+    def get(self, key):
+        return self.counters.get(key)
 
 
 def _budget(tmp_path) -> BudgetRuntime:
@@ -209,3 +220,16 @@ def test_completion_usd_and_usage_counts(monkeypatch, tmp_path):
     usage = budget.usage_from_counts("m", None, 4)
     assert usage.total_tokens == 4
     assert budget.attach_cost(None, 0.2).cost_usd == 0.2
+
+
+def test_identity_redis_ledger(monkeypatch, tmp_path):
+    fake = FakeRedis()
+    monkeypatch.setenv("REDIS_URL", "redis://localhost:6379/0")
+    budget = _budget(tmp_path)
+    monkeypatch.setattr(budget, "_get_redis", lambda: fake)
+    budget.record_usage(tokens=4, usd=0.1, cached=False, identity_id="agent-a")
+    from app.application.models import IdentityQuotas
+
+    budget.assert_allowed("m", 1, identity_id="agent-a", quotas=IdentityQuotas(daily_token_budget=10))
+    with pytest.raises(BudgetExceededError):
+        budget.assert_allowed("m", 8, identity_id="agent-a", quotas=IdentityQuotas(daily_token_budget=5))

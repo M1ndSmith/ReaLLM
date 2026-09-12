@@ -6,12 +6,14 @@ import { useCallback, useEffect, useState } from "react";
 import { ConnectView } from "@/components/ConnectView";
 import { GatewayKeyField } from "@/components/GatewayKeyField";
 import { ModelPicker } from "@/components/ModelPicker";
+import { OperatorBanner } from "@/components/OperatorBanner";
 import { PlaygroundView } from "@/components/PlaygroundView";
 import { SettingsView } from "@/components/SettingsView";
 import { StatusSidebar } from "@/components/StatusSidebar";
 import { useChatSession } from "@/hooks/useChatSession";
 import { useGatewayCatalog } from "@/hooks/useGatewayCatalog";
 import { useGatewayKey } from "@/hooks/useGatewayKey";
+import { useOperatorState } from "@/hooks/useOperatorState";
 import { useRuntimeConfig } from "@/hooks/useRuntimeConfig";
 import type { ConfigLayers } from "@/lib/types";
 import { curlSnippet, openaiSnippet, pythonSnippet } from "@/lib/snippets";
@@ -27,6 +29,7 @@ export function ConsoleShell({ view }: { view: View }) {
   const sendDisabled = chat.busy || !catalog.model;
   const showKeyField = key.needsAuth || Boolean(key.gatewayKey);
   const authOn = Boolean(config.config?.auth_required || key.needsAuth);
+  const operator = useOperatorState(config.config, key.needsAuth);
   const curl = curlSnippet(catalog.gateway, catalog.model || "your-model-id", authOn);
   const python = pythonSnippet(catalog.gateway, catalog.model || "your-model-id", authOn);
   const openai = openaiSnippet(catalog.gateway, catalog.model || "your-model-id");
@@ -35,7 +38,11 @@ export function ConsoleShell({ view }: { view: View }) {
     const result = await catalog.load();
     if (result.ok) {
       key.setNeedsAuth(false);
-      await config.refresh();
+      try {
+        await config.refresh();
+      } catch (err) {
+        chat.reportError(err instanceof Error ? err.message : "Could not load runtime config.");
+      }
       return;
     }
     if (result.unauthorized) key.setNeedsAuth(true);
@@ -76,7 +83,11 @@ export function ConsoleShell({ view }: { view: View }) {
         {showKeyField || view === "settings" ? (
           <GatewayKeyField gatewayKey={key.gatewayKey} onChange={key.setGatewayKeyState} onSave={saveKey} />
         ) : null}
-        <StatusSidebar providers={catalog.catalog.health?.providers} lamps={catalog.lamps} />
+        <StatusSidebar
+          providers={catalog.catalog.health?.providers}
+          lamps={catalog.lamps}
+          redisMode={catalog.catalog.ready?.redis_mode || catalog.catalog.health?.reliability?.redis_mode}
+        />
         <ModelPicker models={catalog.catalog.models} model={catalog.model} onChange={catalog.setModel} />
         {view === "play" ? (
           <>
@@ -118,6 +129,7 @@ export function ConsoleShell({ view }: { view: View }) {
             Settings
           </Link>
         </nav>
+        <OperatorBanner state={operator} runtimeError={config.configError} />
         {view === "play" ? (
           <PlaygroundView
             log={chat.log}
@@ -135,6 +147,8 @@ export function ConsoleShell({ view }: { view: View }) {
             needsAuth={key.needsAuth}
             toggleBusy={config.toggleBusy}
             onToggle={toggleLayer}
+            canAdmin={operator.authState !== "needs_key" && !operator.blockedActions.includes("admin")}
+            onAdminError={(message) => chat.reportError(message)}
           />
         )}
       </main>

@@ -5,9 +5,10 @@ type Lamp = { key: string; label: string; on: boolean };
 type Props = {
   providers: string[] | undefined;
   lamps: Lamp[];
+  redisMode?: string | null;
 };
 
-export function StatusSidebar({ providers, lamps }: Props) {
+export function StatusSidebar({ providers, lamps, redisMode }: Props) {
   return (
     <div className="bus">
       <div className="label">Providers</div>
@@ -35,6 +36,7 @@ export function StatusSidebar({ providers, lamps }: Props) {
       <p className="hint">
         Sidecar lamps are live state. Toggle MEMORY / PII / GUARD on Settings when a gateway key is set. Provider
         keys, Redis, and budgets stay in .env.
+        {redisMode ? ` Redis mode: ${redisMode}.` : ""}
       </p>
     </div>
   );

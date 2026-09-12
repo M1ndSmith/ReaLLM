@@ -55,4 +55,16 @@ describe("streamChat", () => {
       GatewayError,
     );
   });
+
+  it("flushes a trailing buffer without a final blank line", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(['data: {"content":"tail"}'])));
+    const events: Array<{ kind: string; payload?: { content?: string } }> = [];
+    await streamChat({ model: "x", messages: [] }, { onEvent: (event) => events.push(event) });
+    expect(events).toEqual([{ kind: "json", payload: { content: "tail" } }]);
+  });
+
+  it("throws on a trailing SSE error event", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(['data: {"error":"late"}'])));
+    await expect(streamChat({ model: "x", messages: [] }, { onEvent: () => undefined })).rejects.toThrow("late");
+  });
 });

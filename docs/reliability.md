@@ -54,7 +54,7 @@ On the host that is `redis://localhost:6379/0`. [`compose.yaml`](../compose.yaml
 
 ## Rate limit
 
-Provider-side RPM (and optional TPM) on each deployment. There is no inbound HTTP limiter on FastAPI.
+Provider-side RPM (and optional TPM) on each deployment. There is no inbound HTTP limiter on FastAPI. Identity RPM is a 429 from `BudgetRuntime.assert_rpm` before the Router call; see [budget](budget.md).
 
 | Knob | Default |
 | --- | --- |

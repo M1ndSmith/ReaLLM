@@ -20,6 +20,10 @@ class ChatRequest(BaseModel):
     conversation_id: str | None = None
     agent_id: str | None = None
     response_format: dict | None = None
+    temperature: float | None = None
+    max_tokens: int | None = Field(default=None, ge=1)
+    tools: list | None = None
+    tool_choice: str | dict | None = None
 
 
 class OpenAIChatRequest(BaseModel):
@@ -37,6 +41,17 @@ class OpenAIChatRequest(BaseModel):
     conversation_id: str | None = None
     agent_id: str | None = None
     response_format: dict | None = None
+    temperature: float | None = None
+    max_tokens: int | None = Field(default=None, ge=1)
+    tools: list | None = None
+    tool_choice: str | dict | None = None
+
+
+class EmbeddingRequest(BaseModel):
+    model: str = Field(..., min_length=1)
+    input: str | list[str]
+    user: str | None = None
+    encoding_format: str | None = None
 
 
 class ConfigLayers(BaseModel):
@@ -51,10 +66,51 @@ class ConfigPatch(BaseModel):
     layers: ConfigLayers = Field(default_factory=ConfigLayers)
 
 
+class IdentityQuotasPayload(BaseModel):
+    daily_token_budget: int | None = None
+    daily_usd_budget: float | None = None
+    rpm: int | None = None
+
+
+class IdentityPublic(BaseModel):
+    id: str
+    scopes: list[str] = Field(default_factory=list)
+    label: str | None = None
+    created_at: str | None = None
+    revoked_at: str | None = None
+    last_used_at: str | None = None
+    quotas: IdentityQuotasPayload = Field(default_factory=IdentityQuotasPayload)
+
+
+class GatewayKeyCreate(BaseModel):
+    key_id: str = Field(..., min_length=1)
+    scopes: list[str] = Field(..., min_length=1)
+    label: str | None = None
+    secret: str | None = None
+    quotas: IdentityQuotasPayload | None = None
+
+
+class GatewayKeyPatch(BaseModel):
+    scopes: list[str] | None = None
+    label: str | None = None
+    revoked: bool | None = None
+    quotas: IdentityQuotasPayload | None = None
+
+
+class GatewayKeyCreated(BaseModel):
+    key: IdentityPublic
+    secret: str
+
+
+class GatewayKeyListResponse(BaseModel):
+    keys: list[IdentityPublic] = Field(default_factory=list)
+
+
 class ConfigResponse(BaseModel):
     auth_required: bool
     layers: ConfigLayers
     restart_for: list[str]
+    identity: IdentityPublic | None = None
 
 
 class ModelInfo(BaseModel):
@@ -76,6 +132,7 @@ class ReliabilityInfo(BaseModel):
     cache: bool
     cache_ttl: int | None = None
     redis: bool = False
+    redis_mode: str | None = None
     fallback_policy: str | None = None
     fallbacks: list[str]
     routing_strategy: str

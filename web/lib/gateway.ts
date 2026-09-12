@@ -32,6 +32,15 @@ export function formatDetail(payload: unknown, fallback: string): string {
   if (code === "gateway_key_required") {
     return "Set GATEWAY_API_KEY in .env and restart uvicorn to change layers from this page.";
   }
+  if (code === "forbidden") {
+    const detail =
+      payload && typeof payload === "object" ? (payload as { detail?: unknown }).detail : undefined;
+    const required =
+      detail && typeof detail === "object" && "required_scope" in detail
+        ? String((detail as { required_scope: unknown }).required_scope)
+        : "";
+    return required ? `This key cannot access that route (needs ${required}).` : "Action failed: forbidden";
+  }
   if (!payload || typeof payload !== "object") return fallback;
   const detail = (payload as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;
@@ -64,4 +73,19 @@ export async function fetchJson<T>(path: string, init?: RequestInit): Promise<T>
     throw new GatewayError(formatDetail(body, `Request failed (${res.status}).`), res.status, errorCode(body));
   }
   return res.json() as Promise<T>;
+}
+
+export async function fetchReady(): Promise<{ ready: boolean; redis_mode?: string | null } | null> {
+  const res = await fetch(`${gatewayUrl()}/ready`, { headers: authHeaders() });
+  const body = await res.json().catch(() => null);
+  if (res.ok && body && typeof body === "object") {
+    return body as { ready: boolean; redis_mode?: string | null };
+  }
+  if (res.status === 503 && body && typeof body === "object" && "detail" in body) {
+    const detail = (body as { detail?: unknown }).detail;
+    if (detail && typeof detail === "object") {
+      return detail as { ready: boolean; redis_mode?: string | null };
+    }
+  }
+  return null;
 }

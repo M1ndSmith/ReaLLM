@@ -4,7 +4,7 @@ One FastAPI process, one `ChatService` pipeline, one LiteLLM Router. User chat, 
 
 The Next.js console in [`web/`](../web/) talks to uvicorn over CORS. It does not write provider keys. Optional inbound auth is [`GATEWAY_API_KEY`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md). Native clients use `POST /chat`.
 
-Providers come from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`ProviderCatalog`](../app/infrastructure/catalog.py)). `GET /models` is that catalog. You send a catalog `model` on `POST /chat`. Groq is optional for chat. Guard classifier ids, FastEmbed, and Groq strict JSON defaults are documented in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
+Providers come from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`ProviderCatalog`](../app/infrastructure/catalog.py)). `GET /models` is that catalog. You send a catalog `model` on `POST /chat`. Groq is optional for chat. Ollama is another keyed provider: a dummy `OLLAMA_API_KEY` plus optional `OLLAMA_API_BASE` (default `http://127.0.0.1:11434`). Guard classifier ids, FastEmbed, and Groq strict JSON defaults are documented in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
 
 ```mermaid
 flowchart LR
@@ -54,11 +54,33 @@ flowchart LR
 4. Mem0 search and inject ([`MemoryRuntime`](../app/infrastructure/memory.py)) when MEMORY is on (no-op when off)
 5. Presidio mask again on injected memory text when PII is on
 6. Prompt Guard 2 and Llama Guard 4 inbound ([`GuardService`](../app/infrastructure/guards.py)) when GUARD is on
-7. Resolve catalog model, token estimate, and caps ([`BudgetRuntime`](../app/infrastructure/budget.py))
+7. Resolve catalog model, token estimate, and caps ([`BudgetRuntime`](../app/infrastructure/budget.py)). Process daily caps plus the calling key's quotas and RPM.
 8. Sole `router.acompletion` (retries, allowlisted fallbacks, cache TTL, RPM/TPM)
-9. Presidio on the assistant reply when PII is on; Llama Guard 4 outbound when `GUARD_CONTENT` is on; JSON Schema check when `response_format` is set; Langfuse OTEL callback on the Router when keys are set; record usage; Mem0 `add` in the background (extract errors do not fail the chat)
+9. Presidio on the assistant reply when PII is on.
+10. Llama Guard 4 outbound when `GUARD_CONTENT` is on.
+11. JSON Schema check when `response_format` is set.
+12. Langfuse OTEL callback on the Router when keys are set.
+13. Record usage (process ledger and, when a key is bound, that identity's counters).
+14. Mem0 `add` in the background (extract errors do not fail the chat).
 
-Always on: catalog from env keys, Router, `MAX_OUTPUT_TOKENS`, usage ledger. Optional: `GATEWAY_API_KEY`, Langfuse keys, `MEMORY=1`, `PII=1`, `GUARD=1`, `REDIS_URL`, per-request `response_format`. Unset optional layers leave `POST /chat` and `/v1/chat/completions` with `model` and `messages` unchanged.
+Always on:
+
+- catalog from env keys
+- Router
+- `MAX_OUTPUT_TOKENS`
+- usage ledger
+
+Optional:
+
+- `GATEWAY_API_KEY`
+- Langfuse keys
+- `MEMORY=1`
+- `PII=1`
+- `GUARD=1`
+- `REDIS_URL`
+- per-request `response_format`
+
+When optional layers are unset, `POST /chat` and `/v1/chat/completions` keep the same `model` and `messages` behavior.
 
 MEMORY / PII / GUARD can also be flipped at runtime via `PATCH /config` into `data/runtime-flags.json` when a gateway key is configured. That overlay does not mutate `os.environ`.
 
@@ -87,7 +109,18 @@ Runtime owner: [`app/container.py`](../app/container.py) (`GatewayRuntime` start
 
 Only [`app/infrastructure/router.py`](../app/infrastructure/router.py) may construct `litellm.Router` or assign `litellm.cache`. Guards and Mem0 receive `CompletionBackend`. They do not open a second path to providers.
 
-Out of scope for this process: Letta, LiteLLM Proxy (spend DB / virtual keys), Instructor reask, Outlines/Guidance, in-process LangChain or LlamaIndex RAG, Zep, homemade transcript summaries, MCP and A2A protocol servers. `GET` / `POST` / `DELETE /memory` is HTTP. Those protocols are not implemented here.
+Out of scope for this process:
+
+- Letta
+- LiteLLM Proxy (spend DB / virtual keys)
+- Instructor reask
+- Outlines/Guidance
+- in-process LangChain or LlamaIndex RAG
+- Zep
+- homemade transcript summaries
+- MCP and A2A protocol servers
+
+`GET` / `POST` / `DELETE /memory` is HTTP. These protocol servers are not implemented here.
 
 Decisions: [modular monolith](adr/0001-modular-monolith.md), [single Router owner](adr/0002-single-router-owner.md), [static vs runtime config](adr/0003-static-vs-runtime-config.md).
 

@@ -10,7 +10,8 @@ import litellm
 from litellm import Router
 from litellm.types.router import RetryPolicy
 
-from app.infrastructure.catalog import ProviderCatalog, is_chat_model, provider_for_model
+from app.infrastructure.catalog import ProviderCatalog, is_chat_model, ollama_host, provider_for_model
+from app.infrastructure.redis_health import RedisHealth
 from app.schemas import ModelInfo, ReliabilityInfo
 from app.settings import GatewaySettings
 
@@ -61,10 +62,12 @@ class LiteLLMRouterRuntime:
         catalog: ProviderCatalog,
         *,
         tracing: Callable[[], None] | None = None,
+        redis_health: RedisHealth | None = None,
     ):
         self._settings = settings
         self._catalog = catalog
         self._tracing = tracing
+        self._redis_health = redis_health
         self._lock = threading.Lock()
         self._router: Router | None = None
         self._router_signature: tuple[Any, ...] | None = None
@@ -83,6 +86,11 @@ class LiteLLMRouterRuntime:
 
     def redis_enabled(self) -> bool:
         return self._settings.redis_enabled()
+
+    def redis_mode(self) -> str:
+        if self._redis_health is not None:
+            return self._redis_health.mode()
+        return "shared" if self.redis_enabled() else "unconfigured"
 
     def provider_rpm(self, provider: str) -> int:
         compact = f"{provider.replace('_', '').upper()}_RPM"
@@ -186,6 +194,8 @@ class LiteLLMRouterRuntime:
         ]
 
     def _redis_kwargs(self) -> dict[str, Any]:
+        if self._redis_health is not None:
+            return self._redis_health.redis_kwargs()
         url = self.redis_url()
         if not url:
             return {}
@@ -199,16 +209,20 @@ class LiteLLMRouterRuntime:
         tpm = self.provider_tpm(item.provider)
         if tpm is not None:
             params["tpm"] = tpm
+        if item.provider == "ollama":
+            params["api_base"] = ollama_host()
         return params
 
     def _compute_router_signature(self, catalog: list[ModelInfo]) -> tuple[Any, ...]:
         return (
             tuple((item.id, self.provider_rpm(item.provider), self.provider_tpm(item.provider)) for item in catalog),
+            self.redis_mode(),
             self.redis_url(),
             self.cache_enabled(),
             self.cache_ttl(),
             self._settings.fallbacks if self._settings.fallbacks is not None else os.getenv("FALLBACKS"),
             self.num_retries(),
+            ollama_host() if any(item.provider == "ollama" for item in catalog) else None,
         )
 
     def _build_router(self, catalog: list[ModelInfo]) -> Router:
@@ -265,6 +279,9 @@ class LiteLLMRouterRuntime:
     async def acompletion(self, **kwargs):
         return await self.get_router().acompletion(**kwargs)
 
+    async def aembedding(self, **kwargs):
+        return await self.get_router().aembedding(**kwargs)
+
     def completion(self, **kwargs):
         return self.get_router().completion(**kwargs)
 
@@ -275,7 +292,8 @@ class LiteLLMRouterRuntime:
             retries=self.num_retries(),
             cache=self.cache_enabled(),
             cache_ttl=self.cache_ttl(),
-            redis=self.redis_enabled(),
+            redis=self.redis_mode() == "shared",
+            redis_mode=self.redis_mode(),
             fallback_policy=self.fallback_policy(),
             fallbacks=self.fallback_pool(catalog),
             routing_strategy="simple-shuffle",

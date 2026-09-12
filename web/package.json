@@ -6,7 +6,8 @@
     "build": "next build",
     "start": "next start --port 3000",
     "typecheck": "tsc --noEmit",
-    "test": "vitest run"
+    "test": "vitest run",
+    "test:coverage": "vitest run --coverage --coverage.reporter=text"
   },
   "dependencies": {
     "next": "^15.5.4",
@@ -20,6 +21,7 @@
     "@types/node": "^22.18.0",
     "@types/react": "^19.1.12",
     "@types/react-dom": "^19.1.9",
+    "@vitest/coverage-v8": "^3.2.7",
     "jsdom": "^26.1.0",
     "typescript": "^5.9.2",
     "vitest": "^3.2.4"

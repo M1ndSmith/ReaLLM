@@ -9,6 +9,7 @@ from app.application.errors import (
     BudgetExceededError,
     GuardBlockedError,
     GuardConfigError,
+    IdentityRateLimitError,
     InputTooLargeError,
     MemoryConfigError,
     PiiConfigError,
@@ -43,6 +44,8 @@ def classify(exc: BaseException) -> ErrorDescriptor:
         return ErrorDescriptor(400, {"error": str(exc)}, True)
     if isinstance(exc, BudgetExceededError):
         return ErrorDescriptor(402, {"error": str(exc)}, True)
+    if isinstance(exc, IdentityRateLimitError):
+        return ErrorDescriptor(429, {"error": str(exc)}, True)
     if isinstance(exc, GuardBlockedError):
         return ErrorDescriptor(400, guard_blocked_detail(exc), True)
     if isinstance(exc, SchemaError):

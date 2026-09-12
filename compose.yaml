@@ -1,6 +1,9 @@
 # Operator run path: gateway + Next console + Redis.
 # Host pytest (.venv) stays the default test path. Do not COPY .env into images.
 #
+# Published ports bind loopback only. GATEWAY_ALLOW_OPEN is forced off — set
+# GATEWAY_API_KEY and GATEWAY_KEY_PEPPER in .env or the gateway container
+# will refuse to start.
 # Browser is on the host. NEXT_PUBLIC_GATEWAY_URL must be http://127.0.0.1:8000
 # (not http://gateway:8000). Redis is only reachable as redis://redis:6379/0
 # from the gateway container.
@@ -26,13 +29,14 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
+      GATEWAY_ALLOW_OPEN: "0"
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       CONSOLE_URL: http://localhost:3000
       HF_HOME: /app/data/cache/hf
       HUGGINGFACE_HUB_CACHE: /app/data/cache/hf
       FASTEMBED_CACHE_PATH: /app/data/cache/fastembed
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     volumes:
       - ./data:/app/data
     depends_on:
@@ -49,7 +53,7 @@ services:
     environment:
       NEXT_PUBLIC_GATEWAY_URL: http://127.0.0.1:8000
     ports:
-      - "3000:3000"
+      - "127.0.0.1:3000:3000"
     depends_on:
       - gateway
 

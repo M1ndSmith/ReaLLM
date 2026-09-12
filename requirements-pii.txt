@@ -1,0 +1,2 @@
+# Optional extra for PII=1. Not installed by the default runtime requirements.
+spacy>=3.7.0,<4
