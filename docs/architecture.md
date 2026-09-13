@@ -105,23 +105,3 @@ Runtime owner: [`app/container.py`](../app/container.py) (`GatewayRuntime` start
 
 `data/` is gitignored. Budget writes `data/budget-state.json` when Redis is off. Mem0 uses `data/mem0/` (on-disk Qdrant + SQLite). [`compose.yaml`](../compose.yaml) runs gateway + Next + Redis with a `./data` volume. Pytest stays on the host venv. Do not put keys in images. The browser still calls `http://127.0.0.1:8000`, not the Compose hostname `gateway`.
 
-## Ownership
-
-Only [`app/infrastructure/router.py`](../app/infrastructure/router.py) may construct `litellm.Router` or assign `litellm.cache`. Guards and Mem0 receive `CompletionBackend`. They do not open a second path to providers.
-
-Out of scope for this process:
-
-- Letta
-- LiteLLM Proxy (spend DB / virtual keys)
-- Instructor reask
-- Outlines/Guidance
-- in-process LangChain or LlamaIndex RAG
-- Zep
-- homemade transcript summaries
-- MCP and A2A protocol servers
-
-`GET` / `POST` / `DELETE /memory` is HTTP. These protocol servers are not implemented here.
-
-Decisions: [modular monolith](adr/0001-modular-monolith.md), [single Router owner](adr/0002-single-router-owner.md), [static vs runtime config](adr/0003-static-vs-runtime-config.md).
-
-Knobs and failure modes: [reliability](reliability.md), [auth](auth.md), [openai](openai.md), [prompts](prompts.md), [budget](budget.md), [memory](memory.md), [pii](pii.md), [guardrails](guardrails.md), [structured](structured.md). Env examples: [`.env.example`](../.env.example).
