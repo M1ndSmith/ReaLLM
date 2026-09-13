@@ -22,11 +22,19 @@ function config(overrides: Partial<ConfigResponse>): ConfigResponse {
 }
 
 describe("useOperatorState", () => {
+  it("returns open state when config is missing", () => {
+    const { result } = renderHook(() => useOperatorState(null, false));
+    expect(result.current.authState).toBe("open");
+    expect(result.current.blockedActions).toEqual([]);
+  });
+
   it("returns open state when auth is off", () => {
     const { result } = renderHook(() => useOperatorState(config({ auth_required: false }), false));
     expect(result.current.authState).toBe("open");
     expect(result.current.blockedActions).toEqual([]);
     expect(result.current.message).toMatch(/auth is off/i);
+    expect(result.current.message).toContain("GATEWAY_ALLOW_OPEN=0");
+    expect(result.current.message).toContain("GATEWAY_KEY_PEPPER");
   });
 
   it("returns needs_key state when auth is required and no identity is active", () => {

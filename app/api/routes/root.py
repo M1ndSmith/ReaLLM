@@ -49,8 +49,8 @@ def _pointer_page(dest: str) -> str:
   <body>
     <main>
       <h1>ReaLMM</h1>
-      <p>This process is the gateway. Completions go through <code>POST /chat</code> or <code>POST /v1/chat/completions</code>.</p>
-      <p>Open the Next.js console at <a href="{dest}">{dest}</a>. Provider keys stay in <code>.env</code>. Optional <code>GATEWAY_API_KEY</code> is inbound auth, not a virtual key.</p>
+      <p>Opinionated LiteLLM operator stack: memory, PII, guards, and a console. Completions go through <code>POST /chat</code> or <code>POST /v1/chat/completions</code>.</p>
+      <p>Open the Next.js console at <a href="{dest}">{dest}</a>. Provider keys stay in <code>.env</code>. This is not a Portkey or LiteLLM Proxy replacement. <code>GATEWAY_API_KEY</code> protects inbound access; <code>GATEWAY_ALLOW_OPEN=1</code> is for loopback development only.</p>
       <p>API docs: <a href="/docs">/docs</a>.</p>
     </main>
   </body>

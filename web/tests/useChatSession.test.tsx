@@ -164,6 +164,89 @@ describe("useChatSession", () => {
     }
   });
 
+  it("labels buffered streams", async () => {
+    mockedStream.mockImplementation(async (_body, handlers) => {
+      handlers.onEvent({ kind: "json", payload: { buffered: true, content: "hi" } });
+    });
+    const { result } = renderHook(() => useChatSession("groq/openai/gpt-oss-20b", "", vi.fn()));
+    act(() => {
+      result.current.setDraft("hi");
+    });
+    await act(async () => {
+      await result.current.onSend(submitEvent());
+    });
+    const last = result.current.log[result.current.log.length - 1];
+    expect(last.kind).toBe("assistant");
+    if (last.kind === "assistant") {
+      expect(last.text).toBe("hi");
+      expect(last.meta).toContain("buffered");
+    }
+  });
+
+  it("labels empty PII and content-guard streams", async () => {
+    mockedStream.mockImplementation(async (_body, handlers) => {
+      handlers.onEvent({ kind: "json", payload: { pii_redacted: true, guard_passed: true } });
+    });
+    const { result } = renderHook(() => useChatSession("groq/openai/gpt-oss-20b", "", vi.fn()));
+    act(() => {
+      result.current.setDraft("hi");
+    });
+    await act(async () => {
+      await result.current.onSend(submitEvent());
+    });
+    const last = result.current.log[result.current.log.length - 1];
+    expect(last.kind).toBe("assistant");
+    if (last.kind === "assistant") {
+      expect(last.text).toBe("(empty response)");
+      expect(last.meta).toEqual(expect.arrayContaining(["pii", "guard"]));
+    }
+  });
+
+  it("skips send while a stream is already busy", async () => {
+    let release!: () => void;
+    const hung = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    mockedStream.mockImplementation(async () => hung);
+    const { result } = renderHook(() => useChatSession("groq/openai/gpt-oss-20b", "", vi.fn()));
+    act(() => {
+      result.current.setDraft("first");
+    });
+    let firstSend: Promise<void>;
+    act(() => {
+      firstSend = result.current.onSend(submitEvent());
+    });
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(result.current.busy).toBe(true);
+    act(() => {
+      result.current.setDraft("second");
+    });
+    await act(async () => {
+      await result.current.onSend(submitEvent());
+    });
+    expect(mockedStream).toHaveBeenCalledTimes(1);
+    release();
+    await act(async () => {
+      await firstSend!;
+    });
+  });
+
+  it("reports a generic failure when the reject is not an Error", async () => {
+    mockedStream.mockRejectedValue("nope");
+    const { result } = renderHook(() => useChatSession("groq/openai/gpt-oss-20b", "", vi.fn()));
+    act(() => {
+      result.current.setDraft("hi");
+    });
+    await act(async () => {
+      await result.current.onSend(submitEvent());
+    });
+    expect(result.current.log.some((item) => item.kind === "error" && item.text === "The model request failed.")).toBe(
+      true,
+    );
+  });
+
   it("appends an error row when the assistant already has text", async () => {
     mockedStream.mockImplementation(async (_body, handlers) => {
       handlers.onEvent({ kind: "json", payload: { content: "hello" } });

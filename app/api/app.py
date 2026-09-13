@@ -29,7 +29,7 @@ def create_app(runtime: GatewayRuntime) -> FastAPI:
 
     application = FastAPI(
         title="ReaLMM",
-        description="LiteLLM endpoints that detect providers from API keys. Select a model only.",
+        description="Opinionated LiteLLM operator stack with memory, PII, guards, and a console. Not a Portkey or LiteLLM Proxy replacement.",
         version="0.1.0",
         lifespan=lifespan,
     )

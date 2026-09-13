@@ -198,6 +198,28 @@ def test_v1_json_keeps_sidecar_extras(make_app, monkeypatch):
     assert body["schema_valid"] is True
 
 
+def test_v1_stream_includes_buffered_true(make_app, monkeypatch):
+    async def fake_stream(*_a, **_k):
+        model = "groq/openai/gpt-oss-20b"
+        yield StreamStarted(model, "groq", None, None, None, None, None, buffered=True)
+        yield StreamDelta("hi")
+        yield StreamFinished(model=model, served=model)
+
+    app = make_app()
+    monkeypatch.setattr(app.state.runtime.chat, "stream", fake_stream)
+    client = TestClient(app)
+    text = client.post(
+        "/v1/chat/completions",
+        json={
+            "model": "groq/openai/gpt-oss-20b",
+            "messages": [{"role": "user", "content": "hi"}],
+            "stream": True,
+        },
+    ).text
+    assert '"buffered": true' in text
+    assert '"content": "hi"' in text
+
+
 def test_v1_stream_sidecar_and_fallback(make_app, monkeypatch):
     meta = PromptMeta(name="chat-assistant", version=1, source="local")
 

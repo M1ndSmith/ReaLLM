@@ -18,4 +18,7 @@ web/.env.local
 web/.env*.local
 future stuff/
 
-env/
+.env.walkthrough
+BACKEND_MONTE_CARLO_WALKTHROUGH.md
+CODEBASE_MAP.md
+web/tsconfig.tsbuildinfo

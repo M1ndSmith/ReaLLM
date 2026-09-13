@@ -56,6 +56,63 @@ describe("useGatewayCatalog", () => {
     });
   });
 
+  it("builds lamps from health and ready", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/health")) {
+          return json({
+            status: "ok",
+            providers: ["groq"],
+            memory: { enabled: true },
+            pii: { enabled: false },
+            guard: { enabled: true },
+            reliability: { redis: true },
+            budget: { daily_tokens: 10, daily_token_limit: 100 },
+          });
+        }
+        if (url.endsWith("/models")) return json({ models: [{ id: "groq/x", provider: "groq" }] });
+        if (url.endsWith("/prompts")) return json({ prompts: [{ name: "chat", source: "local" }] });
+        if (url.endsWith("/ready")) return json({ ready: true, redis_mode: "redis" });
+        return json({}, 404);
+      }),
+    );
+    const { result } = renderHook(() => useGatewayCatalog());
+    await act(async () => {
+      await result.current.load();
+    });
+    const byKey = Object.fromEntries(result.current.lamps.map((lamp) => [lamp.key, lamp]));
+    expect(byKey.ready.on).toBe(true);
+    expect(byKey.memory.on).toBe(true);
+    expect(byKey.pii.on).toBe(false);
+    expect(byKey.guard.on).toBe(true);
+    expect(byKey.redis.on).toBe(true);
+    expect(byKey.budget.on).toBe(true);
+    expect(byKey.budget.label).toBe("10 / 100 tok");
+  });
+
+  it("clears the model when the catalog has no models", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        if (url.endsWith("/health")) return json({ status: "ok", providers: [] });
+        if (url.endsWith("/models")) return json({});
+        if (url.endsWith("/prompts")) return json({});
+        if (url.endsWith("/ready")) return json({ ready: false });
+        return json({}, 404);
+      }),
+    );
+    const { result } = renderHook(() => useGatewayCatalog());
+    await act(async () => {
+      await result.current.load();
+    });
+    expect(result.current.model).toBe("");
+    expect(result.current.catalog.prompts).toEqual([]);
+    expect(result.current.catalog.models).toEqual([]);
+  });
+
   it("marks non-auth catalog failures", async () => {
     vi.stubGlobal(
       "fetch",

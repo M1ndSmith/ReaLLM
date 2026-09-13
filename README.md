@@ -4,9 +4,24 @@ ReaLMM is a FastAPI process in front of LiteLLM's Router. Put provider `*_API_KE
 
 The Next.js console on port 3000 is a client of `POST /chat` and an operator UI for MEMORY / PII / GUARD overlay flags and inbound keys. The browser calls uvicorn on port 8000. Next does not proxy chat.
 
+## Prerequisites
+
+Chat-only needs Python 3.12–3.14, [`requirements.txt`](requirements.txt), uvicorn on loopback, and at least one provider so `GET /models` is non-empty (`GROQ_API_KEY`, `OPENAI_API_KEY`, or a dummy `OLLAMA_API_KEY` plus a pulled model). The console needs Node 22 in [`web/`](web/). Restart uvicorn after `.env` key or model-id changes.
+
+Optional layers stay off unless `.env` or the Settings overlay turns them on. Details: [memory](docs/memory.md), [guardrails](docs/guardrails.md), [PII](docs/pii.md), [structured output](docs/structured.md). Short copies: [`env/groq.env`](env/groq.env), [`env/ollama.env`](env/ollama.env), [`env/memory.env`](env/memory.env), [`env/full.env`](env/full.env).
+
+| Layer | What you need |
+| --- | --- |
+| Memory | `MEMORY=1` and a catalog chat id for extract (`MEMORY_LLM_MODEL` may match the chat model; do not point Mem0 at this gateway's `POST /chat`; avoid reasoning ids). Embeddings default to local FastEmbed `BAAI/bge-small-en-v1.5` (first request downloads ONNX into `./data`). Groq has no embeddings API. `MEMORY_EMBEDDER=openai` needs `OPENAI_API_KEY` and a fresh `data/mem0` if you switch. |
+| Guards | `GUARD=1` is only the switch. Injection and content are two extra models: `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`. Drop-in is `GROQ_API_KEY`; those ids must appear in `GET /models` or chat is `503`. Other providers need `GUARD_*_MODEL` set to exact catalog ids that still emit `benign`/`malicious` and `safe`/`unsafe` plus `S*`. |
+| PII | `PII=1`, `pip install -r requirements-pii.txt`. First request may download spaCy into `./data`. |
+| Auth / Settings | `GATEWAY_API_KEY` with `config` to flip layers. Overlay in `data/runtime-flags.json` wins over `.env` `MEMORY` / `PII` / `GUARD`. Compose also needs `GATEWAY_KEY_PEPPER`. |
+| Structured output | No extra install. Per-request `response_format` on `POST /chat` (not the console). |
+| Redis | `REDIS_URL` for Compose or more than one uvicorn worker. |
+
 ## Run
 
-Copy [`.env.example`](.env.example) to `.env` and set at least one provider key (`GROQ_API_KEY`, `OPENAI_API_KEY`, and so on). Copy [`web/.env.local.example`](web/.env.local.example) to `web/.env.local` only if the console should use a gateway URL other than `http://127.0.0.1:8000`.
+Copy [`.env.example`](.env.example) to `.env` and set at least one provider key (`GROQ_API_KEY`, `OPENAI_API_KEY`, and so on). The example explicitly sets `GATEWAY_ALLOW_OPEN=1` for this loopback-only development command; do not use that setting on a reachable bind. Copy [`web/.env.local.example`](web/.env.local.example) to `web/.env.local` only if the console should use a gateway URL other than `http://127.0.0.1:8000`.
 
 ```bash
 uv pip install -r requirements.txt
@@ -33,7 +48,7 @@ Playground prints per-reply tokens and USD from the chat stream. Daily totals ar
 
 ## Docker Compose
 
-Use Compose when you want Redis plus isolated spaCy / FastEmbed downloads. Use the host venv for iteration and tests. Images do not contain `.env`. Copy `.env.example` to `.env`, set at least one provider `*_API_KEY`, and set `GATEWAY_API_KEY` (Compose refuses to start open).
+Use Compose when you want Redis plus isolated spaCy / FastEmbed downloads. Use the host venv for iteration and tests. Images do not contain `.env`. Copy `.env.example` to `.env`, set at least one provider `*_API_KEY`, and set independent, randomly generated values for both `GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER`. Compose forces `GATEWAY_ALLOW_OPEN=0` and refuses to start authenticated without the pepper.
 
 ```bash
 cp .env.example .env
@@ -82,12 +97,13 @@ CI runs pytest (with a Redis service) and, in `web/`, `npm run typecheck`, `npm 
 
 Set any keys from [`.env.example`](.env.example). Empty keys are ignored. LiteLLM infers which providers are present, and this app lists those providers and their models. You send a catalog `model` on `POST /chat`.
 
-You can copy a file from [`env/`](env/) over `.env` (`cp env/groq.env .env`), fill `GROQ_API_KEY` if that preset uses Groq, and restart uvicorn.
+Short host-development presets live in [`env/`](env/): `groq.env` and `ollama.env` (chat only), `memory.env` (Mem0 + extract LLM + FastEmbed), `full.env` (memory plus both Groq guard classifiers). Copy one over `.env` (`cp env/groq.env .env`), fill any empty key, and restart uvicorn. Presets set `GATEWAY_ALLOW_OPEN=1` for the documented loopback command. Before using one with Compose or any reachable bind, configure `GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER`; Compose overrides the open flag.
 
 Ollama is the same opt-in: set `OLLAMA_API_KEY` to any dummy value (Ollama does not check it) and optionally `OLLAMA_API_BASE` (default `http://127.0.0.1:11434`). Catalog ids look like `ollama/llama3.2`. From Docker, point BASE at `host.docker.internal` or the host IP. Leave `GUARD=0` unless the default classifier ids are in `GET /models`. Pull and run the model once so the first chat is not a cold load.
 
 ## Endpoints
 
+- `GET /healthz` public process liveness
 - `GET /health` process status, providers, reliability, prompts, budget, memory, PII, guardrails (`read`)
 - `GET /ready` strict readiness (`read`; 503 when not ready)
 - `GET /providers` providers inferred from env keys (`read`)
@@ -98,7 +114,7 @@ Ollama is the same opt-in: set `OLLAMA_API_KEY` to any dummy value (Ollama does 
 - `GET /metrics` Prometheus text when `OBS_METRICS=1` (`read`)
 - `GET /config` overlay flags and the calling identity (`auth` only; no extra scope)
 - `PATCH /config` overlay flags for MEMORY / PII / GUARD (`config`, plus a configured `GATEWAY_API_KEY`)
-- `GET` / `POST` / `PATCH` / `DELETE /admin/keys` inbound key lifecycle (`admin`)
+- `GET /admin/keys`, `POST /admin/keys`, `PATCH /admin/keys/{key_id}`, `DELETE /admin/keys/{key_id}` inbound key lifecycle (`admin`)
 - `GET /memory`, `POST /memory`, `DELETE /memory/{id}` Mem0 search, add, delete when `MEMORY=1` (`read` or `chat` on GET; `chat` on write/delete)
 - `POST /chat` `{ "model", "messages", "stream?", "prompt?", "user_id?", "conversation_id?", "agent_id?", "response_format?", "temperature?", "max_tokens?", "tools?" }`. JSON by default; `stream: true` returns SSE (`chat`)
 - `POST /v1/chat/completions` OpenAI envelope over the same pipeline; sidecars via `extra_body` (`chat`)
@@ -108,7 +124,6 @@ Ollama is the same opt-in: set `OLLAMA_API_KEY` to any dummy value (Ollama does 
 
 - [Usage walkthrough](USAGE_WALKTHROUGH.md)
 - [Architecture](docs/architecture.md)
-- [ADRs](docs/adr/0001-modular-monolith.md)
 - [Auth](docs/auth.md)
 - [OpenAI `/v1`](docs/openai.md)
 - [Reliability](docs/reliability.md)
@@ -119,8 +134,7 @@ Ollama is the same opt-in: set `OLLAMA_API_KEY` to any dummy value (Ollama does 
 - [Guardrails](docs/guardrails.md)
 - [Structured output](docs/structured.md)
 
-Env examples are in [`.env.example`](.env.example). Do not commit `.env`. API responses never include keys.
-
+Env examples are in [`.env.example`]
 ## License
 
 [MIT](LICENSE). See [SECURITY.md](SECURITY.md) for how to report vulnerabilities.

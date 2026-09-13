@@ -1,18 +1,78 @@
 from __future__ import annotations
 
 import asyncio
+from types import SimpleNamespace
 
 import pytest
 from tests.factories import runtime
 from tests.fakes import FakeChunk, FakeResponse, FakeUsage
 
-from app.application.chat import _completion_metadata
+from app.application.chat import (
+    _chunk_delta,
+    _completion_metadata,
+    _hidden_params,
+    _pii_commit,
+    _served_model,
+    _usage_from_response,
+)
 from app.application.errors import UnknownModelError
 from app.application.events import StreamDelta, StreamFallback, StreamFinished, StreamStarted, StreamUsage
 from app.application.models import ChatCommand, PromptMeta
 from app.infrastructure.catalog import ProviderCatalog
 from app.schemas import ChatMessage, ModelInfo
 from app.settings import GatewaySettings
+
+
+def test_pii_commit_holds_back_tail():
+    piece, emitted = _pii_commit("a" * 80, "")
+    assert piece == "a" * 16
+    assert emitted == "a" * 16
+    piece, emitted = _pii_commit("a" * 80 + "<EMAIL>", emitted)
+    assert piece == "a" * 7
+    assert emitted == "a" * 23
+    assert "<EMAIL>" not in piece
+    assert "<EMAIL>" not in emitted
+
+
+def test_pii_commit_mismatch_keeps_emitted():
+    piece, emitted = _pii_commit("rewritten", "old-prefix")
+    assert piece == ""
+    assert emitted == "old-prefix"
+
+
+def test_usage_from_response_ignores_empty_counts():
+    assert _usage_from_response(SimpleNamespace()) is None
+    empty = SimpleNamespace(prompt_tokens=None, completion_tokens=None, total_tokens=None)
+    assert _usage_from_response(SimpleNamespace(usage=empty)) is None
+
+
+def test_hidden_params_model_dump():
+    class Dump:
+        def model_dump(self):
+            return {"cache_hit": True}
+
+    class BadDump:
+        def model_dump(self):
+            return "nope"
+
+    class NoDump:
+        pass
+
+    assert _hidden_params(SimpleNamespace(_hidden_params=Dump())) == {"cache_hit": True}
+    assert _hidden_params(SimpleNamespace(_hidden_params=BadDump())) == {}
+    assert _hidden_params(SimpleNamespace(_hidden_params=NoDump())) == {}
+
+
+def test_served_model_falls_back_to_requested():
+    assert _served_model(SimpleNamespace(), "requested/id") == "requested/id"
+    assert _served_model(SimpleNamespace(model=""), "requested/id") == "requested/id"
+    assert _served_model(SimpleNamespace(model=None), "requested/id") == "requested/id"
+
+
+def test_chunk_delta_empty_choices_or_delta():
+    assert _chunk_delta(SimpleNamespace()) == ""
+    assert _chunk_delta(SimpleNamespace(choices=[])) == ""
+    assert _chunk_delta(SimpleNamespace(choices=[SimpleNamespace(delta=None)])) == ""
 
 
 def _command(model="groq/openai/gpt-oss-20b", content="hi", **kwargs) -> ChatCommand:
@@ -135,6 +195,46 @@ def test_complete_chat_calls_router(monkeypatch, tmp_path):
         assert result.cached is False
         assert result.guard_passed is None
         assert result.schema_valid is None
+
+    asyncio.run(_run())
+
+
+def test_complete_chat_invalid_max_tokens_uses_cap(monkeypatch, tmp_path):
+    async def _run():
+        captured: dict = {}
+
+        class Router:
+            async def acompletion(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse("ok")
+
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        result = await rt.chat.complete(_command(max_tokens="nope"))
+        assert result.message.content == "ok"
+        assert captured["max_tokens"] == 2048
+
+    asyncio.run(_run())
+
+
+def test_complete_chat_forwards_tools_and_tool_choice(monkeypatch, tmp_path):
+    async def _run():
+        captured: dict = {}
+        tools = [{"type": "function", "function": {"name": "x"}}]
+
+        class Router:
+            async def acompletion(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse("ok")
+
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        result = await rt.chat.complete(_command(tools=tools, tool_choice="auto"))
+        assert result.message.content == "ok"
+        assert captured["tools"] == tools
+        assert captured["tool_choice"] == "auto"
 
     asyncio.run(_run())
 
@@ -277,12 +377,15 @@ def test_complete_chat_redacts_in_and_out(monkeypatch, tmp_path):
     asyncio.run(_run())
 
 
-def test_stream_chat_buffers_when_pii_on(monkeypatch, tmp_path):
+def test_stream_chat_holdback_when_pii_on(monkeypatch, tmp_path):
+    prefix = "hello there, this is a long safe prefix that should stream before the address. "
+
     async def _run():
         class Router:
             async def acompletion(self, **kwargs):
                 async def _gen():
-                    yield FakeChunk("user@", model="groq/openai/gpt-oss-20b")
+                    yield FakeChunk(prefix, model="groq/openai/gpt-oss-20b")
+                    yield FakeChunk("user@")
                     yield FakeChunk("example.com", usage=FakeUsage())
 
                 return _gen()
@@ -299,20 +402,64 @@ def test_stream_chat_buffers_when_pii_on(monkeypatch, tmp_path):
         monkeypatch.setattr(rt.pii, "redact_messages", fake_redact_messages)
         monkeypatch.setattr(rt.pii, "redact_text", fake_redact_text)
         texts = []
-        pii_flags = []
-        entities = None
+        started = None
         async for event in rt.chat.stream(_command()):
             if isinstance(event, StreamStarted):
-                pii_flags.append(event.pii_redacted)
-                entities = event.pii_entities
+                started = event
             if isinstance(event, StreamDelta) and event.content:
                 texts.append(event.content)
-            if isinstance(event, StreamUsage):
-                assert event.usage.total_tokens == 5
-        assert texts == ["<EMAIL_ADDRESS>"]
+        joined = "".join(texts)
+        assert started is not None
+        assert started.buffered is False
+        assert started.pii_redacted is True
+        assert len(texts) > 1
+        assert joined == prefix + "<EMAIL_ADDRESS>"
+        assert "user@" not in joined
+
+    asyncio.run(_run())
+
+
+def test_stream_chat_buffers_and_redacts_when_pii_and_content_guard_on(monkeypatch, tmp_path):
+    async def _run():
+        class Router:
+            async def acompletion(self, **kwargs):
+                model = kwargs["model"]
+                if "prompt-guard" in model:
+                    return FakeResponse("benign", model=model)
+                if "llama-guard" in model:
+                    return FakeResponse("safe", model=model)
+
+                async def _gen():
+                    yield FakeChunk("hel", model="groq/openai/gpt-oss-20b")
+                    yield FakeChunk("lo user@example.com", usage=FakeUsage())
+
+                return _gen()
+
+        async def fake_redact_messages(messages):
+            return list(messages), []
+
+        async def fake_redact_text(text):
+            return text.replace("user@example.com", "<EMAIL_ADDRESS>"), ["EMAIL_ADDRESS"]
+
+        monkeypatch.setenv("PII", "1")
+        monkeypatch.setenv("GUARD", "1")
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        monkeypatch.setattr(rt.pii, "redact_messages", fake_redact_messages)
+        monkeypatch.setattr(rt.pii, "redact_text", fake_redact_text)
+        texts = []
+        started = None
+        async for event in rt.chat.stream(_command()):
+            if isinstance(event, StreamStarted):
+                started = event
+            if isinstance(event, StreamDelta) and event.content:
+                texts.append(event.content)
+        assert started is not None
+        assert started.buffered is True
+        assert started.pii_redacted is True
+        assert texts == ["hello <EMAIL_ADDRESS>"]
         assert "user@" not in "".join(texts)
-        assert all(flag is True for flag in pii_flags)
-        assert entities == ["EMAIL_ADDRESS"] or pii_flags[-1] is True
 
     asyncio.run(_run())
 
@@ -420,14 +567,17 @@ def test_stream_chat_buffers_when_content_guard_on(monkeypatch, tmp_path):
         monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
         texts = []
         guards = []
+        buffered = None
         async for event in rt.chat.stream(_command()):
             if isinstance(event, StreamStarted):
                 guards.append(event.guard_passed)
+                buffered = event.buffered
             if isinstance(event, StreamDelta) and event.content:
                 texts.append(event.content)
             if isinstance(event, StreamUsage):
                 assert event.usage.total_tokens == 5
         assert texts == ["hello"]
+        assert buffered is True
         assert all(flag is True for flag in guards)
 
     asyncio.run(_run())
@@ -456,9 +606,58 @@ def test_stream_chat_live_when_only_injection_on(monkeypatch, tmp_path):
         async for event in rt.chat.stream(_command()):
             if isinstance(event, StreamStarted):
                 assert event.guard_passed is True
+                assert event.buffered is False
             if isinstance(event, StreamDelta) and event.content:
                 texts.append(event.content)
         assert texts == ["hel", "lo"]
+
+    asyncio.run(_run())
+
+
+def test_stream_chat_estimates_usage_when_chunks_have_none(monkeypatch, tmp_path):
+    async def _run():
+        class Router:
+            async def acompletion(self, **kwargs):
+                async def _gen():
+                    yield FakeChunk("hi", model="groq/openai/gpt-oss-20b")
+
+                return _gen()
+
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "token_count_text", lambda *_a, **_k: 4)
+        usages = []
+        async for event in rt.chat.stream(_command()):
+            if isinstance(event, StreamUsage):
+                usages.append(event)
+        assert len(usages) == 1
+        assert usages[0].usage.completion_tokens == 4
+        assert usages[0].usage.total_tokens is not None
+
+    asyncio.run(_run())
+
+
+def test_stream_chat_fills_missing_completion_tokens(monkeypatch, tmp_path):
+    async def _run():
+        class Router:
+            async def acompletion(self, **kwargs):
+                async def _gen():
+                    yield FakeChunk("hello", model="groq/openai/gpt-oss-20b")
+                    yield FakeChunk("", usage=FakeUsage(completion_tokens=None, cost_usd=None))
+
+                return _gen()
+
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "token_count_text", lambda *_a, **_k: 9)
+        usages = []
+        async for event in rt.chat.stream(_command()):
+            if isinstance(event, StreamUsage):
+                usages.append(event)
+        assert len(usages) == 1
+        assert usages[0].usage.completion_tokens == 9
+        assert usages[0].usage.prompt_tokens == 3
+        assert usages[0].usage.total_tokens == 12
 
     asyncio.run(_run())
 

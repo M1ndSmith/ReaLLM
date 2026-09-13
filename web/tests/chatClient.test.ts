@@ -63,6 +63,15 @@ describe("streamChat", () => {
     expect(events).toEqual([{ kind: "json", payload: { content: "tail" } }]);
   });
 
+  it("delivers [DONE] without throwing", async () => {
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(["data: [DONE]\n\n"])));
+    const events: Array<{ kind: string }> = [];
+    await expect(
+      streamChat({ model: "x", messages: [] }, { onEvent: (event) => events.push(event) }),
+    ).resolves.toBeUndefined();
+    expect(events).toEqual([{ kind: "done" }]);
+  });
+
   it("throws on a trailing SSE error event", async () => {
     vi.stubGlobal("fetch", vi.fn().mockResolvedValue(sseResponse(['data: {"error":"late"}'])));
     await expect(streamChat({ model: "x", messages: [] }, { onEvent: () => undefined })).rejects.toThrow("late");

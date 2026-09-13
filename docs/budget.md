@@ -38,12 +38,4 @@ If Redis is configured but unreachable, the process logs a warning and falls bac
 
 `GET /budget` and `GET /health` (`budget`) show used vs limits.
 
-## Out of scope
 
-- A second tiktoken import. LiteLLM already uses tiktoken inside `token_counter`, and a separate count path can miss chat-template overhead.
-- `acount_tokens`. It adds provider HTTP and Groq has no count API.
-- Router `provider_budget_config` / `max_budget` for hard caps. It depends on an incomplete price map, so Groq often costs `$0` and may not trip. If one provider is over budget, Router fallback can still spend elsewhere.
-- `litellm.BudgetManager` / `litellm.max_budget` for this daily cap. Those represent process-lifetime or hosted spend, not this layer's UTC daily reset.
-- LiteLLM Proxy spend DB / virtual keys. That path needs Postgres and a different gateway.
-
-Hard budget stop remains in this app layer.

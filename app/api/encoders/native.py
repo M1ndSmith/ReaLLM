@@ -28,6 +28,7 @@ def _started_payload(event: StreamStarted) -> dict:
             payload["pii_entities"] = event.pii_entities
     if event.guard_passed is not None:
         payload["guard_passed"] = event.guard_passed
+    payload["buffered"] = event.buffered
     if event.prompt_meta is not None:
         payload.update(_prompt_fields(event.prompt_meta))
     return payload

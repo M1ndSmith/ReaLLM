@@ -15,6 +15,7 @@ class StreamStarted:
     pii_redacted: bool | None
     pii_entities: list[str] | None
     guard_passed: bool | None
+    buffered: bool = False
 
 
 @dataclass(frozen=True)

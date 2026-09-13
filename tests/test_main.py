@@ -313,6 +313,7 @@ def test_sse_includes_pii_flag(make_app, monkeypatch):
         },
     )
     assert '"pii_redacted": true' in response.text
+    assert '"buffered": false' in response.text
     assert "EMAIL_ADDRESS" in response.text
 
 

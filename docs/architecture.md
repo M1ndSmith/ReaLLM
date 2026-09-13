@@ -2,7 +2,7 @@
 
 One FastAPI process, one `ChatService` pipeline, one LiteLLM Router. User chat, guard classifiers, and Mem0 fact extraction all call [`LiteLLMRouterRuntime`](../app/infrastructure/router.py) (`router.acompletion`).
 
-The Next.js console in [`web/`](../web/) talks to uvicorn over CORS. It does not write provider keys. Optional inbound auth is [`GATEWAY_API_KEY`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md). Native clients use `POST /chat`.
+The Next.js console in [`web/`](../web/) talks to uvicorn over CORS. It does not write provider keys. Inbound auth is fail-closed unless loopback development explicitly sets [`GATEWAY_ALLOW_OPEN=1`](auth.md). OpenAI SDKs use [`POST /v1/chat/completions`](openai.md). Native clients use `POST /chat`.
 
 Providers come from non-empty `*_API_KEY` values in `.env` (LiteLLM, then [`ProviderCatalog`](../app/infrastructure/catalog.py)). `GET /models` is that catalog. You send a catalog `model` on `POST /chat`. Groq is optional for chat. Ollama is another keyed provider: a dummy `OLLAMA_API_KEY` plus optional `OLLAMA_API_BASE` (default `http://127.0.0.1:11434`). Guard classifier ids, FastEmbed, and Groq strict JSON defaults are documented in [guardrails](guardrails.md), [memory](memory.md), and [structured](structured.md).
 
@@ -70,9 +70,9 @@ Always on:
 - `MAX_OUTPUT_TOKENS`
 - usage ledger
 
-Optional:
+Configured as needed:
 
-- `GATEWAY_API_KEY`
+- `GATEWAY_API_KEY` (required unless loopback development explicitly allows open startup)
 - Langfuse keys
 - `MEMORY=1`
 - `PII=1`

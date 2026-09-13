@@ -16,7 +16,8 @@ export function useOperatorState(config: ConfigResponse | null, needsAuth: boole
       return {
         authState: "open",
         blockedActions: [],
-        message: "Gateway auth is off. Set GATEWAY_API_KEY to require inbound auth.",
+        message:
+          "Gateway auth is off. Set GATEWAY_API_KEY and restart to require auth. For any reachable bind, also set GATEWAY_ALLOW_OPEN=0 and GATEWAY_KEY_PEPPER.",
       };
     }
     if (needsAuth || !config.identity) {

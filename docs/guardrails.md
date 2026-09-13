@@ -69,20 +69,3 @@ When `GUARD_CONTENT` is on, `POST /memory` is scanned after Presidio and before 
 
 `llama-guard` and `prompt-guard` ids are excluded from same-provider chat fallbacks.
 
-## Out of scope
-
-Keep the Router as the only completion path, including these classifiers.
-
-Not implemented in this process:
-
-- OpenAI Moderation / Azure Content Safety / Perspective
-- NeMo
-- Guardrails AI `guard()` reask
-- Lakera
-- archived LLM Guard
-- LiteLLM Proxy `guardrails:` YAML
-- a second judge model
-- local torch Prompt Guard
-- asking the chat model "is this safe?"
-
-`POST /chat` is text-only. There is no image moderation.

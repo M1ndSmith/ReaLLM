@@ -44,6 +44,3 @@ When `GUARD_CONTENT` is on, `POST /memory` is scanned after Presidio and blocked
 
 `GET /health` includes `memory: { enabled, llm, embedder, vector }`.
 
-## Out of scope
-
-Mem0 here is `search` / `add` of extracted facts. Letta, Zep / Graphiti, LangChain memory, and homemade JSON summaries are other products or a harness this gateway would have to keep.

@@ -26,7 +26,10 @@ def test_route_surface_includes_gateway_contract(make_app):
         "/admin/keys/{key_id}",
     }
     assert expected.issubset(paths)
-    assert client.get("/").status_code == 200
+    home = client.get("/")
+    assert home.status_code == 200
+    assert "operator stack" in home.text
+    assert "not a Portkey or LiteLLM Proxy replacement" in home.text
 
 
 def test_admin_routes_expose_expected_methods(make_app):

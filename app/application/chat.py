@@ -30,6 +30,16 @@ from app.structured import SchemaError, normalize_response_format, validate_outp
 
 logger = logging.getLogger(__name__)
 
+_PII_STREAM_HOLDBACK = 64
+
+
+def _pii_commit(redacted: str, emitted: str, holdback: int = _PII_STREAM_HOLDBACK) -> tuple[str, str]:
+    commit_end = max(0, len(redacted) - holdback)
+    committed = redacted[:commit_end]
+    if not committed.startswith(emitted):
+        return "", emitted
+    return committed[len(emitted) :], committed
+
 
 class _NullClock:
     @contextmanager
@@ -357,6 +367,7 @@ class ChatService:
                 pii_entities,
                 guard_passed,
             ) = await self._prepare_outgoing(command, flags)
+        buffer_output = bool(guard_passed and self._guards.content_enabled(flags))
         yield StreamStarted(
             model=resolved,
             provider=self._catalog.provider_for_model(resolved),
@@ -365,6 +376,7 @@ class ChatService:
             pii_redacted=pii_redacted,
             pii_entities=pii_entities,
             guard_passed=guard_passed,
+            buffered=buffer_output,
         )
         call_kwargs = self._completion_kwargs(
             command,
@@ -376,7 +388,7 @@ class ChatService:
         served = resolved
         assembled: list[str] = []
         usage = None
-        buffer_output = bool(pii_redacted) or bool(guard_passed and self._guards.content_enabled(flags))
+        emitted = ""
         with clock.stage("provider"):
             stream = await self._backend.acompletion(**call_kwargs)
             async for chunk in stream:
@@ -389,7 +401,15 @@ class ChatService:
                 chunk_usage = _usage_from_response(chunk)
                 if chunk_usage is not None:
                     usage = chunk_usage
-                if not buffer_output and delta:
+                if buffer_output or not delta:
+                    continue
+                if pii_redacted:
+                    redacted, found = await self._pii.redact_text("".join(assembled))
+                    pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
+                    piece, emitted = _pii_commit(redacted, emitted)
+                    if piece:
+                        yield StreamDelta(content=piece)
+                else:
                     yield StreamDelta(content=delta)
         with clock.stage("postprocess"):
             raw_assistant = "".join(assembled)
@@ -418,6 +438,11 @@ class ChatService:
                 await self._guards.assert_outbound(assistant, flags)
             if buffer_output and assistant:
                 yield StreamDelta(content=assistant)
+            elif pii_redacted and assistant:
+                if assistant.startswith(emitted):
+                    rest = assistant[len(emitted) :]
+                    if rest:
+                        yield StreamDelta(content=rest)
             self._memory.schedule_record(
                 outgoing,
                 assistant,

@@ -87,6 +87,7 @@ export function useChatSession(model: string, promptName: string, onUnauthorized
           memoriesUsed: null as number | null,
           pii: null as boolean | null,
           guard: null as boolean | null,
+          buffered: false,
         };
         await streamChat(
           body,
@@ -113,6 +114,7 @@ export function useChatSession(model: string, promptName: string, onUnauthorized
               if (typeof json.memories_used === "number") meta.memoriesUsed = json.memories_used;
               if (typeof json.pii_redacted === "boolean") meta.pii = json.pii_redacted;
               if (typeof json.guard_passed === "boolean") meta.guard = json.guard_passed;
+              if (json.buffered === true) meta.buffered = true;
             },
           },
           controller.signal,
@@ -124,6 +126,7 @@ export function useChatSession(model: string, promptName: string, onUnauthorized
           meta.memoriesUsed ? `${meta.memoriesUsed} memories` : "",
           meta.pii ? "pii" : "",
           meta.guard ? "guard" : "",
+          meta.buffered ? "buffered" : "",
           formatTokens(meta.usage),
           formatCost(meta.cost),
         ].filter(Boolean);

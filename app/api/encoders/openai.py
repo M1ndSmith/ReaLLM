@@ -134,6 +134,7 @@ def _stream_extras(event: StreamStarted) -> dict:
             extras["pii_entities"] = event.pii_entities
     if event.guard_passed is not None:
         extras["guard_passed"] = event.guard_passed
+    extras["buffered"] = event.buffered
     if event.prompt_meta is not None:
         extras.update(_prompt_fields(event.prompt_meta))
     return extras

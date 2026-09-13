@@ -42,6 +42,3 @@ When `PII=1`, `GET /memory` redacts the query going in and hit text coming out. 
 
 `GET /health` includes `pii: { enabled, engine, entities }`. `engine` is `presidio` when the layer is on. Health does not load spaCy.
 
-## Out of scope
-
-Presidio is text rewrite around the Router. LiteLLM Proxy Presidio `config.yaml`, log-only / API-key redaction, tokenize-then-unmask, a second regex library, and cloud DLP or an extra LLM detector are out of this process.

@@ -51,6 +51,3 @@ PII placeholders must still satisfy the schema, or the request fails closed.
 
 Mem0 extract is unchanged.
 
-## Out of scope
-
-Instructor reask, Outlines / Guidance / LM Format Enforcer (need logits), Guardrails AI validators, and `litellm.enable_json_schema_validation` (a global LiteLLM switch) are out of this process. Always-on JSON mode would break normal chat and the UI.

@@ -3,7 +3,7 @@
 ## Supported versions
 
 Report vulnerabilities against the default branch. There is no long-term support
-window yet; fixes land on `main` and are expected to be pulled promptly.
+window yet; fixes land on `Master` and are expected to be pulled promptly.
 
 ## Reporting a vulnerability
 

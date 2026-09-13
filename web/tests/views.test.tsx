@@ -5,6 +5,7 @@ import { describe, expect, it, vi } from "vitest";
 
 import { ChatLog } from "@/components/ChatLog";
 import { ConnectView } from "@/components/ConnectView";
+import { OperatorBanner } from "@/components/OperatorBanner";
 import { SettingsView } from "@/components/SettingsView";
 
 describe("ChatLog", () => {
@@ -68,6 +69,7 @@ describe("ConnectView", () => {
     expect(onCopy).toHaveBeenCalledWith("python", "python-body");
     await user.click(screen.getByRole("button", { name: "Copy OpenAI" }));
     expect(onCopy).toHaveBeenCalledWith("openai", "openai-body");
+    expect(screen.getByText(/not a Portkey or LiteLLM Proxy replacement/)).toBeInTheDocument();
   });
 
   it("shows Copied on the active snippet button", () => {
@@ -76,6 +78,26 @@ describe("ConnectView", () => {
     );
     expect(screen.getByRole("button", { name: "Copied" })).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Copy curl" })).toBeInTheDocument();
+  });
+});
+
+describe("OperatorBanner", () => {
+  it("renders nothing when there is no message or runtime error", () => {
+    const { container } = render(
+      <OperatorBanner state={{ authState: "authorized", blockedActions: [], message: null }} runtimeError={null} />,
+    );
+    expect(container).toBeEmptyDOMElement();
+  });
+
+  it("prefers the runtime error over the operator message", () => {
+    render(
+      <OperatorBanner
+        state={{ authState: "authorized", blockedActions: [], message: "Authenticated." }}
+        runtimeError="forbidden"
+      />,
+    );
+    expect(screen.getByRole("status")).toHaveTextContent("Action failed: forbidden");
+    expect(screen.queryByText("Authenticated.")).not.toBeInTheDocument();
   });
 });
 

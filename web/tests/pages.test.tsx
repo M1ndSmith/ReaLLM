@@ -1,6 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 
+import { GET as healthz } from "@/app/healthz/route";
 import ConnectPage from "@/app/connect/page";
 import PlaygroundPage from "@/app/page";
 import SettingsPage from "@/app/settings/page";
@@ -23,5 +24,11 @@ describe("app pages", () => {
   it("renders settings page with settings view", () => {
     render(<SettingsPage />);
     expect(screen.getByTestId("console-view")).toHaveTextContent("settings");
+  });
+
+  it("serves public liveness at /healthz", async () => {
+    const response = healthz();
+    expect(response.status).toBe(200);
+    await expect(response.json()).resolves.toEqual({ status: "ok" });
   });
 });

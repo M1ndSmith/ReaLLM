@@ -19,6 +19,9 @@ def test_auth_on_rejects_missing_and_wrong_key(monkeypatch, make_app):
     denied = client.get("/health")
     assert denied.status_code == 401
     assert denied.json()["detail"]["error"] == "gateway_unauthorized"
+    ready = client.get("/ready")
+    assert ready.status_code == 401
+    assert ready.json()["detail"]["error"] == "gateway_unauthorized"
 
     wrong = client.get("/health", headers={"Authorization": "Bearer nope"})
     assert wrong.status_code == 401
@@ -33,6 +36,7 @@ def test_auth_on_accepts_bearer_and_x_api_key(monkeypatch, make_app):
     client = TestClient(make_app())
     headers = {"Authorization": "Bearer secret-gateway"}
     assert client.get("/health", headers=headers).status_code == 200
+    assert client.get("/ready", headers=headers).status_code == 200
     assert client.get("/models", headers={"X-Api-Key": "secret-gateway"}).status_code == 200
     assert client.get("/v1/models", headers=headers).status_code == 200
 

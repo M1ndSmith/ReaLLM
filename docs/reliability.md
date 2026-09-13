@@ -69,6 +69,3 @@ Pre-call checks skip a deployment that would exceed its RPM/TPM. At most 8 calls
 
 `GET /health` includes `reliability` (`retries`, `cache`, `cache_ttl`, `redis`, `fallback_policy`, `fallbacks`, `routing_strategy`). Env knobs are listed in [`.env.example`](../.env.example).
 
-## Out of scope
-
-LiteLLM already retries inside `router.acompletion` (provider `max_retries=0`). Wrapping `POST /chat` with Tenacity retries the whole Router call and can burst provider 429s. One `REDIS_URL` feeds the Router and the budget ledger; a second cache library would use different keys. Inbound HTTP limiting (SlowAPI) stays deferred. Public-bind control is optional [`GATEWAY_API_KEY`](auth.md). Router RPM/TPM protects provider quota.
