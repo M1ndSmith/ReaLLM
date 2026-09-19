@@ -1,6 +1,10 @@
+<p align="center">
+  <img src="assets/reallm-logo-wordmark.png" alt="ReaLMM" width="1000">
+</p>
+
 # ReaLMM
 
-ReaLMM is a self-hosted LLM operator built on top of @LiteLLM router. With a layer of necessary harness to run an agent that includes:
+ReaLMM is a self-hosted LLM operator built on top of LiteLLM router. A harness to run an agent includes:
 
 1. Unified LLM gateway with automatic provider detection and OpenAI-compatible endpoints
 2. Memory
