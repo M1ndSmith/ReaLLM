@@ -1,6 +1,4 @@
-<p align="center">
-  <img src="assets/reallm-logo-wordmark.png" alt="ReaLMM" width="1000">
-</p>
+<img src="assets/reallm-logo-wordmark.png" alt="ReaLMM" width="1000" style="display: block; margin: 0 auto;">
 
 # ReaLMM
 
@@ -115,6 +113,7 @@ Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALK
 - `GROQ_API_KEY` (`string`, no default): required by the included `env/groq.env` provider preset.
 - `GATEWAY_API_KEY` (`secret string`, no default): required because Docker Compose sets `GATEWAY_ALLOW_OPEN=0`.
 - `GATEWAY_KEY_PEPPER` (`secret string`, no default): required when Docker Compose enables gateway authentication.
+- Optional layers: memory uses local FastEmbed unless you set `MEMORY_EMBEDDER`; guards need `GUARD=1` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b` (or matching `GUARD_*_MODEL` ids). Host presets: [`env/`](env/). Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
 
 ## Contributing
 
