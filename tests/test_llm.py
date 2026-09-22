@@ -393,28 +393,30 @@ def test_stream_chat_holdback_when_pii_on(monkeypatch, tmp_path):
         async def fake_redact_messages(messages):
             return list(messages), []
 
+        calls = {"n": 0}
+
         async def fake_redact_text(text):
+            calls["n"] += 1
             return text.replace("user@example.com", "<EMAIL_ADDRESS>"), ["EMAIL_ADDRESS"]
 
         monkeypatch.setenv("PII", "1")
+        monkeypatch.setenv("GUARD", "0")
         rt = runtime(tmp_path)
         monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
         monkeypatch.setattr(rt.pii, "redact_messages", fake_redact_messages)
         monkeypatch.setattr(rt.pii, "redact_text", fake_redact_text)
-        texts = []
-        started = None
-        async for event in rt.chat.stream(_command()):
-            if isinstance(event, StreamStarted):
-                started = event
-            if isinstance(event, StreamDelta) and event.content:
-                texts.append(event.content)
-        joined = "".join(texts)
-        assert started is not None
-        assert started.buffered is False
-        assert started.pii_redacted is True
-        assert len(texts) > 1
-        assert joined == prefix + "<EMAIL_ADDRESS>"
-        assert "user@" not in joined
+
+        from app.api.encoders.native import encode_native
+
+        encoded = []
+        async for chunk in encode_native(rt.chat.stream(_command())):
+            encoded.append(chunk)
+        body = "".join(encoded)
+        assert '"buffered": true' in body
+        assert '"pii_redacted": true' in body
+        assert prefix + "<EMAIL_ADDRESS>" in body
+        assert "user@example.com" not in body
+        assert calls["n"] == 1
 
     asyncio.run(_run())
 
@@ -745,5 +747,109 @@ def test_stream_chat_rejects_response_format(tmp_path):
         with pytest.raises(SchemaError, match="cannot be streamed"):
             async for _ in rt.chat.stream(_command(response_format={"type": "json_object"})):
                 pass
+
+    asyncio.run(_run())
+
+
+def test_provider_failure_releases_budget_reservation(monkeypatch, tmp_path):
+    from app.infrastructure.budget import _utc_day
+
+    async def _run():
+        class Router:
+            async def acompletion(self, **kwargs):
+                raise RuntimeError("down")
+
+        monkeypatch.setenv("DAILY_TOKEN_BUDGET", "100")
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        with pytest.raises(RuntimeError, match="down"):
+            await rt.chat.complete(_command())
+        assert rt.budget._load_file_state(_utc_day())["tokens"] == 0
+
+    asyncio.run(_run())
+
+
+def test_chat_memory_uses_identity_not_client_user(monkeypatch, tmp_path):
+    async def _run():
+        seen: dict = {}
+        captured: dict = {}
+
+        class Router:
+            async def acompletion(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse("ok")
+
+        async def fake_attach(messages, flags, **kwargs):
+            seen["user_id"] = kwargs.get("user_id")
+            return list(messages), 0
+
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        monkeypatch.setattr(rt.memory, "attach", fake_attach)
+        await rt.chat.complete(_command(user_id="attacker", identity_id="key-a"))
+        assert seen["user_id"] == "key-a"
+        assert captured["metadata"]["trace_user_id"] == "attacker"
+
+    asyncio.run(_run())
+
+
+def test_pii_redacts_only_injected_memory(monkeypatch, tmp_path):
+    from app.infrastructure.memory import inject_memories
+
+    async def _run():
+        calls = {"messages": 0, "texts": []}
+        captured: dict = {}
+
+        class Router:
+            async def acompletion(self, **kwargs):
+                captured.update(kwargs)
+                return FakeResponse("ok")
+
+        async def fake_attach(messages, flags, **kwargs):
+            return inject_memories(messages, ["ping user@example.com"]), 1
+
+        async def fake_redact_messages(messages):
+            calls["messages"] += 1
+            return list(messages), []
+
+        async def fake_redact_text(text):
+            calls["texts"].append(text)
+            return text.replace("user@example.com", "<EMAIL_ADDRESS>"), ["EMAIL_ADDRESS"]
+
+        monkeypatch.setenv("PII", "1")
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", Router().acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        monkeypatch.setattr(rt.memory, "attach", fake_attach)
+        monkeypatch.setattr(rt.pii, "redact_messages", fake_redact_messages)
+        monkeypatch.setattr(rt.pii, "redact_text", fake_redact_text)
+        await rt.chat.complete(_command(content="hello"))
+        assert calls["messages"] == 1
+        assert calls["texts"][0] == "Relevant memory:\n- ping user@example.com"
+        assert "hello" not in calls["texts"]
+        contents = [item["content"] for item in captured["messages"]]
+        assert "user@example.com" not in "\n".join(contents)
+        assert any("<EMAIL_ADDRESS>" in item for item in contents)
+        assert contents[-1] == "hello"
+
+    asyncio.run(_run())
+
+
+def test_guard_spend_is_attributed_to_chat_identity(monkeypatch, tmp_path):
+    from tests.fakes import FakeGuardRouter, FakeUsage
+
+    from app.infrastructure.budget import _utc_day
+
+    async def _run():
+        monkeypatch.setenv("GUARD", "1")
+        rt = runtime(tmp_path)
+        monkeypatch.setattr(rt.router, "acompletion", FakeGuardRouter(chat="ok").acompletion)
+        monkeypatch.setattr(rt.budget, "completion_usd", lambda *_a, **_k: None)
+        await rt.chat.complete(_command(identity_id="key-a"))
+        bucket = rt.budget._load_file_state(_utc_day())["identities"]["key-a"]
+        guard_calls = 3
+        chat_tokens = FakeUsage().total_tokens
+        assert bucket["tokens"] == guard_calls * chat_tokens + chat_tokens
 
     asyncio.run(_run())

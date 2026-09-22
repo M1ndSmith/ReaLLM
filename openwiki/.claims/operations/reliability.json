@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:90b2cf14a7b96e406c2bc2e32b704ad96affc52ceed4695433e85c9e5ce0178c",
+  "claims": [
+    {
+      "id": "claim_5cef71bec68e4effa85fd236f2e7f94d",
+      "statement": "The LiteLLM router uses simple-shuffle, a 45 second timeout, and a 60 second stream timeout.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/router.py#L189-L205",
+          "version": "repo-lines-v1:sha256:f3f5342fe684b5f2c3d9c82d27ff98b5263ae5ca455a0978e95df69722b83d5c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyOGRjNGRmZDNlMjU5NjNiZDBkYWJiMzRlMGFkZGM0MWNkNDJjMGIzNzIyMzYxZDg2ZjE3NGNiZTgzZmI4YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4NzUyZmY1Yjk4ZDZiNmUxZTIyYmMwMTJjZTNlZDA2ODNlMzg1ZWQ0OWUwM2IxMTgwMjQ1MWVkYjVkNGY2OTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlNDg0ZmUzYzg1MTgxMjMxZGNjOTJjMTkxMTM0OWI3ZjIwMzFjNGVjNGIxMTFhMTI1NWNmMDMyMjFjNDgwZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4OTMwYzdlNzljMmEwNjNiZmQwZDgwOGQzYTBmMzc1NDU4OGFlN2UwYWNiOGQ3OWI3M2ZiYjVmMGQwZDZhZTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0222dd77ca8e48c58cc7651c50048083",
+      "statement": "reserve commits the estimate to the ledger before the provider call returns a reservation id.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/budget.py#L450-L489",
+          "version": "repo-lines-v1:sha256:74acfcbf61f346b2d18ffed5b49ba763f7933034ca9654eb5689c326614e2a10:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZiOGFjZjUyM2Y0NzI4YjA1ZjhlNmM5NWUxYTYwMDYzZTVmZGVlOWRmZTcwY2MxZWNiZjkzMjA1YjlkMTQ1MjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1ZDJjNDA0NGNlOThmYTk2OWM0ODIzNDEyNDU2ZTIyY2JkYjRiMjhlNzIxNTA4ZWIyZTE3ODkwYTNmZDQ3NDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiYmZkNjk3ZGZiODMwOWQyZDcxMTk0ZDU3Y2I1MTRjNzBjMWI5N2RhNDA5OWEzNjdiNDEzMjYzZTQwMGE4ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2M2M5ZGNkZjk3NDE1YzMyMDk2ZWE2MTE3ZTAxNTBmZGRkZWQwYWU3MDUzOWJiNzlhMTI3Mjk0NTllZGMwZDkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_79c0b1140c454ba2919cf5d517bb5c5b",
+      "statement": "record_usage replaces a reservation with actual tokens instead of adding the estimate again.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/budget.py#L617-L640",
+          "version": "repo-lines-v1:sha256:2989ce980b3c742fd8f8a4eb70987056f54e319d5a29e0c8a7620e2a6ec7072b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllNDAyOTZmMzVmMmMyOTVkN2FlN2VkNDQzYmY4ODM0MmFjYmZmNmMyMGEyZWI3OGFiNGE5ZTRkZDE3ZTE1OTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiNDA0YTMzYmQzYzE3YWE0ZTQ4NjVjMTA2NDNlZDIxYmMyMzFjNWYyYzIyNTRkMWUwMDExNmFhMTgyMGQxYTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NGJlNDk3NGNjMTYwNGExYjUzYjEyMzFmZDAxODAxNzEyOGM1YjkwN2YwODlkYjhkOTEzNjJjZGUzYWJhYTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBlY2VlNmM3NjUwNjc0YzdhNTJjZjI1ZjU5YjY0NmFhMDY4NGE1OWVhMmMyMzE5YzBkMTBmMWM2ZTdlZjNmYWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_538b180097fd4a43be5f92bceecf2327",
+      "statement": "GET /ready returns 503 when providers are missing or configured Redis is unreachable and degraded mode is off.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/ready.py#L11-L26",
+          "version": "repo-lines-v1:sha256:c6af1e41342b1d5227b8b266b1b8f2d8d02c050c8479a67d3fe5e1cf43f9fcdb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4Y2UzM2VkYTlhN2Y2NDdhYjdlMTYwNmRkMzdkYTRmY2E4ZjYwMDc2YzZiMzNmYWU0NzI3OWJmZjZjMGQ5ZDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5Mzc4NTRkMzRiZjA1ZWY0YjBkMjIwM2QwOWU3ODgyY2IwYmExY2Q4MzA1MTYwODRjYmMwNjI4ODg3NGMzOTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlNzNiODViZDNhYThlNWIxODljZjVkMjU2ZjJjMzRmOGYwYTExMjIxODA4MzVlMWEwODI2NzNjNzEwNTc4ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_007031f279ea4eac89277e8f294f86cd",
+      "statement": "GET /metrics returns 404 when metrics are disabled.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/metrics.py#L12-L16",
+          "version": "repo-lines-v1:sha256:7a2496d7fbb36a9ef642d835781ab8552b69a7138e2462a594e03e5e59f619ef:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjZhZGI0ZWQ0YzIwMGI3ZmU3YTdiMDVkZTY0YzdiMmFiYjc5MjUzMGFiYTY2NTdkNjBkNTllMmU3ZDhhM2QzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTA5ODhkMGJiYzc3ZGE1MWM4OWUyZTkzY2NlMGM2Y2IzM2E4NTA2YWZkZDQxMDkzMmMyZjQyMWYwZDE0NzlkZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2U3M2I4NWJkM2FhOGU1YjE4OWNmNWQyNTZmMmMzNGY4ZjBhMTEyMjE4MDgzNWUxYTA4MjY3M2M3MTA1NzhlNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

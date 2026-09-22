@@ -1,0 +1,8 @@
+memory:
+  enabled: true
+  llm_model: groq/llama-3.1-8b-instant
+  embedder: fastembed
+pii:
+  enabled: false
+guards:
+  enabled: false

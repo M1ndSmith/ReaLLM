@@ -133,3 +133,25 @@ def test_resolve_debounces_last_used_persist(monkeypatch, tmp_path):
     assert path.read_text(encoding="utf-8") == text_after_first
     assert store.get("agent-lu") is not None
     assert store.get("agent-lu").last_used_at == second.last_used_at
+
+
+def test_open_mode_refuses_stored_keys_without_pepper(monkeypatch, tmp_path):
+    monkeypatch.setenv("GATEWAY_ALLOW_OPEN", "1")
+    monkeypatch.delenv("GATEWAY_KEY_PEPPER", raising=False)
+    monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
+    path = tmp_path / "gateway-keys.json"
+    path.write_text(
+        json.dumps({"version": 1, "keys": {"agent-a": {"secret_hash": "sha256:abc", "scopes": ["chat"]}}}),
+        encoding="utf-8",
+    )
+    with pytest.raises(RuntimeError, match="GATEWAY_KEY_PEPPER"):
+        GatewayIdentityStore(GatewaySettings(), path)
+
+
+def test_create_requires_pepper_even_when_open(monkeypatch, tmp_path):
+    monkeypatch.setenv("GATEWAY_ALLOW_OPEN", "1")
+    monkeypatch.delenv("GATEWAY_KEY_PEPPER", raising=False)
+    monkeypatch.delenv("GATEWAY_API_KEY", raising=False)
+    store = GatewayIdentityStore(GatewaySettings(), tmp_path / "gateway-keys.json")
+    with pytest.raises(RuntimeError, match="GATEWAY_KEY_PEPPER"):
+        store.create(key_id="agent-a", scopes=["chat"])

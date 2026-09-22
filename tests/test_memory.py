@@ -172,6 +172,9 @@ def test_build_memory_and_crud(monkeypatch, tmp_path):
         def delete(self, memory_id):
             self.deleted = memory_id
 
+        def get(self, memory_id):
+            return {"id": memory_id, "user_id": "u", "memory": "ok"}
+
         def search(self, query, top_k, filters):
             return {"results": []}
 
@@ -183,6 +186,52 @@ def test_build_memory_and_crud(monkeypatch, tmp_path):
     async def _run():
         payload = await rt.memory.add([ChatMessage(role="user", content="hi")], user_id="u")
         assert payload["results"][0]["memory"] == "ok"
-        await rt.memory.delete("abc")
+        await rt.memory.delete("abc", user_id="u")
+        assert built.deleted == "abc"
+
+    asyncio.run(_run())
+
+
+def test_memory_is_scoped_to_identity_and_delete_is_owned(monkeypatch, tmp_path):
+    monkeypatch.setenv("MEMORY", "1")
+    rt = runtime(tmp_path)
+    rows: dict[str, dict] = {}
+
+    class Store:
+        def add(self, messages, **kwargs):
+            memory_id = f"id-{kwargs['user_id']}"
+            rows[memory_id] = {"id": memory_id, "memory": "fact", "user_id": kwargs["user_id"]}
+            return {"results": [rows[memory_id]]}
+
+        def search(self, query, top_k, filters):
+            found = [row for row in rows.values() if row["user_id"] == filters["user_id"]]
+            return {"results": found}
+
+        def get(self, memory_id):
+            if memory_id not in rows:
+                raise ValueError("missing")
+            return rows[memory_id]
+
+        def delete(self, memory_id):
+            del rows[memory_id]
+
+    monkeypatch.setattr(rt.memory, "get_memory", lambda flags=None: Store())
+
+    async def _run():
+        await rt.memory.add([ChatMessage(role="user", content="hi")], user_id="key-a")
+        own = await rt.memory.search("fact", user_id="key-a")
+        other = await rt.memory.search("fact", user_id="key-b")
+        blank = await rt.memory.search("fact", user_id=None)
+        assert own and own[0].memory == "fact"
+        assert other == []
+        assert blank == []
+        try:
+            await rt.memory.delete("id-key-a", user_id="key-b")
+            raise AssertionError("foreign delete should fail")
+        except ValueError as exc:
+            assert "not found" in str(exc)
+        assert "id-key-a" in rows
+        await rt.memory.delete("id-key-a", user_id="key-a")
+        assert rows == {}
 
     asyncio.run(_run())

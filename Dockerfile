@@ -12,6 +12,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 COPY app ./app
 COPY prompts ./prompts
+COPY config ./config
 
 RUN mkdir -p /app/data \
     && chown -R realmm:realmm /app

@@ -1,0 +1,72 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:d4a4363d212860ad1eada197f87c4c75f1a031251e2acb4998044bd110d0330d",
+  "claims": [
+    {
+      "id": "claim_adef0d676f9d4695b30dcc56d5931339",
+      "statement": "The playground, connect, and settings routes are three views of the same Console component.",
+      "evidence": [
+        {
+          "resource": "repo://web/app/connect/page.tsx#L1-L5",
+          "version": "repo-lines-v1:sha256:0685d12865a2ca04db90ac3b4de3628878807f0ad362277d58bd7131d919eddb:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDY3MzBkNzYxNWVlZDY1Mzg2OTllMjBlYmEzMjA5YTViODQ5NzNmNjlhY2JhYmM4OTc1MjZkMWQ2MmEyZTJmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://web/app/page.tsx#L1-L5",
+          "version": "repo-lines-v1:sha256:49a43b485dd4b76f4ea5540e701c07d0190422b646a34e9c356525b2190c0dcb:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDY3MzBkNzYxNWVlZDY1Mzg2OTllMjBlYmEzMjA5YTViODQ5NzNmNjlhY2JhYmM4OTc1MjZkMWQ2MmEyZTJmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://web/app/settings/page.tsx#L1-L5",
+          "version": "repo-lines-v1:sha256:365921f324d25c4454ab3ca08d95e7ce5cf636fcbaa86c585fab5629cdb7b695:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDY3MzBkNzYxNWVlZDY1Mzg2OTllMjBlYmEzMjA5YTViODQ5NzNmNjlhY2JhYmM4OTc1MjZkMWQ2MmEyZTJmYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3a8a7b2469ea4d3d856bf3599d4758be",
+      "statement": "The console defaults the gateway URL to http://127.0.0.1:8000 unless NEXT_PUBLIC_GATEWAY_URL is set.",
+      "evidence": [
+        {
+          "resource": "repo://web/lib/gateway.ts#L3-L5",
+          "version": "repo-lines-v1:sha256:c444d94cce29d59f30433dae4b9d467ee6855522d006a53005d1d7d5c1c81708:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTFmYjlhMjEwZjBmZmZiNTFlZDgyOTRmOTU3Yzg4YTVlMTBkYTFhYzZjZTI1MjFlZThmNzkwMDM2YzNkNjBmNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjIsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmVkZjRkZDE5MzFhOTZiZWFkNmZhMThiNjk0YmJiZTZiNDQyOTRkMDNlYjZkMjRjY2I2YTU2OTM4MjYwZjA5YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWNmMDFjYzgyNTYyODNiYzRkMzRlNGZhMzNhZWVmMGY4YWZlNmViNDNjOTI4NTJlZWYzNmMwYWZkNjc2OGM0MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_34cbdfa324be456e8887a5f3e855ba39",
+      "statement": "Playground chat sends conversation_id and does not send user_id.",
+      "evidence": [
+        {
+          "resource": "repo://web/hooks/useChatSession.ts#L69-L75",
+          "version": "repo-lines-v1:sha256:43a89da3e55594acdd6a929d350049088b9034b523fa479a459bd30558dff240:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODNkODM1MmQ3ZDc5YTRkZGE3MWIyZDYzNWQ1ZTM1N2RiMzg3YzQxOTc0ZWNlOTFjZjk3NmQwNjI3NzZmNDJjZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjY3MzZhMGRhZDZmZWRkZGM0ZjBkNTM1ODdhMDI0MzczMzg5OTA1OGY4MTFkODk1MDkzZjM2NDMyMTc1Yzc2NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTQ3NGQ5MTNmYjQ4ZmMwNTE1ODdlMzMwNzQ1ZjZmYTJmOGEzOTJmNTZjODk3MDVmMjc1MDRmODVkMDUwNTNkZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjg2ZmM0YWNmMzhjYmEzMzZiNmVmYzhhYTM3NzNjNzVjN2Q2MTBiZDQwNGM0MzYzMGZkOTU2MDJjNjg3NGI3YyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d143b8d5e86d456a84f897510f3703c1",
+      "statement": "A pasted gateway key is kept in sessionStorage and is not written to .env from the console.",
+      "evidence": [
+        {
+          "resource": "repo://web/lib/auth.ts#L1-L14",
+          "version": "repo-lines-v1:sha256:4c5c8bb1dc7e2c40e01d542e8348adcbaac13acc877dd62def088786b4a59436:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3MjEyNDZmZmM3MjIyOTkyMzYyODBiZTllZjg0ZWM4ZjcyNzZmZDM5YzFjNDllNDUxNDZiMmIwNGRmMzZjMDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzZjMxYjc5YTFhNzljOGU2OTMxYzI4ZTg0OTU0Mjk3ZjI2N2E2N2M4MWEwMzM1ODczN2Y3ZTc1Yzg1NWY2OWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxMDk5YzczOWJjM2I0Y2RlNjRjM2VmYTNjYzNiZTNiOTg2ZWZiODE4NDZiNDgyMjAxMTA3MGQyZmJmNjUxYjUifQ"
+        },
+        {
+          "resource": "repo://web/lib/gateway.ts#L28-L31",
+          "version": "repo-lines-v1:sha256:8456c68d42a58c7d3ac7600e5cecec971c5c5bef4c87e294046bed7bcdfe5545:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNThmOWIzMmQzY2E3NGMyMjdlZjQxMGQ1YWEyNmY2MTlmZTc3Mjg4NWM0NGI2NWExZDhmNWIzODQwZTNhZTIzOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDI1YzQzZmIyZWRmYzYyNjNlMWIyZjkxYjczOWYzNzg2MWFmOThjOTM5MTA3MDRkYTk3ZmJkOTY0OGNiYTAzOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjI0YzJiZDQ5OTU3ZmI2N2VkZTlhYjA2N2JlOGVkODFhYmY2ZDQ4Yzg5OTQyZDI4YzE0NzliOTU3ZDk1MTBmOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_88ef6c56c1c247be9c837ad05d16439a",
+      "statement": "Compose binds the console to 127.0.0.1:3000 and allows that origin through gateway CORS.",
+      "evidence": [
+        {
+          "resource": "repo://compose.yaml#L33-L56",
+          "version": "repo-lines-v1:sha256:d7bfed5c149faf4eac3f711e9ad7c3a7bd898f1943282642e6d49e289de852cf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNTY1YzkyYmM1NzkzNmIzMTdmNTVmNDY2M2JlYWEwOTgzM2IyNzE2YjI5YmExMzViMGZlOGYyZGQ4YWZlZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiNjA2MDljNmQ5Zjk0YjhjNDE3Mzk2N2ZjMDhjZDk4OTdjNTIxODkyZjUxNjBjYWFkYzA2ODhlNGZmN2I2ZTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmMzI2OTRjOWZhY2JlYmE5OWVlMzViMGUzZjM2MTVlMWU5ZmEzMWNhYjI2MDMzOTdmMWI3ZjVjZjVkOTc2NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwNmUxOGNkNDQ4Yzc3NjIzYjVlNDMxMDkzNDJlMTgzMTc1ZjNmODM4YjI0Zjg2M2M2OGZkNGJmNWE5ZjU1Y2UifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

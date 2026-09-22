@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:43b95f043c39d0e9cced4beccca0bbf1f242c3ee38d334db9d819e6fdca00385",
+  "claims": [
+    {
+      "id": "claim_6d7c316840b941ffaeb62524f153e9b8",
+      "statement": "Settings precedence is constructor, environment, dotenv, YAML policy, file secrets, then defaults, so env overrides YAML.",
+      "evidence": [
+        {
+          "resource": "repo://app/settings.py#L363-L377",
+          "version": "repo-lines-v1:sha256:a9321ba865c6e079edba5d801eb9e48a5548ce7b34af0d3f1783d05dd09ab1e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhYjFiNGExMWQwZGEwOTZjOTg0Y2JjMDBhZDgyZWFiMjEzZmQ5ZTJiNTY1ODliODBkZGM3ZTFkZTU4MDhmNzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRkMTE1MzY4MzMzMzAwNThiMTgyYmMyNWE2ZjAwNGZmZWEwYzgxNzA1ZmUzMzMzYThjNTVhYzVhOTNiZDIwNDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1Y2Y1NjMyOGNmZDg4OTkyMjRjMzE2YTgwZTkxOGRlOGY0ODE3ZmU0YzE5M2M2NjY4MWE0MTFjNWYzNTQwMmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_736e7a22339446b5bb4f0c964e7762a0",
+      "statement": "A missing policy YAML file loads as an empty mapping.",
+      "evidence": [
+        {
+          "resource": "repo://app/settings.py#L99-L102",
+          "version": "repo-lines-v1:sha256:c211b762064623ec531710a45851b2f77064a49f67bdbd637ab830a4b2879fee:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWNiNTMzM2ViNzg0NjgzYTI4NDlhNzQ3NDM4MDZjZmNkZjNkOTQyMDE1NzlhZjVhNjQ2MWJjZDFhYzdlNmFiMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGYyOGUxMDZjYjczYTg0MmZmOGUwODgzMDgzN2Q1MjBmOTU1YjRjMDk0YTk3MGQwZTYzZjQwNTI1YzE4ZmMyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzkyM2ZhNjkyYmNiY2FjZmMwZWQ5MjJhZTg5NDlkYjVmYWJiOTBkZmU3N2EyMmRjMjRhOTNmMGZhMzQwOWVhMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjUxNmQyODYyNTg2MGFlMmQ0MzllOWM4NjZkODE2YzdlMTZlZDA5OGQ2Njc1YzdmYzEyOGNiNmNlNDQ4MDk5OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_24452c95fb8f4254ba04ebbc563174bd",
+      "statement": "Router RPM limits are read from GatewaySettings rather than a direct environment lookup in the router.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/router.py#L64-L65",
+          "version": "repo-lines-v1:sha256:17bcfca756fad4306638e7a262646a8f6f3c256135d8c4d02e56d3b53844680a:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTRhNjI2MTI0ZDJiOTEwZTgyNzRmNjNjNGJhNTk1YTI1NmUwY2JkNzg5YWU0OWY4YWZkNzNlZTAwMWQ3YjYyNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjNiZjk3Zjk5ZTNiNmRjZTQwYTgwZWEyYjg5NWQxZmY4ODUwYWVlZjFjZGQxMTRlZTMyNTIwMDI5YjExOTI0YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2U0YTM5ZTY4ZjYyNDZjZWIwNjM5MDMzNWE4OTNiNGZiMTEzMGE5NGI1M2E0OWEwNzc5NGIzNjgyYzY1YTBjZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiN2E2OGM2MmZkMmYyYzQ2NmE0NmUxNmM5Y2FmMTIzNzc5OWQwZTM4NWQxMGM4N2ZjN2JhMjBjY2NiYWYzYjQ0NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b84f5db00ee645d6bcd4d56049f63454",
+      "statement": "The runtime flag file overlays MEMORY, PII, and GUARD flags and does not mutate os.environ.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/flags.py#L13-L25",
+          "version": "repo-lines-v1:sha256:3cfd2ce73f0ec9bcf916dada3bbaa23c75587abf34b1dd31ff511cf30e4039b8:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA0NWJiYWM0Njc5MjIzODAwNDFiOGNmOTAyNDQwMjg1NGY2NTllZDAwMzM4Mjk3YTUyZTljN2ZmYmNhMzhkZjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4YzJjMzU0YzY0YzEwYmUyMDJlMWFjODMyMWM5NThmYTkwZThlZWQ2MzEzMWU4MDRlMTczMmY3ZTdlZjhiYzYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1YzFjNDYyZTJhMzlkNzQ3NTlmNWUxYjEyNmY3NjgzYTJiNzMwMTE4ZTE4ZjUxMjJiMDhjZWRlZWI2NTBlMjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhZDg2Y2Y5YzUzZWY5NTQ5ZjM2ZWY3MjliMWFiZjU4ZTFmYzQ5ZDI1MGVjZWZkYzQ2ODI0ZjdlZGE2MjRjMjMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_28e7ef3b1eee43028664fb00998886e1",
+      "statement": "PATCH /config requires the config scope and a configured gateway key.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/config.py#L21-L26",
+          "version": "repo-lines-v1:sha256:3352eadec9c2ade316f9df0e5931de6750d3b075f3ed3ff426936426e4e02b5d:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjUxZTgxYTBmNmRkMWE0MTE4NmE1OGU1YjIyMjAwMmFlZWRlMTIxZGFkMjRjNGVkNzJjYzJjMDVlMmVjYmMzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU1YWI4MWVmYTJjMDJlN2Q3OGYxNTlhZjVmZDk5Y2IzZjQ3N2Q5ZTVkZGFhNjEyODFhMGE1MTk4Y2IzNGQ4NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzEyNzRkM2JhZjc0NTkxMTBmNDVjM2JkZTdjYmM4NGZmNDdjOWYxYTE2ZWQ5NWMzMGZjM2ViNGFiNmM1NDVkZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTQ0ZWFkZTQzYmYzMmZlOWNlOTQ0YjNkYWZhMmY2NjE3NWVlMjc3NzRmOTI1ZTNiMjYwMTUxYjRmZTZlYWVmOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_8f3ffa3c39e24fb881af5711a957ac1f",
+      "statement": "Compose forces GATEWAY_ALLOW_OPEN to 0.",
+      "evidence": [
+        {
+          "resource": "repo://compose.yaml#L32-L32",
+          "version": "repo-lines-v1:sha256:dae9aeaa55f205efd68706db0254a7fee6f5fc74863e4ae23d06f8351929dd32:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGQ4ZDU5YTkzZWVmMDA5ZWFlMzU2ODVmMDcxYTI4YTk2YzFiNTBmODNhOGUxZGU2ZjlmZDc1YjhlM2ZjNzg0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjJhMDIzYTY0MDVmN2Y4ZmQwY2JjZTZiMTdkNjk2ZWJmOWQ4YjlmMTU0NGI0M2YxMWFjNzAwMTU5YzU3NjM0MCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

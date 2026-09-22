@@ -233,3 +233,44 @@ def test_identity_redis_ledger(monkeypatch, tmp_path):
     budget.assert_allowed("m", 1, identity_id="agent-a", quotas=IdentityQuotas(daily_token_budget=10))
     with pytest.raises(BudgetExceededError):
         budget.assert_allowed("m", 8, identity_id="agent-a", quotas=IdentityQuotas(daily_token_budget=5))
+
+
+def test_parallel_reserve_stays_within_cap(monkeypatch, tmp_path):
+    import threading
+
+    from app.infrastructure.budget import _utc_day
+
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET", "100")
+    budget = _budget(tmp_path)
+    ok: list[str] = []
+    blocked: list[int] = []
+
+    def once() -> None:
+        try:
+            ok.append(budget.reserve("m", 40))
+        except BudgetExceededError:
+            blocked.append(1)
+
+    threads = [threading.Thread(target=once) for _ in range(8)]
+    for thread in threads:
+        thread.start()
+    for thread in threads:
+        thread.join()
+    state = budget._load_file_state(_utc_day())
+    assert len(ok) == 2
+    assert len(blocked) == 6
+    assert state["tokens"] == 80
+    assert state["tokens"] <= 100 + 40
+
+
+def test_record_usage_replaces_reservation(monkeypatch, tmp_path):
+    from app.infrastructure.budget import _utc_day
+
+    monkeypatch.setenv("DAILY_TOKEN_BUDGET", "100")
+    budget = _budget(tmp_path)
+    reservation_id = budget.reserve("m", 40)
+    budget.record_usage(tokens=10, usd=None, cached=False, reservation_id=reservation_id)
+    assert budget._load_file_state(_utc_day())["tokens"] == 10
+    released = budget.reserve("m", 40)
+    budget.release(released)
+    assert budget._load_file_state(_utc_day())["tokens"] == 10

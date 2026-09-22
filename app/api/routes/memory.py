@@ -1,8 +1,8 @@
 from __future__ import annotations
 
-from fastapi import APIRouter, Depends, HTTPException, Query
+from fastapi import APIRouter, Depends, HTTPException, Query, Request
 
-from app.api.dependencies import get_runtime, require_scopes
+from app.api.dependencies import bound_identity_id, get_runtime, require_scopes
 from app.api.errors import raise_chat
 from app.application.errors import MemoryConfigError
 from app.container import GatewayRuntime
@@ -18,8 +18,8 @@ def _require_memory(runtime: GatewayRuntime) -> None:
 
 @router.get("/memory", response_model=MemorySearchResponse, dependencies=[Depends(require_scopes("read", "chat"))])
 async def memory_search(
+    request: Request,
     q: str = Query(..., min_length=1),
-    user_id: str | None = None,
     conversation_id: str | None = None,
     agent_id: str | None = None,
     top_k: int = Query(5, ge=1, le=50),
@@ -33,7 +33,7 @@ async def memory_search(
             query, _ = await runtime.pii.redact_text(q)
         results = await runtime.memory.search(
             query,
-            user_id=user_id,
+            user_id=bound_identity_id(request),
             conversation_id=conversation_id,
             agent_id=agent_id,
             top_k=top_k,
@@ -47,21 +47,23 @@ async def memory_search(
 
 @router.post("/memory", response_model=MemoryAddResponse, dependencies=[Depends(require_scopes("chat"))])
 async def memory_add(
-    request: MemoryAddRequest,
+    body: MemoryAddRequest,
+    request: Request,
     runtime: GatewayRuntime = Depends(get_runtime),
 ) -> MemoryAddResponse:
     _require_memory(runtime)
     flags = runtime.flags.snapshot()
+    owner = bound_identity_id(request)
     try:
-        messages = request.messages
+        messages = body.messages
         if flags.pii:
-            messages, _ = await runtime.pii.redact_messages(request.messages)
-        await runtime.guards.assert_memory_write(messages, flags)
+            messages, _ = await runtime.pii.redact_messages(body.messages)
+        await runtime.guards.assert_memory_write(messages, flags, identity_id=owner)
         payload = await runtime.memory.add(
             messages,
-            user_id=request.user_id,
-            conversation_id=request.conversation_id,
-            agent_id=request.agent_id,
+            user_id=owner,
+            conversation_id=body.conversation_id,
+            agent_id=body.agent_id,
         )
     except Exception as exc:
         raise_chat(exc)
@@ -78,10 +80,14 @@ async def memory_add(
 
 
 @router.delete("/memory/{memory_id}", dependencies=[Depends(require_scopes("chat"))])
-async def memory_delete(memory_id: str, runtime: GatewayRuntime = Depends(get_runtime)) -> dict[str, str]:
+async def memory_delete(
+    memory_id: str,
+    request: Request,
+    runtime: GatewayRuntime = Depends(get_runtime),
+) -> dict[str, str]:
     _require_memory(runtime)
     try:
-        await runtime.memory.delete(memory_id)
+        await runtime.memory.delete(memory_id, user_id=bound_identity_id(request))
     except MemoryConfigError as exc:
         raise HTTPException(status_code=503, detail=str(exc)) from exc
     except ValueError as exc:

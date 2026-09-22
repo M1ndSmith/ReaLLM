@@ -33,6 +33,15 @@ logger = logging.getLogger(__name__)
 _PII_STREAM_HOLDBACK = 64
 
 
+def _injected_message_index(before: list[ChatMessage], after: list[ChatMessage]) -> int | None:
+    if len(after) != len(before) + 1:
+        return None
+    for index, (left, right) in enumerate(zip(before, after)):
+        if left.role != right.role or left.content != right.content:
+            return index
+    return len(before)
+
+
 def _pii_commit(redacted: str, emitted: str, holdback: int = _PII_STREAM_HOLDBACK) -> tuple[str, str]:
     commit_end = max(0, len(redacted) - holdback)
     committed = redacted[:commit_end]
@@ -235,28 +244,33 @@ class ChatService:
         if pii_on:
             outgoing, types = await self._pii.redact_messages(outgoing)
             found = self._pii.unique_entity_types(found, types)
+        before_memory = outgoing
         outgoing, memories_used = await self._memory.attach(
             outgoing,
             flags,
-            user_id=command.user_id,
+            user_id=command.identity_id,
             conversation_id=command.conversation_id,
             agent_id=command.agent_id,
         )
-        if pii_on:
-            outgoing, types = await self._pii.redact_messages(outgoing)
-            found = self._pii.unique_entity_types(found, types)
+        if pii_on and memories_used:
+            index = _injected_message_index(before_memory, outgoing)
+            if index is not None:
+                redacted, types = await self._pii.redact_text(outgoing[index].content)
+                outgoing = list(outgoing)
+                outgoing[index] = ChatMessage(role=outgoing[index].role, content=redacted)
+                found = self._pii.unique_entity_types(found, types)
         if flags.guard:
-            await self._guards.assert_inbound(outgoing, flags)
+            await self._guards.assert_inbound(outgoing, flags, identity_id=command.identity_id)
         resolved = self._catalog.resolve_model(command.model)
         estimated = self._budget.token_count(resolved, outgoing)
         quotas = self._quotas_for(command.identity_id)
-        self._budget.assert_allowed(
+        self._budget.assert_rpm(command.identity_id, quotas.rpm_limit)
+        reservation_id = self._budget.reserve(
             resolved,
             estimated,
             identity_id=command.identity_id,
             quotas=quotas,
         )
-        self._budget.assert_rpm(command.identity_id, quotas.rpm_limit)
         return (
             outgoing,
             prompt_meta,
@@ -266,12 +280,14 @@ class ChatService:
             True if pii_on else None,
             found if pii_on else None,
             True if flags.guard else None,
+            reservation_id,
         )
 
     async def complete(self, command: ChatCommand) -> ChatResponse:
         clock = self._clock()
         flags = self._flags.snapshot()
         fmt = normalize_response_format(command.response_format)
+        reservation_id: str | None = None
 
         with clock.stage("preflight"):
             (
@@ -283,6 +299,7 @@ class ChatService:
                 pii_redacted,
                 pii_entities,
                 guard_passed,
+                reservation_id,
             ) = await self._prepare_outgoing(command, flags)
         call_kwargs = self._completion_kwargs(
             command,
@@ -293,40 +310,46 @@ class ChatService:
         )
         if fmt is not None:
             call_kwargs["response_format"] = fmt
-        with clock.stage("provider"):
-            response = await self._backend.acompletion(**call_kwargs)
-        with clock.stage("postprocess"):
-            choice = response.choices[0]
-            content = choice.message.content or ""
-            served = _served_model(response, resolved)
-            used_fallback = self._catalog.fallback_from(resolved, served)
-            reported = served if used_fallback else resolved
-            cached = _cache_hit(response)
-            usage = self._budget.attach_cost(
-                _usage_from_response(response), self._budget.completion_usd(response, reported)
-            )
-            tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
-            self._budget.record_usage(
-                tokens=tokens,
-                usd=usage.cost_usd if usage else None,
-                cached=cached,
-                identity_id=command.identity_id,
-            )
-            if pii_redacted:
-                content, found = await self._pii.redact_text(content)
-                pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
-            if guard_passed:
-                await self._guards.assert_outbound(content, flags)
-            if fmt is not None:
-                validate_output(content, fmt)
-            self._memory.schedule_record(
-                outgoing,
-                content,
-                flags,
-                user_id=command.user_id,
-                conversation_id=command.conversation_id,
-                agent_id=command.agent_id,
-            )
+        try:
+            with clock.stage("provider"):
+                response = await self._backend.acompletion(**call_kwargs)
+            with clock.stage("postprocess"):
+                choice = response.choices[0]
+                content = choice.message.content or ""
+                served = _served_model(response, resolved)
+                used_fallback = self._catalog.fallback_from(resolved, served)
+                reported = served if used_fallback else resolved
+                cached = _cache_hit(response)
+                usage = self._budget.attach_cost(
+                    _usage_from_response(response), self._budget.completion_usd(response, reported)
+                )
+                tokens = usage.total_tokens if usage and usage.total_tokens is not None else estimated
+                self._budget.record_usage(
+                    tokens=tokens,
+                    usd=usage.cost_usd if usage else None,
+                    cached=cached,
+                    identity_id=command.identity_id,
+                    reservation_id=reservation_id,
+                )
+                reservation_id = None
+                if pii_redacted:
+                    content, found = await self._pii.redact_text(content)
+                    pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
+                if guard_passed:
+                    await self._guards.assert_outbound(content, flags, identity_id=command.identity_id)
+                if fmt is not None:
+                    validate_output(content, fmt)
+                self._memory.schedule_record(
+                    outgoing,
+                    content,
+                    flags,
+                    user_id=command.identity_id,
+                    conversation_id=command.conversation_id,
+                    agent_id=command.agent_id,
+                )
+        finally:
+            if reservation_id is not None:
+                self._budget.release(reservation_id)
         logger.info(
             "chat complete stages_ms=%s identity=%s",
             clock.snapshot(),
@@ -356,6 +379,7 @@ class ChatService:
 
         clock = self._clock()
         flags = self._flags.snapshot()
+        reservation_id: str | None = None
         with clock.stage("preflight"):
             (
                 outgoing,
@@ -366,8 +390,9 @@ class ChatService:
                 pii_redacted,
                 pii_entities,
                 guard_passed,
+                reservation_id,
             ) = await self._prepare_outgoing(command, flags)
-        buffer_output = bool(guard_passed and self._guards.content_enabled(flags))
+        buffer_output = bool(pii_redacted) or bool(guard_passed and self._guards.content_enabled(flags))
         yield StreamStarted(
             model=resolved,
             provider=self._catalog.provider_for_model(resolved),
@@ -388,71 +413,64 @@ class ChatService:
         served = resolved
         assembled: list[str] = []
         usage = None
-        emitted = ""
-        with clock.stage("provider"):
-            stream = await self._backend.acompletion(**call_kwargs)
-            async for chunk in stream:
-                chunk_model = getattr(chunk, "model", None)
-                if isinstance(chunk_model, str) and chunk_model:
-                    served = _served_model(chunk, resolved)
-                delta = _chunk_delta(chunk)
-                if delta:
-                    assembled.append(delta)
-                chunk_usage = _usage_from_response(chunk)
-                if chunk_usage is not None:
-                    usage = chunk_usage
-                if buffer_output or not delta:
-                    continue
-                if pii_redacted:
-                    redacted, found = await self._pii.redact_text("".join(assembled))
-                    pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
-                    piece, emitted = _pii_commit(redacted, emitted)
-                    if piece:
-                        yield StreamDelta(content=piece)
-                else:
+        try:
+            with clock.stage("provider"):
+                stream = await self._backend.acompletion(**call_kwargs)
+                async for chunk in stream:
+                    chunk_model = getattr(chunk, "model", None)
+                    if isinstance(chunk_model, str) and chunk_model:
+                        served = _served_model(chunk, resolved)
+                    delta = _chunk_delta(chunk)
+                    if delta:
+                        assembled.append(delta)
+                    chunk_usage = _usage_from_response(chunk)
+                    if chunk_usage is not None:
+                        usage = chunk_usage
+                    if buffer_output or not delta:
+                        continue
                     yield StreamDelta(content=delta)
-        with clock.stage("postprocess"):
-            raw_assistant = "".join(assembled)
-            if usage is None:
-                usage = self._budget.usage_from_counts(
-                    served, estimated, self._budget.token_count_text(served, raw_assistant)
+            with clock.stage("postprocess"):
+                raw_assistant = "".join(assembled)
+                if usage is None:
+                    usage = self._budget.usage_from_counts(
+                        served, estimated, self._budget.token_count_text(served, raw_assistant)
+                    )
+                elif usage.cost_usd is None:
+                    completion_tokens = usage.completion_tokens
+                    if completion_tokens is None:
+                        completion_tokens = self._budget.token_count_text(served, raw_assistant)
+                    prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
+                    usage = self._budget.usage_from_counts(served, prompt_tokens, completion_tokens)
+                tokens = usage.total_tokens if usage.total_tokens is not None else estimated
+                self._budget.record_usage(
+                    tokens=tokens,
+                    usd=usage.cost_usd,
+                    cached=False,
+                    identity_id=command.identity_id,
+                    reservation_id=reservation_id,
                 )
-            elif usage.cost_usd is None:
-                completion_tokens = usage.completion_tokens
-                if completion_tokens is None:
-                    completion_tokens = self._budget.token_count_text(served, raw_assistant)
-                prompt_tokens = usage.prompt_tokens if usage.prompt_tokens is not None else estimated
-                usage = self._budget.usage_from_counts(served, prompt_tokens, completion_tokens)
-            tokens = usage.total_tokens if usage.total_tokens is not None else estimated
-            self._budget.record_usage(
-                tokens=tokens,
-                usd=usage.cost_usd,
-                cached=False,
-                identity_id=command.identity_id,
-            )
-            assistant = raw_assistant
-            if pii_redacted:
-                assistant, found = await self._pii.redact_text(raw_assistant)
-                pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
-            if guard_passed:
-                await self._guards.assert_outbound(assistant, flags)
-            if buffer_output and assistant:
-                yield StreamDelta(content=assistant)
-            elif pii_redacted and assistant:
-                if assistant.startswith(emitted):
-                    rest = assistant[len(emitted) :]
-                    if rest:
-                        yield StreamDelta(content=rest)
-            self._memory.schedule_record(
-                outgoing,
-                assistant,
-                flags,
-                user_id=command.user_id,
-                conversation_id=command.conversation_id,
-                agent_id=command.agent_id,
-            )
-            used_fallback = self._catalog.fallback_from(resolved, served)
-            reported = served if used_fallback else resolved
+                reservation_id = None
+                assistant = raw_assistant
+                if pii_redacted:
+                    assistant, found = await self._pii.redact_text(raw_assistant)
+                    pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
+                if guard_passed:
+                    await self._guards.assert_outbound(assistant, flags, identity_id=command.identity_id)
+                if buffer_output and assistant:
+                    yield StreamDelta(content=assistant)
+                self._memory.schedule_record(
+                    outgoing,
+                    assistant,
+                    flags,
+                    user_id=command.identity_id,
+                    conversation_id=command.conversation_id,
+                    agent_id=command.agent_id,
+                )
+        finally:
+            if reservation_id is not None:
+                self._budget.release(reservation_id)
+        used_fallback = self._catalog.fallback_from(resolved, served)
+        reported = served if used_fallback else resolved
         logger.info(
             "chat stream stages_ms=%s identity=%s",
             clock.snapshot(),

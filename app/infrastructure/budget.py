@@ -2,8 +2,10 @@ from __future__ import annotations
 
 import json
 import logging
+import secrets
 import threading
 import time
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any
@@ -22,6 +24,58 @@ _RPM_KEY_PREFIX = "realmm:rpm:"
 _REDIS_TTL_SECONDS = 3 * 24 * 3600
 _RPM_WINDOW_SECONDS = 60
 logger = logging.getLogger(__name__)
+
+_RESERVE_LUA = """
+local gkey = KEYS[1]
+local ikey = KEYS[2]
+local add_tokens = tonumber(ARGV[1])
+local add_usd = tonumber(ARGV[2])
+local g_token_cap = tonumber(ARGV[3])
+local g_usd_cap = tonumber(ARGV[4])
+local i_token_cap = tonumber(ARGV[5])
+local i_usd_cap = tonumber(ARGV[6])
+local ttl = tonumber(ARGV[7])
+
+local function over(key, token_cap, usd_cap)
+  if token_cap >= 0 then
+    local tokens = tonumber(redis.call('HGET', key, 'tokens') or '0')
+    if tokens + add_tokens > token_cap then return 1 end
+  end
+  if usd_cap >= 0 and add_usd > 0 then
+    local usd = tonumber(redis.call('HGET', key, 'usd') or '0')
+    if usd + add_usd > usd_cap then return 2 end
+  end
+  return 0
+end
+
+local g = over(gkey, g_token_cap, g_usd_cap)
+if g ~= 0 then return g end
+if ikey ~= '' then
+  local i = over(ikey, i_token_cap, i_usd_cap)
+  if i == 1 then return 3 end
+  if i == 2 then return 4 end
+end
+if add_tokens ~= 0 then
+  redis.call('HINCRBY', gkey, 'tokens', add_tokens)
+end
+if add_usd ~= 0 then
+  redis.call('HINCRBYFLOAT', gkey, 'usd', add_usd)
+end
+redis.call('EXPIRE', gkey, ttl)
+if ikey ~= '' then
+  if add_tokens ~= 0 then redis.call('HINCRBY', ikey, 'tokens', add_tokens) end
+  if add_usd ~= 0 then redis.call('HINCRBYFLOAT', ikey, 'usd', add_usd) end
+  redis.call('EXPIRE', ikey, ttl)
+end
+return 0
+"""
+
+
+@dataclass(frozen=True)
+class _Reservation:
+    tokens: int
+    usd: float
+    identity_id: str | None
 
 
 def _clean_usd(value: object) -> float | None:
@@ -111,6 +165,7 @@ class BudgetRuntime:
         self._redis_client: Any = None
         self._redis_import_failed = False
         self._rpm_hits: dict[str, list[float]] = {}
+        self._reservations: dict[str, _Reservation] = {}
 
     def max_input_tokens(self) -> int | None:
         return self._settings.max_input_tokens
@@ -392,18 +447,152 @@ class BudgetRuntime:
             hits.append(now)
             self._rpm_hits[slug] = hits
 
-    def record_usage(
+    def reserve(
         self,
+        model: str,
+        estimated_tokens: int,
         *,
-        tokens: int | None,
-        usd: float | None,
-        cached: bool,
         identity_id: str | None = None,
-    ) -> None:
-        if cached:
+        quotas: IdentityQuotas | None = None,
+    ) -> str:
+        """Check the daily cap and commit the estimate before the provider call."""
+        input_limit = self.max_input_tokens()
+        if input_limit is not None and estimated_tokens > input_limit:
+            raise InputTooLargeError(f"Prompt is {estimated_tokens} tokens; MAX_INPUT_TOKENS is {input_limit}.")
+        projected = self.estimated_input_usd(model, estimated_tokens)
+        add_tokens = max(0, int(estimated_tokens or 0))
+        add_usd = float(projected) if isinstance(projected, (int, float)) and projected > 0 else 0.0
+        client = self._get_redis()
+        if client is not None:
+            try:
+                self._reserve_redis(client, model, estimated_tokens, add_tokens, add_usd, identity_id, quotas)
+            except BudgetExceededError:
+                raise
+            except Exception:
+                logger.warning("Redis budget reserve failed; using file ledger", exc_info=True)
+            else:
+                return self._store_reservation(add_tokens, add_usd, identity_id)
+        with self._lock:
+            state = self._load_file_state(_utc_day())
+            identity_state = None
+            if identity_id and quotas is not None:
+                bucket = (state.get("identities") or {}).get(identity_id) or {}
+                identity_state = _coerce_state(_utc_day(), bucket.get("tokens", 0), bucket.get("usd", 0.0))
+            self._reject_caps(
+                state,
+                identity_state,
+                estimated_tokens,
+                projected,
+                identity_id=identity_id,
+                quotas=quotas,
+            )
+            self._bump_file_state(state, add_tokens, add_usd, identity_id)
+            self._save_file_state(state)
+            return self._store_reservation_unlocked(add_tokens, add_usd, identity_id)
+
+    def release(self, reservation_id: str | None) -> None:
+        if not reservation_id:
             return
-        add_tokens = max(0, int(tokens or 0))
-        add_usd = float(usd) if isinstance(usd, (int, float)) and usd > 0 else 0.0
+        with self._lock:
+            reservation = self._reservations.pop(reservation_id, None)
+        if reservation is None:
+            return
+        self._apply_delta(-reservation.tokens, -reservation.usd, reservation.identity_id)
+
+    def _store_reservation(self, tokens: int, usd: float, identity_id: str | None) -> str:
+        with self._lock:
+            return self._store_reservation_unlocked(tokens, usd, identity_id)
+
+    def _store_reservation_unlocked(self, tokens: int, usd: float, identity_id: str | None) -> str:
+        reservation_id = secrets.token_hex(8)
+        self._reservations[reservation_id] = _Reservation(tokens=tokens, usd=usd, identity_id=identity_id)
+        return reservation_id
+
+    def _reserve_redis(
+        self,
+        client: Any,
+        model: str,
+        estimated_tokens: int,
+        add_tokens: int,
+        add_usd: float,
+        identity_id: str | None,
+        quotas: IdentityQuotas | None,
+    ) -> None:
+        day = _utc_day()
+        identity_key = self._identity_budget_key(day, identity_id) if identity_id else ""
+        ident_token_cap = quotas.daily_token_budget if identity_id and quotas is not None else None
+        ident_usd_cap = quotas.daily_usd_budget if identity_id and quotas is not None else None
+        code = int(
+            client.eval(
+                _RESERVE_LUA,
+                2,
+                self._budget_key(day),
+                identity_key,
+                add_tokens,
+                add_usd,
+                self.daily_token_budget() if self.daily_token_budget() is not None else -1,
+                self.daily_usd_budget() if self.daily_usd_budget() is not None else -1,
+                ident_token_cap if ident_token_cap is not None else -1,
+                ident_usd_cap if ident_usd_cap is not None else -1,
+                _REDIS_TTL_SECONDS,
+            )
+        )
+        if code:
+            self.assert_allowed(model, estimated_tokens, identity_id=identity_id, quotas=quotas)
+            raise BudgetExceededError("Daily budget exceeded.")
+
+    def _reject_caps(
+        self,
+        state: dict,
+        identity_state: dict | None,
+        estimated_tokens: int,
+        projected: float | None,
+        *,
+        identity_id: str | None,
+        quotas: IdentityQuotas | None,
+    ) -> None:
+        token_cap = self.daily_token_budget()
+        if token_cap is not None and state["tokens"] + estimated_tokens > token_cap:
+            remaining = max(0, token_cap - state["tokens"])
+            raise BudgetExceededError(
+                f"Daily token budget exceeded. {state['tokens']} used, {remaining} left, "
+                f"prompt is {estimated_tokens} tokens (cap {token_cap})."
+            )
+        usd_cap = self.daily_usd_budget()
+        if usd_cap is not None and projected is not None and state["usd"] + projected > usd_cap:
+            remaining = max(0.0, usd_cap - state["usd"])
+            raise BudgetExceededError(
+                f"Daily USD budget exceeded. ${state['usd']:.6f} used, ${remaining:.6f} left, "
+                f"prompt estimate is ${projected:.6f} (cap ${usd_cap:.6f})."
+            )
+        if not identity_id or quotas is None or identity_state is None:
+            return
+        ident_token_cap = quotas.daily_token_budget
+        if ident_token_cap is not None and identity_state["tokens"] + estimated_tokens > ident_token_cap:
+            remaining = max(0, ident_token_cap - identity_state["tokens"])
+            raise BudgetExceededError(
+                f"Key '{identity_id}' daily token budget exceeded. {identity_state['tokens']} used, "
+                f"{remaining} left, prompt is {estimated_tokens} tokens (cap {ident_token_cap})."
+            )
+        ident_usd_cap = quotas.daily_usd_budget
+        if ident_usd_cap is not None and projected is not None and identity_state["usd"] + projected > ident_usd_cap:
+            remaining = max(0.0, ident_usd_cap - identity_state["usd"])
+            raise BudgetExceededError(
+                f"Key '{identity_id}' daily USD budget exceeded. ${identity_state['usd']:.6f} used, "
+                f"${remaining:.6f} left, prompt estimate is ${projected:.6f} (cap ${ident_usd_cap:.6f})."
+            )
+
+    def _bump_file_state(self, state: dict, add_tokens: int, add_usd: float, identity_id: str | None) -> None:
+        state["tokens"] = max(0, int(state["tokens"]) + int(add_tokens))
+        state["usd"] = max(0.0, float(state["usd"]) + float(add_usd))
+        if not identity_id:
+            return
+        identities = state.setdefault("identities", {})
+        bucket = identities.setdefault(identity_id, {"tokens": 0, "usd": 0.0})
+        bucket["tokens"] = max(0, int(bucket.get("tokens", 0) or 0) + int(add_tokens))
+        bucket["usd"] = max(0.0, float(bucket.get("usd", 0.0) or 0.0) + float(add_usd))
+
+    def _apply_delta(self, add_tokens: int, add_usd: float, identity_id: str | None) -> None:
         if add_tokens == 0 and add_usd == 0.0:
             return
         client = self._get_redis()
@@ -422,14 +611,33 @@ class BudgetRuntime:
                 logger.warning("Redis budget write failed; using file ledger", exc_info=True)
         with self._lock:
             state = self._load_file_state(_utc_day())
-            state["tokens"] += add_tokens
-            state["usd"] += add_usd
-            if identity_id:
-                identities = state.setdefault("identities", {})
-                bucket = identities.setdefault(identity_id, {"tokens": 0, "usd": 0.0})
-                bucket["tokens"] = int(bucket.get("tokens", 0) or 0) + add_tokens
-                bucket["usd"] = float(bucket.get("usd", 0.0) or 0.0) + add_usd
+            self._bump_file_state(state, add_tokens, add_usd, identity_id)
             self._save_file_state(state)
+
+    def record_usage(
+        self,
+        *,
+        tokens: int | None,
+        usd: float | None,
+        cached: bool,
+        identity_id: str | None = None,
+        reservation_id: str | None = None,
+    ) -> None:
+        reservation = None
+        if reservation_id:
+            with self._lock:
+                reservation = self._reservations.pop(reservation_id, None)
+        if cached:
+            if reservation is not None:
+                self._apply_delta(-reservation.tokens, -reservation.usd, reservation.identity_id)
+            return
+        add_tokens = max(0, int(tokens or 0))
+        add_usd = float(usd) if isinstance(usd, (int, float)) and usd > 0 else 0.0
+        if reservation is not None:
+            add_tokens -= reservation.tokens
+            add_usd -= reservation.usd
+            identity_id = identity_id if identity_id is not None else reservation.identity_id
+        self._apply_delta(add_tokens, add_usd, identity_id)
 
     def attach_cost(self, usage: UsageInfo | None, cost: float | None) -> UsageInfo | None:
         if usage is None and cost is None:

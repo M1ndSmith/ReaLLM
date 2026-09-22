@@ -1,0 +1,82 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:b932312c89dcca2e5076a9b50711ab113d191644382d0eafe2e77fc23edf1ae4",
+  "claims": [
+    {
+      "id": "claim_094784c465664eca983d01aa078413d3",
+      "statement": "Memory attach uses the authenticated identity_id, and a client user_id is stored only as trace_user_id metadata.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L112-L130",
+          "version": "repo-lines-v1:sha256:d5d9e926fbdfa6a645feb95454dba2bdfc7e2c2655429c9fe48e83a72e5cce42:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0YmQyMzYwY2NiZDg3MTUzY2Y0MzNiMzFhNmVjN2Y1NDMzN2Y2MmU0MzhjZWM1MGE5ODY5MmJlOTc0NjhlOGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4M2UzNDFkZDFhYjEyNGQzODY3NjQzNDVhMGI5YTdiYzc3Mzc0MzQyZDk4NGMzNTRmMmEyNTcxYTlmYjNhOGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVmNjg5Zjg0YjMwNDM0ZTdkMzNmNjIyNDVkMmQ5ZTQ5NmQwNmM4NDY3MjdiODc2MzdhMjNkZWUwYjEwZGM1MzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk4OWRmNTBmMDVlMmI3ZjdhNmNiMzI1NWE3NzQ1NjFjYTg1MWFiMjkyMDgxNDU4YjNlNDY2ZGE3YTllMDYzOWUifQ"
+        },
+        {
+          "resource": "repo://app/application/chat.py#L248-L254",
+          "version": "repo-lines-v1:sha256:ba5e3cc34d360fcca7540c0d71a9b3ca8ba3fc2192c19330402939ecd7b6509e:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjJjMDQyMThhNDQ2ZTA0YmRiZjQ3OWJhOWE1NmFlM2VhMWMyYWQ4MjM3MWQyYWNmN2QyYzIwNDI2YWVhOThkNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkwOWE1M2E2MThkMDI4ZTFkMzAwMGMwYTdhYmNlZWNiZTVmYjM3ZjRlNTExZWZlNDY2NDNmYWQ2ZTY2ODcyZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzk2NGFkODUwY2JlODdiNDc3YTc2NTQyYWU1OTA2YmNiMmI4NDZjODcxMjBlOGU0NzQ0ZDdhY2E1ODk5NTI5MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjlkNGYwZGNhM2MxMWU5MzBlNjA3MDdjMDcxMzAwZTA1NWNhMjVmNmNlYWUwODQzZmRiYTkxMmZjZWE2NmFlOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_abd02c647bc14abbb35028800e04d67d",
+      "statement": "When PII is on and memory inserted a message, only that inserted message is redacted before the provider call.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L244-L261",
+          "version": "repo-lines-v1:sha256:081078ac87118ac3226f6254eb61ab876a8bb13b9ab7ed725123cbb44c365d6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4ZTZiMjRkYmQxYzVkNDMxMTBjMGQ2NGFlMzc5ZDhlMmIwYjU0ZTBlODU3NDdjZTE5NWYxN2QzMjU4ODY4OTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhOGEyNTg3YzFkZjBhYWQyMzUwMjVkZGRjNGZiYmY3NzZlZTY2ZGFjMmI5OGQ0YmFkNTQzNWMyYjA2ODI4MDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ3M2I0OTlhMzY0ZGJmYTk1ZmIyYzhmM2UxODEwNzcyYjJjZTMyNTE1ZmJkZTlmYTcyOGQ3MjMzYjQ0OTY4OTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM3MjBmMjQ5OGZhMDY0OTgxNjk0NGQwY2MzODhkOWQzMWZmYjY2YWY5MDYxZjA3ZDMyNWRhOGU2Mzk1NmJhZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_083774fc93d346519815716d6df8cdc9",
+      "statement": "The token estimate is reserved before acompletion and released in finally if the provider call fails.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L264-L273",
+          "version": "repo-lines-v1:sha256:440c7c3f359e749d255c654e4f150c2e3c33e503104fcb08e847b2976372147a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyYWQ1NTY0NWUxMDc4NWEwMjViZTg1NjcyODE4YzM4M2VmYTJmYzc3OGUzODMwZDkyNDQ5NWRiZGZkMmZlMmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyNGEwMThlM2YwYTZkNmVjNDdkZjA3MjE2NzcyN2I5NDRmZmU0MThkNjMyOGUxMGQyNTY0OTNlYmUyMmJmNmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI2YTRjZGMwNTg3Y2IxMWEyOTU4OTFkYTdhNDE3NTJjYWU2MzE2NDViZDk1ZjM3MzEyN2VkZDc1Y2I4OWJiZDYifQ"
+        },
+        {
+          "resource": "repo://app/application/chat.py#L350-L352",
+          "version": "repo-lines-v1:sha256:9f56cb1d5a1591eece44476d66810bf9a2839caa057dbf2bbc44b90d82cb5019:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzcyNzZkNTI3YzNkOTA2YWRjOWE1ZWQ1YmMyMThmNmEwNWM3YTlmODEwOTgwMDhmNTVjYWZjYzNmZmIwNGZjMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmNiNzZmNGJmNDU2YmRiOTgwY2VkMTEzOWEwY2YzOTU1Y2JkYmU3ODRmNzkxZDdmM2E3ODM1ODUzZDU1NDg3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGVjYjIyYjMzMWJmZTVjZDBjY2QzY2Q0ZTU2YmFhZjM5YzM5NmE2ZTA4NGIyZDBkMGY3MDQ4MGRjNjg2Yzg5YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTEzNjJiNjViM2U1ZGJkYmZiMzNmNDZjMzNlOGZkOGZjNmQ3Nzk1ZjE0MzE4OWM5YTM0OTZlMDczYmY2NjQ2OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e3e497d3ab864d0b80fdf79383e67f69",
+      "statement": "Structured output cannot be streamed; stream raises SchemaError before the provider call.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L376-L378",
+          "version": "repo-lines-v1:sha256:4b2bd2a32473d2d9fb13d2d919144d9616c8c871ce9101c5d5eb49aba86b5ade:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNiZjZmOTQ5MzJjNWMwY2ZhYTkyNTQzZjY3YzBkZGIwMTBiODk4YzUyODY1MGY0ZWM5ZGFmMDIyNDNlODEzNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzhjZDY5MmE3NmJlZDE4MDhhMTc2MmE3YmNhMzFkYzUwYjgwNzBkZGZmMDMzYWRkYWM5NzgyYTNiODliMWFlMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTVkMmFhMWEzNzQxNzZkMTJjYjVhMTM0ZTg4ZjFlY2ZkMDYzNjY2NzdmOThjMTEwN2MzMTQ5N2ZiYjg1NGI2ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTZhZWM3ZGE1MDg1NGIwODRkZDBkOTJmNTJjNWE4M2VkZTgwZDlkYjEwODgzNTk5MWIyN2I1ZTAwMjBkZDZhZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_7a3ba0fbd9f74f958d78a0bbe3338d46",
+      "statement": "When PII is on, the assistant stream is buffered and redact_text runs once on the full assistant text.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L395-L405",
+          "version": "repo-lines-v1:sha256:406d4e66e1de7be5d17d6b71b8c8d0d7821100e5f12f0f84315338fc4f5eba8a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0ZjYwYWFkZTljNWYzM2JkZTc1ZWRjMzA4ZWIzNmFhNDNiNDc0ODA4MjkxNGRjZWI4YjJiMGE2MzkzODgyYjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRjOWY3MDU0Y2EzNWQxMjRmOWZlNjlkNDNmM2U4ZTU2YzhkZjYyNTQ4ZDUwOWZhNTIwM2Q3NjcyOTJlNTM5OTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcwMzdjNDk3YmIzNGU5ZGNkMTQ4YmMwZGIzNDZjYjA0MGEwZjI2YzA3N2Q0YWJjODM4M2RjNmM4ZGUyMDdiZGEifQ"
+        },
+        {
+          "resource": "repo://app/application/chat.py#L454-L460",
+          "version": "repo-lines-v1:sha256:364c32f91d82d9bc560bf9ad3112661c4357ba90d5883eab5ea95ef193f26e41:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDljMTJlNWFlZDUxMDBjYjQ3ZjBmYzUwM2VhOWY1YjQ3ZjY1YmEyNGRlOThlMjY0YzRmMjJiMmJjMDM4NDY5YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjA3NDRkZTM3M2QxNWVhZGQyYmVhN2FiY2JiMGI3MDA3ZmMyNmJkOTIxNzg1ZGExY2Q5NzY5MTk4ZTc1NjY4NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzgyMjVhOTlhYTk0NjI2YzMwMjBjZWNmZDQwMzdiM2VlN2JiYWRjMTc5YTlhZWU2MjBhNTk5ZjE5MDlhMmJlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWMyM2EzNTAzMjdjMDhkMmM0ZWUxMDBjNzUyNGI2MWQ0ZTk4M2ZkNTViZTBjYzdlMGFkNjNlNTAwYTE0ZjM2OCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_e22cb45dca9d45ff9ae1f667f0581dc5",
+      "statement": "Background memory writes use identity_id as the Mem0 user.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L461-L468",
+          "version": "repo-lines-v1:sha256:2386bd6a96887d724d2d2a23cc92e82fccbac1c7d23298b00286ab7ed5e15754:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWJiYWVlMWRiZDBkZDYyOTVkYTEyYTQ3YzlhZjQwYTNjYTFiMTRmYmVkZjkxMDY3OWJmMDM4NDliNWM4NTI1OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTEwMzQ4MWM1N2QwZjBkYzBmNzZjZDJjYzhiMzYwNGM0ZTgyOTZkYTQxMjJhZGQxOWU4MTc0NWRjN2UzMzFhNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2E0NTA0NGU1ODVmY2UzMWQ0MjkyNzY4YmU3NDY2NmUyNDUwMzU5MjhjZTE2Yzg4YmZlYjMxNTI2NThiMzI0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWY1NmNiMWQ1YTE1OTFlZWNlNDQ0NzZkNjY4MTBiZjlhMjgzOWNhYTA1N2RiZjJiYmM0NGI5MGQ4MmNiNTAxOSJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

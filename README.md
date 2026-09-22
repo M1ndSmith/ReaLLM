@@ -13,14 +13,12 @@ ReaLMM is a self-hosted LLM operator built on top of LiteLLM router. A harness t
 
 ## Prerequisites
 
-Before installing, ensure you have met the following requirements:
-
 - **Python 3.12**
 - **Node.js 22**
 - **Docker and Docker Compose** (if you use the published operator stack `gateway` + `web` + Redis).
 - **At least one model source:** a provider `*_API_KEY` in `.env` (Groq, OpenAI, Anthropic, and others LiteLLM can detect), or a running local model using **Ollama**
-- **Inbound auth:** `GATEWAY_ALLOW_OPEN=1` is loopback-only. Compose forces it off, so set **`GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER`** or the gateway will refuse to start.
-- **Redis** for Compose and for more than one uvicorn worker (shared cache, RPM/TPM, and daily budget). A single local process can run without it.
+- **Inbound auth:** `GATEWAY_ALLOW_OPEN=1` is loopback-only. Compose forces it off, so set **`GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER`** or the gateway will refuse to start. `GATEWAY_KEY_PEPPER` is also required when any issued key exists, and before a new key is hashed, including open mode. Open mode with an empty key file may still serve the legacy gateway key.
+- **Redis** for Compose. `WEB_CONCURRENCY` or `UVICORN_WORKERS` greater than 1 without `REDIS_URL` refuses to start. `GATEWAY_ALLOW_SPLIT_BUDGET=1` restores a warning and continues. Redis covers cache, RPM, and the daily budget. The key file and `data/runtime-flags.json` stay on one process. A single local process can run without Redis.
 - **Optional extras:** `requirements-pii.txt` plus a spaCy model if `PII=1`; Langfuse keys if you want remote prompts and tracing instead of local `prompts/*.json`.
 
 ## Installation
@@ -113,21 +111,15 @@ Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALK
 - `GROQ_API_KEY` (`string`, no default): required by the included `env/groq.env` provider preset.
 - `GATEWAY_API_KEY` (`secret string`, no default): required because Docker Compose sets `GATEWAY_ALLOW_OPEN=0`.
 - `GATEWAY_KEY_PEPPER` (`secret string`, no default): required when Docker Compose enables gateway authentication.
-- Optional layers: memory uses local FastEmbed unless you set `MEMORY_EMBEDDER`; guards need `GUARD=1` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b` (or matching `GUARD_*_MODEL` ids). Host presets: [`env/`](env/). Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
+- Optional layers live in [`config/realmm.yaml`](config/realmm.yaml). Host presets: [`env/`](env/) selects [`config/`](config/). Env overrides YAML. Memory uses local FastEmbed unless `memory.embedder` is `openai`. Stored facts are scoped to the authenticated key (`default` for `GATEWAY_API_KEY`). A client `user_id` is trace metadata only. Facts already stored under `local` do not appear under a real key. Guards need `guards.enabled` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`. With PII on, a streamed reply is buffered and redacted once at the end. The chat estimate is reserved before the provider call. Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
 
 ## Contributing
 
-Contributions are welcome! Please follow these steps to contribute:
-
-1. Fork the project.
-2. Create your feature branch (`git checkout -b feature/Your-Feature`).
-3. Commit your changes (`git commit -m 'Add some Your-Feature'`).
-4. Push to the branch (`git push origin feature/Your-Feature`).
-5. Open a Pull Request.
+See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## License
 
-Distributed under the **MIT License**. See [`LICENSE.md`](LICENSE.md) for more information.
+Distributed under the **MIT License**. See [`LICENSE`](LICENSE) for more information.
 
 ## Contact
 

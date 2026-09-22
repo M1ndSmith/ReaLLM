@@ -1,0 +1,210 @@
+import path from "node:path";
+import { ENGLISH_CONCEPT_TYPE, ENGLISH_INDEX_LABELS, } from "./index-labels.js";
+import { normalizeConceptContent, parseFrontmatterFields, } from "./frontmatter.js";
+const INDEX_FILE = "index.md";
+const LOG_FILE = "log.md";
+const EXCLUDED_FILES = new Set([INDEX_FILE, LOG_FILE, "INSTRUCTIONS.md"]);
+/**
+ * Synchronizes the index for every directory in the configured wiki.
+ */
+export async function synchronizeWikiIndexes(backend, outputMode, labels = ENGLISH_INDEX_LABELS, conceptType = ENGLISH_CONCEPT_TYPE) {
+    const root = outputMode === "local-wiki" ? "/" : "/openwiki";
+    for (const directory of await collectDirectories(backend, root, true)) {
+        await synchronizeDirectory(backend, directory, root, labels, conceptType);
+    }
+}
+/**
+ * Normalizes every concept page's OKF front matter across the wiki, without
+ * touching indexes.
+ *
+ * Runs before the agent so an update operates over an already-conformant wiki:
+ * legacy or externally edited pages are migrated to a minimal OKF block (tagged
+ * `openwiki_generated`) up front, letting the agent read clean metadata and
+ * enrich flagged pages in the same run.
+ */
+export async function migrateWikiToOkf(backend, outputMode, conceptType = ENGLISH_CONCEPT_TYPE) {
+    for (const filePath of await listWikiConceptPaths(backend, outputMode)) {
+        await normalizeConceptFile(backend, filePath, conceptType);
+    }
+}
+/**
+ * Lists the non-structural Markdown concepts currently present in the wiki.
+ *
+ * @param backend - Filesystem abstraction rooted at the active wiki target.
+ * @param outputMode - Whether the wiki lives at `/` or `/openwiki`.
+ * @returns Stable, sorted virtual paths for every concept page.
+ */
+export async function listWikiConceptPaths(backend, outputMode) {
+    const root = outputMode === "local-wiki" ? "/" : "/openwiki";
+    const directories = await collectDirectories(backend, root, true);
+    return directories
+        .flatMap((directory) => directory.entries.flatMap((entry) => {
+        const name = entryName(entry);
+        return !entry.is_dir &&
+            name &&
+            !name.startsWith(".") &&
+            path.posix.extname(name).toLowerCase() === ".md" &&
+            !EXCLUDED_FILES.has(name)
+            ? [path.posix.join(directory.path, name)]
+            : [];
+    }))
+        .sort((left, right) => left.localeCompare(right));
+}
+/**
+ * Normalizes one concept file's OKF front matter in place.
+ *
+ * Reads the file, applies `normalizeConceptContent` and writes the result
+ * back only when it changed. Returns the normalized content so a caller can read
+ * its index metadata without a second read.
+ */
+async function normalizeConceptFile(backend, filePath, conceptType = ENGLISH_CONCEPT_TYPE) {
+    const original = await readText(backend, filePath);
+    const normalized = normalizeConceptContent(original, filePath, conceptType);
+    if (normalized.changed) {
+        const result = await backend.edit(filePath, original, normalized.content);
+        if (result.error) {
+            throw new Error(`Unable to normalize ${filePath}: ${result.error}`);
+        }
+    }
+    return normalized.content;
+}
+/**
+ * Recursively collects visible wiki directories and their entries.
+ */
+async function collectDirectories(backend, directoryPath, allowMissing = false) {
+    const result = await backend.ls(directoryPath);
+    if (result.error) {
+        if (allowMissing)
+            return [];
+        throw new Error(`Unable to list ${directoryPath}: ${result.error}`);
+    }
+    const entries = result.files ?? [];
+    const children = entries.filter((entry) => entry.is_dir && !entryName(entry).startsWith("."));
+    const descendants = await Promise.all(children.map((entry) => collectDirectories(backend, path.posix.join(directoryPath, entryName(entry)))));
+    return [...descendants.flat(), { entries, path: directoryPath }];
+}
+/**
+ * Builds and writes one directory's index when its content has changed.
+ */
+async function synchronizeDirectory(backend, directory, root, labels, conceptType) {
+    const files = [];
+    const directories = [];
+    for (const entry of directory.entries) {
+        const name = entryName(entry);
+        if (!name || name.startsWith("."))
+            continue;
+        if (entry.is_dir) {
+            directories.push({ href: `${encodeURIComponent(name)}/`, label: name });
+            continue;
+        }
+        if (path.posix.extname(name).toLowerCase() !== ".md" ||
+            EXCLUDED_FILES.has(name)) {
+            continue;
+        }
+        const filePath = path.posix.join(directory.path, name);
+        const content = await normalizeConceptFile(backend, filePath, conceptType);
+        const metadata = readIndexMetadata(content);
+        files.push({
+            description: metadata.description,
+            href: encodeURIComponent(name),
+            label: metadata.title ?? path.posix.basename(name, ".md"),
+        });
+    }
+    const indexPath = path.posix.join(directory.path, INDEX_FILE);
+    const content = renderIndex(files, directories, directory.path === root, labels);
+    const existing = directory.entries.some((entry) => !entry.is_dir && entryName(entry) === INDEX_FILE)
+        ? await readText(backend, indexPath)
+        : null;
+    if (existing === content)
+        return;
+    const result = existing
+        ? await backend.edit(indexPath, existing, content)
+        : await backend.write(indexPath, content);
+    if (result.error) {
+        throw new Error(`Unable to write ${indexPath}: ${result.error}`);
+    }
+}
+/**
+ * Renders a complete deterministic index document.
+ */
+function renderIndex(files, directories, isRoot, labels) {
+    const sections = [
+        renderLinks(labels.files, files, true),
+        renderLinks(labels.directories, directories, false),
+    ]
+        .filter(Boolean)
+        .join("\n\n");
+    const version = isRoot ? '---\nokf_version: "0.2"\n---\n\n' : "";
+    return `${version}${sections || `# ${labels.files}`}\n`;
+}
+/**
+ * Renders a sorted Markdown section for files or subdirectories.
+ */
+function renderLinks(heading, links, includeDescription) {
+    if (links.length === 0)
+        return "";
+    links.sort((left, right) => left.href.localeCompare(right.href));
+    const items = links.map(({ description, href, label }) => {
+        const link = `- [${escapeLabel(label)}](${href})`;
+        return includeDescription && description
+            ? `${link} - ${description}`
+            : link;
+    });
+    return `# ${heading}\n\n${items.join("\n")}`;
+}
+/**
+ * Reads usable optional display metadata; returns empty on any parse issue.
+ */
+function readIndexMetadata(content) {
+    const fields = parseFrontmatterFields(content);
+    if (!fields)
+        return {};
+    const usableDescription = usableString(fields.description);
+    const usableTitle = usableString(fields.title);
+    return {
+        ...(usableDescription ? { description: usableDescription } : {}),
+        ...(usableTitle ? { title: usableTitle } : {}),
+    };
+}
+/**
+ * Returns optional front matter text only when it can be rendered in an index.
+ */
+function usableString(value) {
+    if (typeof value !== "string" || !value.trim())
+        return undefined;
+    return value;
+}
+/**
+ * Reads a text file from the backend or throws an actionable error.
+ */
+async function readText(backend, filePath) {
+    const result = await backend.readRaw(filePath);
+    if (result.error)
+        throw new Error(`Unable to read ${filePath}: ${result.error}`);
+    return fileDataToText(result.data?.content, filePath);
+}
+/**
+ * Converts supported backend file content into text.
+ */
+function fileDataToText(content, filePath) {
+    if (Array.isArray(content))
+        return content.join("\n");
+    if (typeof content === "string")
+        return content;
+    throw new Error(`${filePath} is not a text file.`);
+}
+/**
+ * Extracts an entry's basename from its virtual path.
+ */
+function entryName(entry) {
+    return path.posix.basename(entry.path.replace(/\/$/u, ""));
+}
+/**
+ * Escapes a value for use as a Markdown link label.
+ */
+function escapeLabel(value) {
+    return value
+        .replaceAll("\\", "\\\\")
+        .replaceAll("[", "\\[")
+        .replaceAll("]", "\\]");
+}

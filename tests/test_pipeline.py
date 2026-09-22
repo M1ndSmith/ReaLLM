@@ -35,10 +35,10 @@ class Recorder:
     def schedule_record(self, *args, **kwargs):
         self.calls.append("memory_record")
 
-    async def assert_inbound(self, messages, flags):
+    async def assert_inbound(self, messages, flags, **_kwargs):
         self.calls.append("guard_in")
 
-    async def assert_outbound(self, assistant, flags):
+    async def assert_outbound(self, assistant, flags, **_kwargs):
         self.calls.append("guard_out")
 
     def content_enabled(self, flags):
@@ -74,6 +74,13 @@ class Recorder:
 
     def assert_allowed(self, model, estimated, **_k):
         self.calls.append("budget_assert")
+
+    def reserve(self, model, estimated, **_k):
+        self.calls.append("budget_assert")
+        return "reservation"
+
+    def release(self, reservation_id):
+        return None
 
     def assert_rpm(self, identity_id, rpm_limit):
         self.calls.append("budget_rpm")
@@ -135,12 +142,11 @@ def test_complete_pipeline_stage_order():
         "prompt",
         "pii_in",
         "memory",
-        "pii_in",
         "guard_in",
         "catalog",
         "budget",
-        "budget_assert",
         "budget_rpm",
+        "budget_assert",
         "router",
         "usage",
         "pii_out",

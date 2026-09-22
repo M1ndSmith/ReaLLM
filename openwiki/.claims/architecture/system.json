@@ -1,0 +1,70 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:4fb2115655b6d45498f7e7eefc439ee828f3f3d048b25a620ab94c8cb73a9870",
+  "claims": [
+    {
+      "id": "claim_cf133721e3084daab7dae0d4d4fe8fbc",
+      "statement": "The uvicorn app is create_configured_app assigned in app/main.py.",
+      "evidence": [
+        {
+          "resource": "repo://app/main.py#L1-L3",
+          "version": "repo-lines-v1:sha256:b5f4d9d74be762cc269be8358878e34db130fd54994e403b8b46484b26d600a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWNjZTdkZjM3NGE1NDhlMDI2ZjhiMDQyYTcxZjk3NzU3NzFmMzhmZDNiZTAxZTQyYjJlY2Q3MjA0YmIyY2I5MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2Y1NmFjNjYxYmY5Mjk2YTE1MWIyNWVhZmE0ZjkwYjkwMGJlMTVjMWNhNDI3ZDUxMWNkMjQ5ZTlmNGI4YTBhZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c4ea744b43ff4d39ac9f617cc0d799a5",
+      "statement": "bootstrap.build_runtime is the composition root that constructs one LiteLLMRouterRuntime and passes it to ChatService as the completion backend.",
+      "evidence": [
+        {
+          "resource": "repo://app/bootstrap.py#L41-L70",
+          "version": "repo-lines-v1:sha256:a4b6e165fd327b61c329f0fa68a448542cfcd1317cb30f1aefb9f9bbb9b4701e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkMGI4NjU3OWU4NGIzNTA3NGFhNzc0ZWJjYmFlYzE1MTM5NzhmNGU2MTEyNDVjZmI4ZWNjOTMzNzA2NGE5ZWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzYmYxYTJhN2M5YjFkNDUxYzdmYjVmMTIzYTEwNzExNzcyNWZiYzQyOTgxNWVhZWZkYmM5M2E0YzNjZDg4YzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE4MzY2NTFiYzY4NWE5YWVlOWNlMDFkOTk4MmMwN2U4YWFiYzk5NDk2YjVhYzk2MWQxMTUzYTI3MDEzN2E3NmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIxMzhlMzRkOWZkNTliM2M2OWNjNzQ3ZWNiYjAyZGMzMzRjMjVmNTE1ZmNmYTYwMGQ5YjhiYjdlYjk4NTEyNjQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_19c03c875bee4427a6167c48ab5c2228",
+      "statement": "The application layer must not import FastAPI, LiteLLM, Mem0, Presidio, Redis, or app.infrastructure.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_architecture.py#L25-L31",
+          "version": "repo-lines-v1:sha256:e11df98eafeb34cfb65601bacfdf909b25b0edfa44cb779d41ea8889643b2003:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmU4NzU1YzE4ZGU1MzUyNGNlN2UzYmVkMmJhMTBkNzUzNzZhZjRjNzg2MDcwNzRiMmMxNDllMDk4OTM0ODI0MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGMyNzkzNjI2MGUyOTVmZjYzYTI1YTQwMGI2YWNiNDFmZTY2NTEyYjY3NmRiYzc5NDcwMzY5ZmIxNDAyNTAyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFlMjc1NTFmYWRiNTdkYzcxNWQ4MjJkYjcyMGFlM2FiNTY4YTI3OGQwNTBlMmRmMzE1NWRlMzBkMTk2MmY5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGU0MmQ5MDRjMjE1NjUwMmM1NTg5NDgwYzMzMjQ2MDZlMzk5NWEzYzIwZDUwM2UyOGI2ZmVmYTBlNzgwNzE2MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1b2766c3f38b4415a6f647e111d9ceaa",
+      "statement": "Only app/infrastructure/router.py may construct litellm.Router.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_architecture.py#L34-L45",
+          "version": "repo-lines-v1:sha256:80f7b66bc4c9e045e8395ec44237a2d32980d88bde2de99626f97fc9edc855f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlMDBmMmIxYmNhN2Y3YTc1YTFiNGNiY2E2YTI0NTg5YzZhMDVmYjUwMDgyOWJhZTQ2ZWMzZTMwZDYzNGIzZWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1YjRlNjVjYmVmNWIzMWU0MzZmYjc4MDEzNzI3MWQxZDA5ODQ2MjBhM2MyNjU5ZDFiYjFlODliNjA4NzU1MTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzYzgyNjYyNjY3NTJkOWNlZjgwZWI5ZTJhM2Y3ODdkZWUwMTgxMzFkNjk4MDdlOTc4MmEwOTIyOTBjN2VmMDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxNDQ1NWEzYmNkNTlmMzI4NzlmNjg1NzBkMzIxNTYzODE4ZDQ0YWE3OTUyZDBmMzdhMGI1NThlY2EwZTI5NDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_115532e92bc5437f949346224b8e9b2d",
+      "statement": "Issued keys and runtime flags are JSON files under data/ and are constructed per process.",
+      "evidence": [
+        {
+          "resource": "repo://app/bootstrap.py#L47-L58",
+          "version": "repo-lines-v1:sha256:630f1037992ef2bafa1956bdba27c823824873ed472cbd7acbfdddff156f96e2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmMDc5NjBiY2UyZTMxNjMwY2ExNTY0ZTMxNjJhNGFkMjg3NmExMzczZGNjMGNhY2U0ZDM2MjNkYTQ0ZjE1MmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiMTBmNWQ0MTdkMGY1ZWIxY2FjZjIzZTMyZmZlM2IzMWIxMDkzZmNjZDQ4MDEyZTdkZjg5OWU0ZWI1N2M0MWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE3NTQyYTBmNDVjYWY5YWQwZTMwNzEwMGE1Y2QzYTZjZDZjOWU2MmFjNzhjZjY1ZTJiOGMwM2FiNTQyZTU3ZjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4ODlhZjEwZmQwNjQ5YmE0NWVmOTJmNzQ5M2Q0ZGQyOGFlZDYxMzZlOWY0MTA4ZWM5MmE3ZDQzZWExNTU1YmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_133af1a61d7b4234a5dff63b51872213",
+      "statement": "More than one worker without REDIS_URL raises at startup unless GATEWAY_ALLOW_SPLIT_BUDGET is on.",
+      "evidence": [
+        {
+          "resource": "repo://app/container.py#L85-L99",
+          "version": "repo-lines-v1:sha256:7ddce06c0906770c9eab1c2b3a1dbe52470483bbc6accef7455f00ff953c1199:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwMDk3ZTM4ZjYyYzI0ZWNlNTM2ZWI0YTQ4YzJjOGU0MGQzNjY3NDJhMjM0NzVhN2QxMTAyOWMyNWYxYjliZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlN2JjZDM2ZWY1M2I0NDUyM2U2NWU5OGQxOTQ0OTkzZTBmZjE3NDZmNTUzNmMxYTUxMTc0NmYzZTAxZTc1NmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjZDIzZDA0NGQ1MTM2NzMwNzBkNGZjOTYwODZmMWI0MGE4ZmJhOTY3NGZjMmQwZGY0Y2FkYjVhYTQ1Y2UxNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

@@ -71,10 +71,18 @@ def test_start_allows_open_when_opted_in(monkeypatch, tmp_path, caplog):
     assert "GATEWAY_ALLOW_OPEN=1" in caplog.text
 
 
-def test_multi_worker_warning_without_redis(monkeypatch, tmp_path, caplog):
+def test_multi_worker_without_redis_refuses_start(monkeypatch, tmp_path):
+    monkeypatch.setenv("WEB_CONCURRENCY", "2")
+    rt = runtime(tmp_path)
+    with pytest.raises(RuntimeError, match="WEB_CONCURRENCY"):
+        asyncio.run(rt.start())
+
+
+def test_multi_worker_without_redis_warns_when_split_budget_allowed(monkeypatch, tmp_path, caplog):
     import logging
 
     monkeypatch.setenv("WEB_CONCURRENCY", "2")
+    monkeypatch.setenv("GATEWAY_ALLOW_SPLIT_BUDGET", "1")
     caplog.set_level(logging.WARNING)
     rt = runtime(tmp_path)
     asyncio.run(rt.start())

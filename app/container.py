@@ -88,9 +88,12 @@ def _warn_multi_worker_without_redis(settings: GatewaySettings) -> None:
     for name in ("WEB_CONCURRENCY", "UVICORN_WORKERS"):
         raw = (os.getenv(name) or "").strip()
         if raw.isdigit() and int(raw) > 1:
-            logger.warning(
-                "%s=%s without REDIS_URL: response cache, RPM/TPM/cooldown, and daily budget are per-process",
-                name,
-                raw,
+            message = (
+                f"{name}={raw} without REDIS_URL: response cache, RPM/TPM/cooldown, and daily budget "
+                "are per-process. Set REDIS_URL or GATEWAY_ALLOW_SPLIT_BUDGET=1."
             )
+            if settings.allow_split_budget_on():
+                logger.warning("%s", message)
+            else:
+                raise RuntimeError(message)
             return

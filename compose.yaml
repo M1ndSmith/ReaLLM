@@ -1,9 +1,12 @@
-# Operator run path: gateway + Next console + Redis.
+# Operator run path: one gateway process, the Next console, and Redis.
 # Host pytest (.venv) stays the default test path. Do not COPY .env into images.
 #
 # Published ports bind loopback only. GATEWAY_ALLOW_OPEN is forced off — set
 # GATEWAY_API_KEY and GATEWAY_KEY_PEPPER in .env or the gateway container
 # will refuse to start.
+# Redis shares response cache, RPM/TPM/cooldown, and the daily budget.
+# ./data/gateway-keys.json and ./data/runtime-flags.json stay on this process.
+# WEB_CONCURRENCY and UVICORN_WORKERS are pinned to 1. Do not scale gateway.
 # Browser is on the host. NEXT_PUBLIC_GATEWAY_URL must be http://127.0.0.1:8000
 # (not http://gateway:8000). Redis is only reachable as redis://redis:6379/0
 # from the gateway container.
@@ -29,6 +32,8 @@ services:
       - .env
     environment:
       REDIS_URL: redis://redis:6379/0
+      WEB_CONCURRENCY: "1"
+      UVICORN_WORKERS: "1"
       GATEWAY_ALLOW_OPEN: "0"
       CORS_ORIGINS: http://localhost:3000,http://127.0.0.1:3000
       CONSOLE_URL: http://localhost:3000

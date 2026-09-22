@@ -89,6 +89,13 @@ class GatewayIdentityStore:
         pepper = self._settings.gateway_key_pepper_value()
         if pepper:
             return pepper
+        with self._lock:
+            has_records = bool(self._records)
+        if has_records:
+            raise RuntimeError(
+                "GATEWAY_KEY_PEPPER is required when issued keys exist. "
+                "Open mode does not allow a built-in pepper for stored keys."
+            )
         if self._settings.allow_open_on():
             return self._settings.gateway_key() or _DEV_PEPPER
         raise RuntimeError(
@@ -140,6 +147,11 @@ class GatewayIdentityStore:
                             parsed[key_id] = dict(raw)
         with self._lock:
             self._records = parsed
+        if parsed and not self._settings.gateway_key_pepper_value():
+            raise RuntimeError(
+                "GATEWAY_KEY_PEPPER is required when issued keys exist. "
+                "Open mode does not allow a built-in pepper for stored keys."
+            )
 
     def _save_unlocked(self) -> None:
         self._path.parent.mkdir(parents=True, exist_ok=True)
@@ -153,6 +165,10 @@ class GatewayIdentityStore:
             return
         legacy = self._settings.gateway_key()
         if not legacy:
+            return
+        if not self._settings.gateway_key_pepper_value():
+            if not self._settings.allow_open_on():
+                self._pepper()
             return
         with self._lock:
             if self._records:
@@ -238,6 +254,8 @@ class GatewayIdentityStore:
         secret: str | None = None,
         quotas: IdentityQuotas | None = None,
     ) -> tuple[GatewayIdentity, str]:
+        if not self._settings.gateway_key_pepper_value():
+            raise RuntimeError("GATEWAY_KEY_PEPPER is required to issue keys.")
         clean_id = key_id.strip()
         if not clean_id:
             raise ValueError("key_id is required")

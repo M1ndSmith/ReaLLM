@@ -37,6 +37,7 @@ class RouterLLM:
     ):
         self._backend = backend
         self._budget = budget
+        self.identity_id: str | None = None
         self.config = type(
             "RouterLlmConfig",
             (),
@@ -95,7 +96,12 @@ class RouterLLM:
         tokens = getattr(usage, "total_tokens", None) if usage is not None else None
         hidden = getattr(response, "_hidden_params", None)
         cached = isinstance(hidden, dict) and hidden.get("cache_hit") is True
-        self._budget.record_usage(tokens=tokens, usd=self._budget.completion_usd(response, model), cached=cached)
+        self._budget.record_usage(
+            tokens=tokens,
+            usd=self._budget.completion_usd(response, model),
+            cached=cached,
+            identity_id=self.identity_id,
+        )
         return _parse_llm_response(response, tools)
 
 
@@ -359,6 +365,7 @@ class MemoryRuntime:
             return {"results": []}
         filters = self._search_filters(user_id, conversation_id, agent_id, include_run=include_run)
         with self._ops_lock:
+            self._bind_identity(memory, (user_id or "").strip() or None)
             return memory.search(query, top_k=top_k, filters=filters)
 
     def _add_sync(
@@ -375,12 +382,52 @@ class MemoryRuntime:
             return {"results": []}
         scope = resolve_scope(user_id, conversation_id, agent_id)
         with self._ops_lock:
+            self._bind_identity(memory, (user_id or "").strip() or None)
             return memory.add(
                 messages,
                 user_id=scope.get("user_id"),
                 agent_id=scope.get("agent_id"),
                 run_id=scope.get("run_id"),
             )
+
+    def _bind_identity(self, memory: object, identity_id: str | None) -> None:
+        llm = getattr(memory, "llm", None)
+        if isinstance(llm, RouterLLM):
+            llm.identity_id = identity_id
+
+    def _record_user_id(self, record: object) -> str | None:
+        if isinstance(record, dict):
+            raw = record.get("user_id")
+            if isinstance(raw, str) and raw.strip():
+                return raw.strip()
+            meta = record.get("metadata")
+            if isinstance(meta, dict):
+                nested = meta.get("user_id")
+                if isinstance(nested, str) and nested.strip():
+                    return nested.strip()
+            return None
+        raw = getattr(record, "user_id", None)
+        if isinstance(raw, str) and raw.strip():
+            return raw.strip()
+        return None
+
+    def _get_sync(self, memory_id: str, flags: RuntimeFlags | None = None) -> object:
+        memory = self.get_memory(flags)
+        if memory is None:
+            raise MemoryConfigError("Memory is disabled.")
+        getter = getattr(memory, "get", None)
+        if not callable(getter):
+            raise ValueError("memory not found")
+        with self._ops_lock:
+            try:
+                record = getter(memory_id)
+            except ValueError:
+                raise
+            except Exception as exc:
+                raise ValueError("memory not found") from exc
+        if record is None:
+            raise ValueError("memory not found")
+        return record
 
     def _delete_sync(self, memory_id: str, flags: RuntimeFlags | None = None) -> None:
         memory = self.get_memory(flags)
@@ -513,7 +560,11 @@ class MemoryRuntime:
             flags=None,
         )
 
-    async def delete(self, memory_id: str) -> None:
+    async def delete(self, memory_id: str, *, user_id: str | None = None) -> None:
+        owner = resolve_scope(user_id, None, None)["user_id"]
+        record = await asyncio.to_thread(self._get_sync, memory_id, None)
+        if self._record_user_id(record) != owner:
+            raise ValueError("memory not found")
         await asyncio.to_thread(self._delete_sync, memory_id, None)
 
     async def drain(self, timeout: float = 5.0) -> None:

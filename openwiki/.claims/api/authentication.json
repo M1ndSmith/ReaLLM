@@ -1,0 +1,110 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:daaacb08f6f35bce77760fe074147e03e7ece3a3e412505b4bd117a05f63a25d",
+  "claims": [
+    {
+      "id": "claim_c84362158bb642ab85de05299c59282d",
+      "statement": "Routes other than the root router depend on require_gateway_auth before their handlers run.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/app.py#L69-L79",
+          "version": "repo-lines-v1:sha256:1fbd3b440a9bddef482520e6bc2cb36077bda90c1566bb4112e096b6b1522e0e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2ZjU5NzA1OTM5YWE3OGYyZDI2YjJkNGIxZmQ1YTk5MGQ1ZjBjZmM4NjRlZDc0MDVhNzEwYTFlZTFjZGYyMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ0OGJhNDhhOTJmYzViYzg1MjhkYzdiYWMxYzQwNDg2YzE0YmMyYmEwZWQyNjBiYWZiZDllN2Q2ODAzNDg1ZWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1MTAxYTBlYWExM2FlZjlhMDJkNDdkNGJhZmJmMDk5NDc5Y2EyYzBmNWIxZTBkYzc5ODY0MTcwYjkzZGM2YWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmYWI2NjJjMTcyZjQ3YTYwOTgzMzQ1M2E3MzE0OWNhYjY5N2Q3MjQ2M2Q0NmViNDQzZjc3YWJkOGU4N2JmNmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c45c563b7adf4e9da11d705ecd805345",
+      "statement": "When auth is enabled, a missing or unresolved Bearer or X-Api-Key secret returns HTTP 401 gateway_unauthorized.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/auth.py#L33-L43",
+          "version": "repo-lines-v1:sha256:6c0d67a493da7da180b4fbae92d5a40f04dfc240b93fd7fc047d8034e77c2b6d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2ZjI4YTNmYWQyM2M0YmVlMzdjZDNkMDE4ZWZmMjFlOGU0Nzk3MmExMWViOTQxMGFhMzk2Y2M3YzUzNjRlY2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzYmY4ZjU5MmIwMjBlODA4YjY3MzdlNjNmYmQzMWFhOTZlMjgwZjk0NWU3MzYxMDk5Mzg1NWE1ZDAxOGRlM2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3Y2U2MjUzYjAxZDJlZTAwY2Y2NWZkNjQxMDgyMzc4OTRmZjU1YjNiMWY5MjcyMjQ0MjkxNDkyNTE1YmI2ZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY3MjQ5NjRiNmQ1MTg2NzIxMWNlN2RjNDZjNGIxNTBlMDAxYTU3NGVjODg0N2ViNWY4OTZhODU5ODU4YTU5YmQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_20a313fdc5314c87ba5efb771a78d95b",
+      "statement": "When auth is disabled and no gateway key is configured, require_gateway_auth accepts the request without binding an identity.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/auth.py#L45-L47",
+          "version": "repo-lines-v1:sha256:aac27ffad15ddd151314079f80f117f321b61ac7b4810b9ee7ef31690e0bb163:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjZlYjc5OGNlOGNiOTEwNzAzYTk0YzkyMTc5YjkyMWMzMWU4NDBlZTkzOGI5NDk5OWMzNzhhN2MxZDg3Y2JmMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWI1YzgyNjMyZmM4MmQ0YjJjMzQwZjQyNTU4YmEzZGZhMzFjNzY1NWRmNmZjYzE2OGI0ZmRjZTU3ZmFjNjA0MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGU2ODBjZjYwNzMzZDk1ZWVmNzM0MDVlZjdhYWZhODlmOTRiOGFlNzYzZTFjYmYxOGExNTQ1ZWYyN2NiYzYzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTE3OGM2MzU5ZDVkMWE0MzU2ODRmNGY5ZDc1MjJhNTA5MDQ4MzBlYzI0NTdmYjVhZWNjNWY1NzRlNGU0ZGNhZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_119a58890a1b4afaa4d38cb9fa68b9d6",
+      "statement": "Startup refuses to run when auth is off unless GATEWAY_ALLOW_OPEN is on, and refuses an empty pepper when auth is on and open mode is off.",
+      "evidence": [
+        {
+          "resource": "repo://app/container.py#L44-L60",
+          "version": "repo-lines-v1:sha256:47c1687d84781ecf8deb0f6ee226a9e8393d7b138f8c36a36b5d26c8d06c061a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwZGNjNzFhYjZiNDIwNzI3MzhjYTkzZjE5ZGRhNmExZDQwODcyOWJhNDk5MjI1ODQ2YzhiN2VkMzExYjJhZTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MDMyZTk2NGQwOTMyMzUxZTVkMTg1MjY5MjgxYjE3MWEzYTA5YjA4YjI4NmU2NjFlYTQ3MDMyM2M4MmViNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFmMzllOTQyOWNmMzQxYzBjMmJmZTJmODUyMTc3YWM0YTBhNDdkN2Q3NzcyZDNmYjAwYzUwYTE4NDVhNDE2ZGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkzZDc4ZmNmZTEzMzkzNzZiMjMzNTJhZjE0ZjdkZjYzZGRhZjUyZjE5ZjVjN2M3ZDdiNmFkMDdkNzIwMDhmZDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_76da00933bea425c86695c76b878fe82",
+      "statement": "Loading a key file that already contains records raises when GATEWAY_KEY_PEPPER is empty, including in open mode.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/identities.py#L150-L154",
+          "version": "repo-lines-v1:sha256:cebaa8c255dd234e8eee801917145a8fbfb1a0536a408be5a70d6f7c4ee4115b:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTliNzA3NjJlNDE4MjdlZmU1Mjg3Yjg5ODY3OGVkMzI4MTljMzkxOTQ0YmI5ZmI4ZGMyNDNiYTRjMWUzMjBmOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTUwMzJlOTY0ZDA5MzIzNTFlNWQxODUyNjkyODFiMTcxYTNhMDliMDhiMjg2ZTY2MWVhNDcwMzIzYzgyZWI0ZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzJhNzc0M2E3NzZmMzM4ZmYzZjNjZDA0MWM2YmQxNzRiNDE2ZmRmZjU2YzAzNmMxNThjYjQyODkwZTFlYTRiNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTM0NTA0M2IwMmM0MDRmNDQ4MTMxYjUxMDJmZDVhYmQzZDE2MTFiNzk3ZDhlZjdmMjFmOTEyZGYyMTI3ZmJmMiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3d2184474dd3490cbfcdd38fbdaa0935",
+      "statement": "Issuing a key raises before hashing when GATEWAY_KEY_PEPPER is empty.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/identities.py#L257-L258",
+          "version": "repo-lines-v1:sha256:fb21e3047c25aaa11d02de9a170165bb286bc604e57d2c01e651fa4a7d726d31:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2QzOTc1ODI3ZDk2MWM2NzI3NDdiZjNhNGRjZTZmODI0NGEwYWViNDRiYTUwNTRkMTg4ODI0ZmU5NTJiZmViNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdjMzJmNWMwYWIxNzg0ZTMxMTFkMGQyMDE5MDkzZjU1MzE3ODlhNTlmYjQ2MGM1NWFmZGM5ODMyZDBjYzdlMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjUyM2MzNmFjNjlkMmQ3OTNlYWU0NGEwNzA1YWU1Y2I0NzcwMzkwMTdmZmRhYjUzYzM3Mzc2ZWU3YTAzNzAwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGRhNmQ4NTY3MTg4ZjBiMTk1ZDc2YzI2OWExZTE3NWM3MDhmNDExNTVmYzY4OTI4NDc2ODYwOTFlMGQ0MDllNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9100216af2e74d4eaad4c142c394515b",
+      "statement": "Stored secrets are SHA-256 of the pepper, a NUL byte, and the secret, checked with hmac.compare_digest.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/identities.py#L106-L114",
+          "version": "repo-lines-v1:sha256:1830815bf5fc4fde08bb8b0ef711ea31563755c730748264dd1b916d0dd2a620:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjg0MzkyOTk2NGQwMjQ0Njc1NTM1ODZiNjE0NGQ5ZjI2MzcwMWJkZTg3NGNiNzM4N2NhYTEzNjJkY2M2M2QzNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjcwOTI5NWE2YTllZGViNmM5ZjIwYTAyOGIyYjhjMDM1YWQ4NWVkZDM0ODAyOGFhY2RhNWQ3M2EwZmM1ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTQ1NzdjMjVhNDczNjRkYmJiOWYwMzkwMzE5M2FiYjhiNjE4Nzg5ZWM0YWI4NzYxYzkxNmRmYzk3MDg1ZmUzMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmE1YjgyZDlkMzQxODgyYTJmYjM0ODlhZDRkZmE4NGRmYmNlNDZjZDBiZGZkMTBkZjRlNDA0N2MxNGNkZWNjNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3802a8f5e3234863b18c104e77930273",
+      "statement": "A matching legacy GATEWAY_API_KEY resolves to identity id default with every scope.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/identities.py#L236-L238",
+          "version": "repo-lines-v1:sha256:b114574d21fd4553c9692ea64cdb9c74522748451ae4a6084e0b8b154e76784c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVkYTg2MzI3ZWVhMDJkZTRmYmNhM2E5NzBlOThkNmMyZWExOGVkODk0YTUwMDg4YjBmMWE1NTE4MDI5M2JlZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmMzNGQ4NzIzZGE4YTcxMmIzMjRjOWFjMGNhN2RiM2Q3ZmI5YjA0NzY3ZTFmMzk2YzUyZTcxYTBmZTRlN2JjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTZmZjNlNGY0Y2VkYWRjYmQ0OTIwZmIxYzNjMTFiZWY4MTRkMzU4ZDhjMWJlY2Q0YWM2YzkxNTk3ODYwZmQ3MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODVjNzYyMjExMTAwMDcxYTkyNDU1YWU4YmJmZDUzNTUxMzMxODY1OGJmNmIxYjI1MmMzNjgyMWYyNjRjMjEzMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dc36ff3fadf14cf7b795cd86aacd0987",
+      "statement": "Scope checks return 401 when auth is on and no identity is bound, and 403 when the identity lacks every required scope.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/dependencies.py#L22-L33",
+          "version": "repo-lines-v1:sha256:cc4818e7e143332565580447060faa166ff78c27a0a9885a5862c426d92b5bfb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwZGU1ZDFhYzM3M2Y3YjQ5MTNmMjczMzcxZjc1ZDk4NjA0N2RkZDI4NjkyOWFlYmMxOWQ5ZTM4YTBjN2Y5MjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MDMyZTk2NGQwOTMyMzUxZTVkMTg1MjY5MjgxYjE3MWEzYTA5YjA4YjI4NmU2NjFlYTQ3MDMyM2M4MmViNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkNWIxYzkwY2VhNTlkYjM4MTBiYTQ0YTA1OGM3ZTYyNjliZDFiODNjOGIxOGJhNDgzYTdmZGM1ZTkxYjIyYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyYzQzNjlkYjRmMGEyNmRmMGU1ODhmZmFjZjMyOGFhZjAwZmYwZDQ3ODQ2ZmEyZDg4MTNhYzllODkxNWIzOGUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_79878a9659154f5a8298274b5176dc3f",
+      "statement": "Admin key list, create, patch, and revoke endpoints require the admin scope.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/admin.py#L33-L42",
+          "version": "repo-lines-v1:sha256:5a449b21469ae685f085d1199fb91443cc6e0f021b0f22805c200877371fafe2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZGI5ZDYzMjQxMjZkMTFiNWU0OGY4MzMwMmE0ZDZiM2MwMzE1YjExOTA2OWQ0NzI4YjQ0NmRjOGRlMmZmZmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhYTAyYTdlNzNjYzAwYzZhZWVmZTcxYWEwODI5NWQ2NGViMjIyOTYxNTYwZjhiMjllOTljNDIyZTI0MWU4MTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjYzRhN2QxY2M3OTZhYmEzZTQ2NzIzMzI3ZjUxN2U5ZjgxMTk4MmQyNTBmMDcwMjk4NmU0YjU3NjRhZDk1ODkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU0OGE3ODdkMWNiYWM2ZjhiYzQwMzc3ZWViYTQzMjQ5NzUwNzc3MTExMmQ3OTEzMzUxNWQ5MDUzNTY3NjExZjgifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

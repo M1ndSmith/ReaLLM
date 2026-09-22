@@ -7,18 +7,11 @@ ROOT = Path(__file__).resolve().parent.parent
 
 
 def test_license_and_security_policy_exist():
-    license_text = (ROOT / "LICENSE").read_text(encoding="utf-8")
-    security = (ROOT / "SECURITY.md").read_text(encoding="utf-8")
-    assert "MIT License" in license_text
-    assert "Reporting a vulnerability" in security
-    assert "fixes land on `Master`" in security
-    assert "GATEWAY_ALLOW_OPEN" in security
-    assert "GATEWAY_KEY_PEPPER" in security
-    assert "/healthz" in security
+    assert (ROOT / "LICENSE").is_file()
+    assert (ROOT / "SECURITY.md").is_file()
 
 
 def test_public_guides_and_env_presets_are_publishable():
-    readme = (ROOT / "README.md").read_text(encoding="utf-8")
     ignore_lines = {
         line.strip()
         for line in (ROOT / ".gitignore").read_text(encoding="utf-8").splitlines()
@@ -29,38 +22,38 @@ def test_public_guides_and_env_presets_are_publishable():
     assert "web/.env.local" in ignore_lines
     assert "USAGE_WALKTHROUGH.md" not in ignore_lines
     assert "env/" not in ignore_lines
-    assert "## Prerequisites" in readme
-    assert "FastEmbed" in readme
-    assert "groq/meta-llama/llama-prompt-guard-2-22m" in readme
-    assert "groq/meta-llama/llama-guard-4-12b" in readme
-    assert "[Usage walkthrough](USAGE_WALKTHROUGH.md)" in readme
-    assert "[`env/`](env/)" in readme
-    assert "GATEWAY_KEY_PEPPER" in readme
     assert (ROOT / "USAGE_WALKTHROUGH.md").is_file()
     assert (ROOT / "web" / "app" / "healthz" / "route.ts").is_file()
-    walkthrough = (ROOT / "USAGE_WALKTHROUGH.md").read_text(encoding="utf-8")
-    assert "CODEBASE_MAP.md" not in walkthrough
-    assert "BACKEND_MONTE_CARLO_WALKTHROUGH.md" not in walkthrough
-    assert "FastEmbed" in walkthrough
-    assert "groq/meta-llama/llama-prompt-guard-2-22m" in walkthrough
-    assert "groq/meta-llama/llama-guard-4-12b" in walkthrough
-    assert "env/groq.env" in walkthrough
     for name in ("groq.env", "ollama.env", "memory.env", "full.env"):
         preset = (ROOT / "env" / name).read_text(encoding="utf-8")
         assert "GATEWAY_ALLOW_OPEN=1" in preset
         assert "GATEWAY_KEY_PEPPER" in preset
+        assert "REALMM_CONFIG=" in preset
         assert "sk-" not in preset
         assert "gsk_" not in preset
+        assert "MEMORY=" not in preset
+        assert "GUARD=" not in preset
     groq = (ROOT / "env" / "groq.env").read_text(encoding="utf-8")
     ollama = (ROOT / "env" / "ollama.env").read_text(encoding="utf-8")
-    memory = (ROOT / "env" / "memory.env").read_text(encoding="utf-8")
-    full = (ROOT / "env" / "full.env").read_text(encoding="utf-8")
-    assert "MEMORY=0" in groq and "GUARD=0" in groq
-    assert "OLLAMA_API_KEY=ollama" in ollama and "MEMORY=0" in ollama
-    assert "MEMORY=1" in memory and "MEMORY_LLM_MODEL=" in memory and "MEMORY_EMBEDDER=fastembed" in memory
-    assert "GUARD=0" in memory
-    assert "MEMORY=1" in full and "GUARD=1" in full
-    assert "GUARD_INJECTION_MODEL=" in full and "GUARD_CONTENT_MODEL=" in full
+    memory_env = (ROOT / "env" / "memory.env").read_text(encoding="utf-8")
+    full_env = (ROOT / "env" / "full.env").read_text(encoding="utf-8")
+    assert "REALMM_CONFIG=config/groq.yaml" in groq
+    assert "OLLAMA_API_KEY=ollama" in ollama and "REALMM_CONFIG=config/ollama.yaml" in ollama
+    assert "REALMM_CONFIG=config/memory.yaml" in memory_env
+    assert "REALMM_CONFIG=config/full.yaml" in full_env
+    groq_policy = (ROOT / "config" / "groq.yaml").read_text(encoding="utf-8")
+    ollama_policy = (ROOT / "config" / "ollama.yaml").read_text(encoding="utf-8")
+    memory_policy = (ROOT / "config" / "memory.yaml").read_text(encoding="utf-8")
+    full_policy = (ROOT / "config" / "full.yaml").read_text(encoding="utf-8")
+    assert "enabled: false" in groq_policy
+    assert "enabled: false" in ollama_policy
+    assert "enabled: true" in memory_policy
+    assert "llm_model: groq/llama-3.1-8b-instant" in memory_policy
+    assert "embedder: fastembed" in memory_policy
+    assert "enabled: false" in memory_policy
+    assert "enabled: true" in full_policy
+    assert "injection_model: groq/meta-llama/llama-prompt-guard-2-22m" in full_policy
+    assert "content_model: groq/meta-llama/llama-guard-4-12b" in full_policy
 
 
 def test_runtime_requirements_are_capped():

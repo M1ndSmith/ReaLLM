@@ -66,9 +66,11 @@ def test_cache_rpm_tpm(monkeypatch):
     assert not is_chat_model("groq/meta-llama/llama-prompt-guard-2-22m")
     assert runtime.provider_rpm("groq") == 30
     monkeypatch.setenv("GROQ_RPM", "12")
+    runtime = _router()
     assert runtime.provider_rpm("groq") == 12
     assert runtime.provider_tpm("groq") is None
     monkeypatch.setenv("GROQ_TPM", "15000")
+    runtime = _router()
     item = ModelInfo(id="groq/openai/gpt-oss-20b", provider="groq")
     params = runtime._deployment_params(item)
     assert params["tpm"] == 15000

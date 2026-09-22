@@ -1,0 +1,211 @@
+{
+  "runId": "803bdd23-268c-460c-9370-f6a5646f320f",
+  "pages": [
+    {
+      "path": "/openwiki/quickstart.md",
+      "title": "ReaLMM Quickstart",
+      "purpose": "Task-routing map for agents: how to run the gateway and console, make a first authenticated chat call, and which wiki pages to open for architecture, API, auth, operations, and tests.",
+      "seedPaths": ["README.md", "USAGE_WALKTHROUGH.md", "compose.yaml", "env/groq.env", "app/main.py"],
+      "relatedPages": [
+        "/openwiki/architecture/system.md",
+        "/openwiki/api/http-surface.md",
+        "/openwiki/operations/configuration.md",
+        "/openwiki/console/operator-ui.md"
+      ],
+      "instructions": [
+        "Keep this as a routing page, not a second architecture document.",
+        "Point to the other wiki pages for depth."
+      ]
+    },
+    {
+      "path": "/openwiki/architecture/system.md",
+      "title": "System Architecture",
+      "purpose": "Explain the FastAPI process, composition root, layered ownership, GatewayRuntime lifecycle, and the single LiteLLM Router invariant.",
+      "seedPaths": [
+        "app/main.py",
+        "app/bootstrap.py",
+        "app/container.py",
+        "app/api/app.py",
+        "app/application/ports.py",
+        "tests/test_architecture.py"
+      ],
+      "relatedPages": [
+        "/openwiki/architecture/chat-pipeline.md",
+        "/openwiki/api/http-surface.md",
+        "/openwiki/operations/reliability.md"
+      ]
+    },
+    {
+      "path": "/openwiki/architecture/chat-pipeline.md",
+      "title": "Chat Pipeline",
+      "purpose": "Document ChatService complete and stream: flag snapshot, prompt compile, PII, memory, guards, budget, Router completion, postprocess, SSE holdback, and structured-output rules.",
+      "seedPaths": [
+        "app/application/chat.py",
+        "app/application/events.py",
+        "app/structured.py",
+        "app/api/encoders/native.py",
+        "app/api/encoders/openai.py"
+      ],
+      "relatedPages": [
+        "/openwiki/architecture/system.md",
+        "/openwiki/integrations/optional-layers.md",
+        "/openwiki/api/http-surface.md"
+      ]
+    },
+    {
+      "path": "/openwiki/api/http-surface.md",
+      "title": "HTTP API Surface",
+      "purpose": "Describe public routes, native versus OpenAI-compatible chat, embeddings, health/readiness, config, admin, and how adapters map HTTP into ChatService.",
+      "seedPaths": [
+        "app/api/app.py",
+        "app/api/routes/chat.py",
+        "app/api/routes/openai.py",
+        "app/api/routes/meta.py",
+        "app/api/routes/ready.py",
+        "app/api/routes/root.py",
+        "app/schemas.py",
+        "tests/test_route_surface.py"
+      ],
+      "relatedPages": [
+        "/openwiki/api/authentication.md",
+        "/openwiki/architecture/chat-pipeline.md",
+        "/openwiki/console/operator-ui.md"
+      ]
+    },
+    {
+      "path": "/openwiki/api/authentication.md",
+      "title": "Gateway Authentication",
+      "purpose": "Explain fail-closed inbound auth, GATEWAY_ALLOW_OPEN, peppered identity store, scopes, bootstrap default key, and admin key issuance.",
+      "seedPaths": [
+        "app/api/auth.py",
+        "app/api/dependencies.py",
+        "app/infrastructure/identities.py",
+        "app/api/routes/admin.py",
+        "app/container.py",
+        "tests/test_auth.py",
+        "tests/test_admin_keys.py",
+        "tests/test_scopes.py"
+      ],
+      "relatedPages": [
+        "/openwiki/api/http-surface.md",
+        "/openwiki/operations/configuration.md"
+      ]
+    },
+    {
+      "path": "/openwiki/operations/configuration.md",
+      "title": "Configuration and Runtime Flags",
+      "purpose": "Document dotenv, GatewaySettings, provider keys remaining in os.environ, runtime-flags overlay, Compose vs host venv, and which changes require restart.",
+      "seedPaths": [
+        "app/settings.py",
+        "app/bootstrap.py",
+        "app/infrastructure/flags.py",
+        "app/api/routes/config.py",
+        ".env.example",
+        "compose.yaml",
+        "env/groq.env",
+        "tests/test_settings.py",
+        "tests/test_runtime_flags.py"
+      ],
+      "relatedPages": [
+        "/openwiki/operations/reliability.md",
+        "/openwiki/integrations/providers.md",
+        "/openwiki/api/authentication.md"
+      ]
+    },
+    {
+      "path": "/openwiki/operations/reliability.md",
+      "title": "Reliability, Budget, and Health",
+      "purpose": "Cover LiteLLM Router retries/fallbacks/cache, Redis shared state, process vs Redis budget ledger, RPM/TPM, readiness, and metrics.",
+      "seedPaths": [
+        "app/infrastructure/router.py",
+        "app/infrastructure/budget.py",
+        "app/infrastructure/redis_health.py",
+        "app/infrastructure/metrics.py",
+        "app/api/routes/ready.py",
+        "app/api/routes/metrics.py",
+        "tests/test_reliability.py",
+        "tests/test_budget.py",
+        "tests/test_ready.py"
+      ],
+      "relatedPages": [
+        "/openwiki/architecture/system.md",
+        "/openwiki/operations/configuration.md"
+      ]
+    },
+    {
+      "path": "/openwiki/integrations/providers.md",
+      "title": "Provider Catalog",
+      "purpose": "Explain how non-empty *_API_KEY values detect providers, how GET /models is built, model resolution, Ollama dummy key, and embeddings.",
+      "seedPaths": [
+        "app/infrastructure/catalog.py",
+        "app/api/routes/meta.py",
+        "app/api/routes/openai.py",
+        "tests/test_llm.py",
+        "tests/test_ollama.py"
+      ],
+      "relatedPages": [
+        "/openwiki/operations/configuration.md",
+        "/openwiki/operations/reliability.md",
+        "/openwiki/api/http-surface.md"
+      ]
+    },
+    {
+      "path": "/openwiki/integrations/optional-layers.md",
+      "title": "Optional Pipeline Layers",
+      "purpose": "Document Memory, PII, Guard, and Langfuse prompt/tracing layers: enablement, side effects, failure semantics, and that they share the same CompletionBackend.",
+      "seedPaths": [
+        "app/infrastructure/memory.py",
+        "app/infrastructure/pii.py",
+        "app/infrastructure/guards.py",
+        "app/infrastructure/prompts.py",
+        "app/api/routes/memory.py",
+        "tests/test_memory.py",
+        "tests/test_pii.py",
+        "tests/test_guardrails.py",
+        "tests/test_prompts.py"
+      ],
+      "relatedPages": [
+        "/openwiki/architecture/chat-pipeline.md",
+        "/openwiki/operations/configuration.md"
+      ]
+    },
+    {
+      "path": "/openwiki/console/operator-ui.md",
+      "title": "Operator Console",
+      "purpose": "Describe the Next.js console: Playground, Connect, Settings, how it talks to the gateway over CORS, and that it never writes provider keys.",
+      "seedPaths": [
+        "web/app/page.tsx",
+        "web/app/connect/page.tsx",
+        "web/app/settings/page.tsx",
+        "web/components/ConsoleShell.tsx",
+        "web/lib/gateway.ts",
+        "web/lib/chatClient.ts",
+        "web/hooks/useOperatorState.ts",
+        "compose.yaml"
+      ],
+      "relatedPages": [
+        "/openwiki/api/http-surface.md",
+        "/openwiki/api/authentication.md",
+        "/openwiki/quickstart.md"
+      ]
+    },
+    {
+      "path": "/openwiki/testing/verification.md",
+      "title": "Tests and Architecture Guards",
+      "purpose": "Explain host pytest coverage gates, architecture import invariants, route-surface tests, and frontend vitest as the verification contract.",
+      "seedPaths": [
+        "pyproject.toml",
+        "tests/test_architecture.py",
+        "tests/test_route_surface.py",
+        "tests/test_publish_readiness.py",
+        "tests/conftest.py",
+        "web/package.json",
+        "web/vitest.config.ts"
+      ],
+      "relatedPages": [
+        "/openwiki/architecture/system.md",
+        "/openwiki/api/http-surface.md"
+      ]
+    }
+  ]
+}

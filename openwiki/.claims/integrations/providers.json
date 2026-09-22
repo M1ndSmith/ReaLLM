@@ -1,0 +1,40 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:3ac57522b092309351f278b929edc286a053a8e9c0bbc78c5ce319bca8a9bf7f",
+  "claims": [
+    {
+      "id": "claim_986a8a4254194b5db330f067df098818",
+      "statement": "A provider is detected only when its API key environment variable is a non-empty string.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L58-L83",
+          "version": "repo-lines-v1:sha256:5a9a2f052cc8095b7bd5f31f9a56a6039fc7085a2ec73696d7cffca023944999:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNTAwNTk0OGRmZmJjYTk1MjM2MTJiOTFkMDU1YjQ4ODliZDEzZjRjZjk5OTAwNWNhNjAzNmExZWU5ZDQxNzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTNlNTQyMzdhZjMwMzU5OGY1ZTIwMTQ1NDkxNzAxYmJmYzU0ODMzMTA3NGE0ZWRmNzZlY2MwZTQ4OTFmNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiOWI1YjQ1Y2Y2ZjM3OTk4ZjlkZWJmNmJjMTdlNWMzYWE2YmFkNDIxYTQ0YzE4NDBmNTFmZjEyMjVjYmMzMDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0MDVmYjVkZmZhZjYwNjdiNGJjOWNlZWI0NjI3ZjZkZDZjMjM2NzQzODM5YmY4Y2Y1N2NiN2U3OTQxYWQxYjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7ff464f68f374f208ab65d5dc95b6827",
+      "statement": "resolve_model rejects an empty catalog, an unknown id, and an ambiguous id.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L180-L203",
+          "version": "repo-lines-v1:sha256:be7d7174912af8255e882da6035ce72324f61453b844a6a97d8809788612b3d0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MjVjNjk3Mzk5YjkxMTk1NDhmMTg5YzQwZGYzNzEwN2RjMzdjNGQxZmNiNjQ0MmFjYmQzODE5OTA1NGZmNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY5MGFjNDUzZGU5YzZmZTllOTYxZWNkNDlhNTg0NDYzZTQwZDc2M2FhMGZlNDE1NTdlMDk0Zjk3NjM0MGRlOGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzNzk3MTBiNjNiOTIwM2M3MjZiOGZjODQ1NzMwMjgwNzYyODc5OTgwMTg0MDVlNjZhNDhlOTM4ZjkxNTA1NzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM4YzE0NzUyZWFjOGRkOTkyNDEyMjQ4MzdlNDY5ZGUzOWNjNDIzY2JiNzgwNDc4MGU3OTY2YWY1ZDYyMWY1MDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_effc3ab5244145cd9f5cc75d16bc7239",
+      "statement": "Embeddings resolve the requested model through the same catalog before the provider call.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/openai.py#L106-L114",
+          "version": "repo-lines-v1:sha256:bae4576a9ae7e65cd9a31a1926acb18f823bc9afce9e5ce28c6513990a783e9b:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWM5YjQ0NjcwMjgwZjU5OTgwNmYxZTJjNWU1ZmYyODIwY2U4NDgyZGNlYmY4NDY2ZDZmZDU3MWFhMTk5NWE1YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGIxMzU5NDQyZDNmZWEzOTUxMDI4ZTgwOThkNTIyYzg4ZmNkNmIwNTQ2ZTM2MzViZDEwZDYxOWJkNjhjMjgwMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTliYzdjMTQzNDY3OWRjZjE5MzJjYzdmMzBmZGM0ZTdkOTY3YTMxYTI0NGIwNGZkYjM1OTM4NjkxMGZmZWQ4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTg0NTE3ZjNkZjVkM2IzZTgxNDc0NjA3NDE3M2Y1YTVlODBlNjNlYzIyMmFmY2E5MDdkN2NmYmNjNzdlZjM1OCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

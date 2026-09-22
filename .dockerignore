@@ -19,3 +19,4 @@ web/.env.local
 *.ses
 .cursor
 agent-transcripts
+.openwiki-cli

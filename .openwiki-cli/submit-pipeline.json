@@ -1,0 +1,29 @@
+{
+  "runId": "803bdd23-268c-460c-9370-f6a5646f320f",
+  "jobId": "69c9d239-f59f-4503-8bf4-f5cb1eb705af",
+  "claims": [
+    {
+      "statement": "complete and stream snapshot RuntimeFlags once, then run the same preflight: prompt compile, optional PII, memory attach, optional second PII pass, optional inbound guards, then catalog resolve and budget or RPM checks.",
+      "evidence": [
+        { "resource": "repo://app/application/chat.py#L225-L269" },
+        { "resource": "repo://app/application/chat.py#L271-L286" },
+        { "resource": "repo://app/application/chat.py#L352-L369" }
+      ]
+    },
+    {
+      "statement": "Streaming refuses response_format, disables Router caching, and holds back 64 characters of PII-redacted SSE unless outbound Llama Guard buffers the full assistant text.",
+      "evidence": [
+        { "resource": "repo://app/application/chat.py#L33-L41" },
+        { "resource": "repo://app/application/chat.py#L219-L223" },
+        { "resource": "repo://app/application/chat.py#L352-L413" }
+      ]
+    },
+    {
+      "statement": "After the provider returns, complete validates structured output when response_format is set and always schedules a background Mem0 record that cannot fail the chat.",
+      "evidence": [
+        { "resource": "repo://app/application/chat.py#L315-L329" },
+        { "resource": "repo://app/structured.py#L64-L74" }
+      ]
+    }
+  ]
+}

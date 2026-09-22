@@ -114,27 +114,32 @@ async def openai_embeddings(
         identity_id = bound_identity_id(request)
         quotas = runtime.identities.quotas_for(identity_id)
         estimated = _embedding_token_estimate(runtime.budget, resolved, body.input)
-        runtime.budget.assert_allowed(
+        runtime.budget.assert_rpm(identity_id, quotas.rpm_limit)
+        reservation_id = runtime.budget.reserve(
             resolved,
             estimated,
             identity_id=identity_id,
             quotas=quotas,
         )
-        runtime.budget.assert_rpm(identity_id, quotas.rpm_limit)
         payload: dict = {"model": resolved, "input": body.input}
         if body.encoding_format:
             payload["encoding_format"] = body.encoding_format
         if body.user:
             payload["user"] = body.user
-        result = await runtime.router.aembedding(**payload)
-        body_out = _embedding_payload(result, resolved)
-        tokens = body_out["usage"]["total_tokens"] or estimated
-        runtime.budget.record_usage(
-            tokens=tokens,
-            usd=runtime.budget.completion_usd(result, resolved),
-            cached=False,
-            identity_id=identity_id,
-        )
-        return body_out
+        try:
+            result = await runtime.router.aembedding(**payload)
+            body_out = _embedding_payload(result, resolved)
+            tokens = body_out["usage"]["total_tokens"] or estimated
+            runtime.budget.record_usage(
+                tokens=tokens,
+                usd=runtime.budget.completion_usd(result, resolved),
+                cached=False,
+                identity_id=identity_id,
+                reservation_id=reservation_id,
+            )
+            reservation_id = None
+            return body_out
+        finally:
+            runtime.budget.release(reservation_id)
     except Exception as exc:
         raise_chat(exc)

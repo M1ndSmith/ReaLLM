@@ -1,7 +1,6 @@
 from __future__ import annotations
 
 import logging
-import os
 import threading
 from collections.abc import Callable
 from typing import Any, Literal
@@ -18,39 +17,9 @@ from app.settings import GatewaySettings
 logger = logging.getLogger(__name__)
 
 _WEAK_FALLBACK_MARKERS = ("compound", "allam", "safeguard", "canopy")
-_DEFAULT_PROVIDER_RPM = {
-    "groq": 30,
-    "openai": 500,
-    "anthropic": 50,
-    "gemini": 60,
-    "xai": 60,
-    "mistral": 60,
-    "deepseek": 60,
-    "openrouter": 60,
-}
 _OFF_VALUES = {"0", "false", "no", "off", "none"}
 
 FallbackPolicy = Literal["same-provider", "allowlist", "retry-only"]
-
-
-def _int_env(name: str, default: int) -> int:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return default
-    try:
-        return int(raw)
-    except ValueError:
-        return default
-
-
-def _optional_int_env(name: str) -> int | None:
-    raw = os.getenv(name)
-    if raw is None or not raw.strip():
-        return None
-    try:
-        return int(raw)
-    except ValueError:
-        return None
 
 
 class LiteLLMRouterRuntime:
@@ -93,37 +62,15 @@ class LiteLLMRouterRuntime:
         return "shared" if self.redis_enabled() else "unconfigured"
 
     def provider_rpm(self, provider: str) -> int:
-        compact = f"{provider.replace('_', '').upper()}_RPM"
-        underscored = f"{provider.upper()}_RPM"
-        raw = os.getenv(compact) or os.getenv(underscored)
-        if raw and raw.strip():
-            try:
-                return int(raw)
-            except ValueError:
-                pass
-        default = self._settings.default_rpm
-        return _int_env("DEFAULT_RPM", _DEFAULT_PROVIDER_RPM.get(provider, default))
+        return self._settings.provider_rpm_limit(provider)
 
     def provider_tpm(self, provider: str) -> int | None:
-        compact = f"{provider.replace('_', '').upper()}_TPM"
-        underscored = f"{provider.upper()}_TPM"
-        raw = os.getenv(compact) or os.getenv(underscored)
-        if raw and raw.strip():
-            try:
-                return int(raw)
-            except ValueError:
-                pass
-        if self._settings.default_tpm is not None:
-            return self._settings.default_tpm
-        return _optional_int_env("DEFAULT_TPM")
+        return self._settings.provider_tpm_limit(provider)
 
     def fallback_policy(self) -> FallbackPolicy:
         raw = self._settings.fallbacks
         if raw is None:
-            env_raw = os.getenv("FALLBACKS")
-            if env_raw is None:
-                return "same-provider"
-            raw = env_raw
+            return "same-provider"
         stripped = raw.strip().lower()
         if not stripped or stripped in _OFF_VALUES:
             return "retry-only"
@@ -151,7 +98,7 @@ class LiteLLMRouterRuntime:
         return None
 
     def _explicit_fallback_ids(self, catalog: list[ModelInfo]) -> list[str]:
-        raw = self._settings.fallbacks if self._settings.fallbacks is not None else (os.getenv("FALLBACKS") or "")
+        raw = self._settings.fallbacks or ""
         found: list[str] = []
         seen: set[str] = set()
         for token in raw.split(","):
@@ -220,7 +167,7 @@ class LiteLLMRouterRuntime:
             self.redis_url(),
             self.cache_enabled(),
             self.cache_ttl(),
-            self._settings.fallbacks if self._settings.fallbacks is not None else os.getenv("FALLBACKS"),
+            self._settings.fallbacks,
             self.num_retries(),
             ollama_host() if any(item.provider == "ollama" for item in catalog) else None,
         )

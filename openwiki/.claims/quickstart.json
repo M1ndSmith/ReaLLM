@@ -1,0 +1,60 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:869c38156f7060a3036cc1a94d1cd9067349363b603f6c1cea06751aca9eb75a",
+  "claims": [
+    {
+      "id": "claim_67902facbfa8482188d4a3a360f0e638",
+      "statement": "app.main exports the FastAPI app built by create_configured_app.",
+      "evidence": [
+        {
+          "resource": "repo://app/main.py#L1-L3",
+          "version": "repo-lines-v1:sha256:b5f4d9d74be762cc269be8358878e34db130fd54994e403b8b46484b26d600a5:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWNjZTdkZjM3NGE1NDhlMDI2ZjhiMDQyYTcxZjk3NzU3NzFmMzhmZDNiZTAxZTQyYjJlY2Q3MjA0YmIyY2I5MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiN2Y1NmFjNjYxYmY5Mjk2YTE1MWIyNWVhZmE0ZjkwYjkwMGJlMTVjMWNhNDI3ZDUxMWNkMjQ5ZTlmNGI4YTBhZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3f0c91ca5a834d31b158098e477efcd2",
+      "statement": "The Groq env preset sets GATEWAY_ALLOW_OPEN=1 and REALMM_CONFIG for a host loopback run.",
+      "evidence": [
+        {
+          "resource": "repo://env/groq.env#L6-L7",
+          "version": "repo-lines-v1:sha256:30919a183dd192b9f8035fbfcae5a8ceb24ed3bf1d81d48b46e480e18258a872:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODg2OWQ1MmM5OTUwOTE1MGRhNTZmYmYzZjIzMWE1NDU4ODk3ZjJhYmI2MjcxNGQxNTJjYzgxYzk1YmM4MzZhYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjBlMTE0ZjAyNzE5NGVjYjJjZmZlNDJkZGQ4ZTE5MmUxZWM3ZGRkZDQ4NDZkODJjNjA4N2M1MGY3YWIwMmJiNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzViNmI5Yzg4YWI5YzdlNDAwNmEzNTE0MGE3YjE4NGNkMDg2ZGRjNzg2MjhlZjJlZmExNjVjN2U2MDRjNDZjMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_c824796d40724ca19c34cf9b9fce55a2",
+      "statement": "Compose binds published ports to loopback and requires GATEWAY_API_KEY and GATEWAY_KEY_PEPPER because open mode is forced off.",
+      "evidence": [
+        {
+          "resource": "repo://compose.yaml#L4-L6",
+          "version": "repo-lines-v1:sha256:91a550f944984d8df43c5d616d8cba0b667e8563940301a536e9e08097c0ddf5:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTgzYjBjMGU1ZDI1MDQ4ODBiN2M5ZmUwNDgzYWIwOGJkZjRhNGY5OGU2MzQ3ZGZiMWQ0NDM0ODA5YWY2Y2QxZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTEyMGVlZjI2ODM3OTcwODQ0NTk0N2FmNmM2ZDU1M2QwODlhZDczZGFlZjY0YTAxYzVlMDlhMWYyNmQ5Mjc3ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzMxZTdkMTQxYjcyMzc4ZTI3Njc1OWI5NmFlZDcxNGEwNTNjOWIzZmYzY2M0OGU3NGNmNmIyMTNlOTk3NDc3YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTdmYmE3OTRjMTI0ZGRmODA0YzJkZjBkY2U4ZGY5ZDYxZGU4ZWE5NjBmZjE5Y2VjOWU1OWQxMWMzZWUxMDZhOSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3253f8bd09c24fb08ea7ddb7d81f58dc",
+      "statement": "More than one worker without REDIS_URL raises RuntimeError unless GATEWAY_ALLOW_SPLIT_BUDGET=1.",
+      "evidence": [
+        {
+          "resource": "repo://app/container.py#L85-L98",
+          "version": "repo-lines-v1:sha256:45f12b68024abd9bf56b721b6b9f0d12a5014ab8b55fa5d2a26c6f48923bfff7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYwMDk3ZTM4ZjYyYzI0ZWNlNTM2ZWI0YTQ4YzJjOGU0MGQzNjY3NDJhMjM0NzVhN2QxMTAyOWMyNWYxYjliZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkNzkyMDEyYmZlNTQ2N2QwNTkzMjVhMGExZjM0MWVjYzU4NWNmYTgwYWEyMGIxNjZkZDhhNDg0YTgxYTRjMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjZDIzZDA0NGQ1MTM2NzMwNzBkNGZjOTYwODZmMWI0MGE4ZmJhOTY3NGZjMmQwZGY0Y2FkYjVhYTQ1Y2UxNGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlN2JjZDM2ZWY1M2I0NDUyM2U2NWU5OGQxOTQ0OTkzZTBmZjE3NDZmNTUzNmMxYTUxMTc0NmYzZTAxZTc1NmYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_dccd949a10094d9c887b29ac759221d8",
+      "statement": "Memory attach uses the authenticated identity_id as the Mem0 user.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L248-L254",
+          "version": "repo-lines-v1:sha256:ba5e3cc34d360fcca7540c0d71a9b3ca8ba3fc2192c19330402939ecd7b6509e:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjJjMDQyMThhNDQ2ZTA0YmRiZjQ3OWJhOWE1NmFlM2VhMWMyYWQ4MjM3MWQyYWNmN2QyYzIwNDI2YWVhOThkNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkwOWE1M2E2MThkMDI4ZTFkMzAwMGMwYTdhYmNlZWNiZTVmYjM3ZjRlNTExZWZlNDY2NDNmYWQ2ZTY2ODcyZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzk2NGFkODUwY2JlODdiNDc3YTc2NTQyYWU1OTA2YmNiMmI4NDZjODcxMjBlOGU0NzQ0ZDdhY2E1ODk5NTI5MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjlkNGYwZGNhM2MxMWU5MzBlNjA3MDdjMDcxMzAwZTA1NWNhMjVmNmNlYWUwODQzZmRiYTkxMmZjZWE2NmFlOCJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

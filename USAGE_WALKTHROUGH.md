@@ -57,11 +57,11 @@ cp env/groq.env .env
 # or: env/ollama.env  env/memory.env  env/full.env
 ```
 
-[`.env.example`](.env.example) is the full knob list if you need every flag.
+Each env preset sets `REALMM_CONFIG` to the matching file under [`config/`](config/). [`.env.example`](.env.example) is keys and deployment wiring. [`config/realmm.yaml`](config/realmm.yaml) is the policy file.
 
 Fill at least one provider key (`GROQ_API_KEY`, `OPENAI_API_KEY`, or dummy `OLLAMA_API_KEY` plus a pulled model). Presets and the example set `GATEWAY_ALLOW_OPEN=1` for the loopback-only command below. Do not keep that on a reachable bind.
 
-Settings overlay (`data/runtime-flags.json`) can keep MEMORY / PII / GUARD on after `.env` says `0`. Turn layers off in Settings, not only in `.env`.
+Settings overlay (`data/runtime-flags.json`) can keep MEMORY / PII / GUARD on after the policy file says off. Turn layers off in Settings, not only in `config/realmm.yaml`.
 
 Optional but common:
 - `GATEWAY_API_KEY=...` to require inbound auth and enable Settings toggles,
@@ -99,7 +99,7 @@ docker compose up --build
 ```
 
 Notes:
-- Set independent, random `GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER` values before starting. Compose forces `GATEWAY_ALLOW_OPEN=0` and refuses to start without both.
+- Set independent, random `GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER` values before starting. Compose forces `GATEWAY_ALLOW_OPEN=0` and refuses to start without both. `GATEWAY_KEY_PEPPER` is also required when any issued key exists, and before a new key is hashed, including `GATEWAY_ALLOW_OPEN=1`. Open mode with an empty key file may still serve the legacy gateway key.
 - Gateway is still reached at `http://127.0.0.1:8000` from browser.
 - Compose sets gateway Redis to `redis://redis:6379/0`.
 - First memory/PII requests may download models into `./data`.
@@ -151,6 +151,8 @@ curl -s http://127.0.0.1:8000/v1/chat/completions \
   -d '{"model":"<catalog-model-id>","messages":[{"role":"user","content":"hello"}],"temperature":0.2,"max_tokens":64,"user_id":"agent-42"}'
 ```
 
+`user_id` (and OpenAI `user`) is trace metadata (`trace_user_id`) only. It does not select the Mem0 tenant.
+
 ```bash
 curl -s http://127.0.0.1:8000/v1/embeddings \
   -H "Content-Type: application/json" \
@@ -164,7 +166,7 @@ curl -s http://127.0.0.1:8000/v1/embeddings \
 - Choose a model from the sidebar `Model` select.
 - Optionally select a prompt from `Prompt`.
 - Send a user message.
-- Use `New chat` to rotate conversation context.
+- Use `New chat` to mint a new `conversation_id`. Long-term facts stay on the authenticated key. A new conversation does not partition them.
 
 The sidebar Sidecars row includes a ready lamp and Redis mode from `GET /ready`.
 
@@ -228,17 +230,18 @@ Admin key lifecycle endpoints:
 
 ### 8.1 Runtime flags vs restart settings
 - Runtime flags (`/config` patch): memory/pii/guard layers.
-- Restart-required settings (`.env`): provider keys, Redis URL, budgets, embedder, many reliability knobs.
+- Restart-required settings (`.env` for keys and deployment, `config/realmm.yaml` for policy): provider keys, Redis URL, budgets, embedder, many reliability knobs.
 
 ### 8.2 Sidecar enablement basics
-See [memory](docs/memory.md), [guardrails](docs/guardrails.md), and [PII](docs/pii.md).
 - Memory:
-  - set `MEMORY=1` and a catalog chat id for extract (`MEMORY_LLM_MODEL` may match the chat model; do not point Mem0 at this gateway's `POST /chat`; avoid reasoning ids),
+  - set `memory.enabled` in `config/realmm.yaml` (or `MEMORY=1`) and a catalog chat id for extract (`memory.llm_model` / `MEMORY_LLM_MODEL` may match the chat model; do not point Mem0 at this gateway's `POST /chat`; avoid reasoning ids),
+  - the Mem0 `user_id` is the authenticated key (`default` for `GATEWAY_API_KEY`). `GET` and `POST /memory` ignore a client `user_id`. `DELETE /memory/{id}` returns 404 unless that id belongs to the caller. Facts stored under `local` do not appear under a real key. Chat fact search ignores `conversation_id`,
   - embeddings default to local FastEmbed `BAAI/bge-small-en-v1.5` (first request downloads ONNX into `./data`). Groq has no embeddings API,
-  - `MEMORY_EMBEDDER=openai` needs `OPENAI_API_KEY` and a fresh `data/mem0` if you switch.
+  - `MEMORY_EMBEDDER=openai` needs `OPENAI_API_KEY` and a fresh `data/mem0` if you switch. Extractor tokens count on the same key as the chat.
 - PII:
   - set `PII=1` and `pip install -r requirements-pii.txt`,
-  - optional `PII_ENTITIES`, `PII_SPACY_MODEL`. First request may download spaCy into `./data`.
+  - optional `PII_ENTITIES`, `PII_SPACY_MODEL`. First request may download spaCy into `./data`,
+  - with PII on, a streamed reply is buffered and redacted once at the end. The first token waits for the full reply.
 - Guardrails:
   - `GUARD=1` is only the switch. `GUARD_INJECTION` and `GUARD_CONTENT` default on,
   - two extra models, not the chat model: `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`,
@@ -246,10 +249,11 @@ See [memory](docs/memory.md), [guardrails](docs/guardrails.md), and [PII](docs/p
 
 ### 8.3 Budget, rate, reliability
 - Process caps: `MAX_INPUT_TOKENS`, `MAX_OUTPUT_TOKENS`, `DAILY_TOKEN_BUDGET`, `DAILY_USD_BUDGET`.
-- Per-key quotas on `/admin/keys` are enforced on chat (token/USD 402, RPM 429), not only stored.
+- Per-key quotas on `/admin/keys` are enforced on chat (token/USD 402, RPM 429), not only stored. Guard and memory-extractor tokens count on the same key.
+- The chat estimate is reserved before the provider call, released if the call fails, and replaced by the actual token count on success. A crash between reserve and release can hold that estimate until the UTC day rolls.
 - Reliability: `LITELLM_NUM_RETRIES`, `LITELLM_CACHE`, `LITELLM_CACHE_TTL`, `FALLBACKS`.
 - Host uvicorn does not use Redis unless `REDIS_URL` is set. Cache, RPM/TPM, and daily budget then stay per-process (`data/budget-state.json`).
-- Multi-worker or Compose: set `REDIS_URL` (Compose uses `redis://redis:6379/0`).
+- `WEB_CONCURRENCY` or `UVICORN_WORKERS` greater than 1 without `REDIS_URL` refuses to start. `GATEWAY_ALLOW_SPLIT_BUDGET=1` restores a warning and continues. That hatch does not share the key file or `data/runtime-flags.json`. Supported topology is one worker, or Redis for cache, RPM, and the daily budget only. Compose sets Redis to `redis://redis:6379/0`.
 - Readiness:
   - `/healthz` is public liveness,
   - `/health` gives broad status (may show degraded),

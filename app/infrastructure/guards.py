@@ -176,6 +176,7 @@ class GuardService:
         *,
         generation_name: str,
         max_tokens: int,
+        identity_id: str | None = None,
     ) -> str:
         params: dict = {
             "model": model,
@@ -201,7 +202,12 @@ class GuardService:
         tokens = getattr(usage, "total_tokens", None) if usage is not None else None
         hidden = getattr(response, "_hidden_params", None)
         cached = isinstance(hidden, dict) and hidden.get("cache_hit") is True
-        self._budget.record_usage(tokens=tokens, usd=self._budget.completion_usd(response, model), cached=cached)
+        self._budget.record_usage(
+            tokens=tokens,
+            usd=self._budget.completion_usd(response, model),
+            cached=cached,
+            identity_id=identity_id,
+        )
         choices = getattr(response, "choices", None)
         if not choices:
             raise GuardConfigError(f"Guard {generation_name} returned no choices.")
@@ -211,7 +217,7 @@ class GuardService:
             raise GuardConfigError(f"Guard {generation_name} returned no text.")
         return content
 
-    async def scan_injection(self, text: str, flags: RuntimeFlags) -> None:
+    async def scan_injection(self, text: str, flags: RuntimeFlags, *, identity_id: str | None = None) -> None:
         if not self.injection_enabled(flags) or not text.strip():
             return
         model = self._resolve_guard_model(self.requested_injection_model(), "injection")
@@ -225,13 +231,21 @@ class GuardService:
                 [{"role": "user", "content": chunk}],
                 generation_name="guard-injection",
                 max_tokens=_INJECTION_MAX_TOKENS,
+                identity_id=identity_id,
             )
             if injection_is_malicious(verdict):
                 raise GuardBlockedError("injection", "Prompt injection blocked.")
 
         await asyncio.gather(*[_one(chunk) for chunk in chunks])
 
-    async def scan_content(self, text: str, role: str, flags: RuntimeFlags) -> None:
+    async def scan_content(
+        self,
+        text: str,
+        role: str,
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None:
         if not self.content_enabled(flags) or not text.strip():
             return
         if role not in {"user", "assistant"}:
@@ -242,6 +256,7 @@ class GuardService:
             [{"role": role, "content": text}],
             generation_name="guard-content",
             max_tokens=_CONTENT_MAX_TOKENS,
+            identity_id=identity_id,
         )
         unsafe, categories = parse_content_verdict(verdict)
         if not unsafe:
@@ -254,31 +269,49 @@ class GuardService:
         label = ", ".join(remaining) if remaining else "unsafe"
         raise GuardBlockedError("content", f"Unsafe content blocked ({label}).", remaining, names)
 
-    async def assert_inbound(self, messages: list[ChatMessage], flags: RuntimeFlags) -> None:
+    async def assert_inbound(
+        self,
+        messages: list[ChatMessage],
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None:
         if not flags.guard:
             return
         self._ensure_scanners(flags)
         tasks = []
         if self.injection_enabled(flags):
-            tasks.append(self.scan_injection(self._inbound_injection_blob(messages), flags))
+            tasks.append(self.scan_injection(self._inbound_injection_blob(messages), flags, identity_id=identity_id))
         if self.content_enabled(flags):
             user_text = self._latest_user_text(messages)
             system_text = self._inbound_system_blob(messages)
             if user_text:
-                tasks.append(self.scan_content(user_text, "user", flags))
+                tasks.append(self.scan_content(user_text, "user", flags, identity_id=identity_id))
             if system_text:
-                tasks.append(self.scan_content(system_text, "user", flags))
+                tasks.append(self.scan_content(system_text, "user", flags, identity_id=identity_id))
         if tasks:
             await asyncio.gather(*tasks)
 
-    async def assert_outbound(self, assistant: str, flags: RuntimeFlags) -> None:
+    async def assert_outbound(
+        self,
+        assistant: str,
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None:
         if not flags.guard or not flags.guard_content:
             return
         self._ensure_scanners(flags)
-        await self.scan_content(assistant, "assistant", flags)
+        await self.scan_content(assistant, "assistant", flags, identity_id=identity_id)
 
-    async def assert_memory_write(self, messages: list[ChatMessage], flags: RuntimeFlags) -> None:
+    async def assert_memory_write(
+        self,
+        messages: list[ChatMessage],
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None:
         if not flags.guard or not flags.guard_content:
             return
         self._ensure_scanners(flags)
-        await self.scan_content(self._memory_write_blob(messages), "user", flags)
+        await self.scan_content(self._memory_write_blob(messages), "user", flags, identity_id=identity_id)

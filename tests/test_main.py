@@ -203,6 +203,32 @@ def test_memory_routes_when_enabled(monkeypatch, tmp_path, make_app):
     assert client.delete("/memory/1").json()["status"] == "deleted"
 
 
+def test_memory_routes_ignore_client_user_id(monkeypatch, make_app):
+    monkeypatch.setenv("MEMORY", "1")
+    app = make_app()
+    seen: dict = {}
+
+    async def fake_search(*_a, **kwargs):
+        seen["search_user"] = kwargs.get("user_id")
+        return []
+
+    async def fake_add(*_a, **kwargs):
+        seen["add_user"] = kwargs.get("user_id")
+        return {"results": []}
+
+    monkeypatch.setattr(app.state.runtime.memory, "search", fake_search)
+    monkeypatch.setattr(app.state.runtime.memory, "add", fake_add)
+    client = TestClient(app)
+    assert client.get("/memory", params={"q": "tea", "user_id": "other"}).status_code == 200
+    added = client.post(
+        "/memory",
+        json={"messages": [{"role": "user", "content": "x"}], "user_id": "other"},
+    )
+    assert added.status_code == 200
+    assert seen["search_user"] is None
+    assert seen["add_user"] is None
+
+
 def test_memory_routes_redact_when_pii_on(monkeypatch, make_app):
     monkeypatch.setenv("MEMORY", "1")
     monkeypatch.setenv("PII", "1")
@@ -384,7 +410,7 @@ def test_sse_pii_config_error(make_app, monkeypatch):
 def test_memory_write_guard_blocked_is_400(monkeypatch, make_app):
     from app.application.errors import GuardBlockedError
 
-    async def blocked(_messages, _flags):
+    async def blocked(_messages, _flags, **_kwargs):
         raise GuardBlockedError("content", "Unsafe content blocked (S10).", ["S10"], ["Hate"])
 
     monkeypatch.setenv("MEMORY", "1")
@@ -403,7 +429,7 @@ def test_memory_write_guard_blocked_is_400(monkeypatch, make_app):
 def test_memory_write_guard_config_is_503(monkeypatch, make_app):
     from app.application.errors import GuardConfigError
 
-    async def boom(_messages, _flags):
+    async def boom(_messages, _flags, **_kwargs):
         raise GuardConfigError("GUARD_CONTENT_IGNORE contains unknown category 'S99'. Use S1–S14.")
 
     monkeypatch.setenv("MEMORY", "1")

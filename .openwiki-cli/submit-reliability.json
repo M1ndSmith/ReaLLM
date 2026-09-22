@@ -1,0 +1,27 @@
+{
+  "runId": "803bdd23-268c-460c-9370-f6a5646f320f",
+  "jobId": "1ed86f58-a0f3-4500-aba5-913336c26325",
+  "claims": [
+    {
+      "statement": "FALLBACKS unset selects same-provider chat models; empty or off selects retry-only; a comma list is an explicit allowlist.",
+      "evidence": [
+        { "resource": "repo://app/infrastructure/router.py#L120-L194" }
+      ]
+    },
+    {
+      "statement": "Budget assert_allowed enforces optional input and daily caps; cache hits are not recorded; identity RPM uses Redis when available and otherwise an in-process window.",
+      "evidence": [
+        { "resource": "repo://app/infrastructure/budget.py#L319-L337" },
+        { "resource": "repo://app/infrastructure/budget.py#L369-L385" },
+        { "resource": "repo://app/infrastructure/budget.py#L395-L413" }
+      ]
+    },
+    {
+      "statement": "GET /ready is 200 only when providers are detected and Redis is healthy or unconfigured, otherwise HTTP 503; GET /metrics is 404 unless OBS_METRICS is on.",
+      "evidence": [
+        { "resource": "repo://app/api/routes/ready.py#L11-L26" },
+        { "resource": "repo://app/api/routes/metrics.py#L12-L16" }
+      ]
+    }
+  ]
+}

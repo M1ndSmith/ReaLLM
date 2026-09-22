@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c62d80d800809f542817af34196deb62fff768f8a9bc1e100094da2fbadc0cd0",
+  "claims": [
+    {
+      "id": "claim_026809c361df41dd92e877a94470fe2d",
+      "statement": "Chat memory search does not filter on conversation run_id.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/memory.py#L439-L460",
+          "version": "repo-lines-v1:sha256:52d0833c3cb0c237d7237d1e3293f62dc69e0fe5f1c2ead35ec1abd2534839b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjYjBjNDE4MWE0ODUzMmYzMjgzNmQ3ODA3ZTBlNGZiZWEwYWUxNWE5N2FmODJiNzhhZmE1ZWEzMWQ1ZTMyNmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM0M2M2NGUwNjQzODNlNWMxMjFiNTJkNGU4M2IzZGY5ZmE0YWQ3MjNlNTYzNzI2ZGMwYmM3YWM0YTIwYjRhMTkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5ZWUxNGQ0NzJhZDI3YTZmYjM2YmEyNzQ4OWFhZTJkZDM3NDkwNjIyYTdmZTZmYWMxZTNkM2I2Nzk2ZGU0NGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI1NDhlNWY5ZDQ3M2Q2ODdhM2YxODA3OGFhY2VlZTdlMThlMThkZDFkMDUxMTliNWYxMTQ2MjY3OGIyM2NmNDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ece0a9a9ae834722a6fefe434e8ba486",
+      "statement": "A blank memory user id is stored under the tenant local.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/memory.py#L108-L115",
+          "version": "repo-lines-v1:sha256:f5e6dae44f743476a79f445e6e567cca39b5c8ce58f16b44144801920297aa6c:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiM2NlM2IyYmY0ZDcyOWExY2Q4NDU1YmE1ODkyMDc5ZTZiNDhlYjAzMWRjZjJhOTNkODg4ZjdlYmNjNWQ4NWE3OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDVjODg3MmE4YTkwMTc4ZTExNjk4NmU2MDBkZTc1YjYzYWY4ODcyNTIyMGQ0NmU3YWRhM2I5OWJlNmZhMzg2MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGUxZDc2ZTY0OTUyYjQwMDYwNDgxNmQ5ZTRkNGUwMDU2ZTc3NWViYzI0YWQ3NWYxOTMxMTRjMjUwMWUxOTM2NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODJjYWQxMTE5ZWNjMTEyOGE4NWFlOTRjZGYxNGY4Nzk1YThlMTVjYzE1Y2E1OTk2NWFlYzFkNWY2MTc0ODM3OSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9a311d4c9b354a8a9ff84ee580e5b657",
+      "statement": "DELETE /memory/{id} returns 404 when the record owner is not the caller.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/memory.py#L89-L94",
+          "version": "repo-lines-v1:sha256:07cede698f398be9330fa31fc0a819a121ea71c3ac09667563badce863490cd8:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWRhNWM2NmUxN2IxNDUzOTc4MzRiOGM4NTRkYzQxOTNlMjEyNTE4MGE4OTk2YTE0YzMxODgzMzI2YjJlZmJjZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2ZiYzgzYzZhZjQxNDc4MTViZGVhNjg0MmU5YzIwZWZiMjU0NWUwYWQ2ZGMzMWI5ZjgyZjBjMjkwZGMyZTg2NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTNkYjU3MzgxNzI4NDYxOTZhNTg0YjQ3MzY0OTQ5N2ZlNmUwMWEyNjhjYjBjZTY3ODA1ZWFmZTIyNmI3N2Q5YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjJhMDQ4MjY1MjM0ZmQxMmQwZDJjMjdkMzEzMzUzZTIxZTk2NTdjYTQ0MzNiZDE1NzdkNDVhZmJiZTMyY2YxNCJ9"
+        },
+        {
+          "resource": "repo://app/infrastructure/memory.py#L563-L568",
+          "version": "repo-lines-v1:sha256:47930dc42a31edfb40881f416d7756ad669e7ac773fd791a401f4e552a251901:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODhlMDFjOWZjYmQ3NTE5OGU3NjdkYzk4YTdlMmI3YTdlNjMyNmQyMDk0MTY4ZDViMWJiYzhhNjExOWJhMjFjZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDcyNmMzNjE1YmZiZmZhN2IzZjdkMTk5MzkxOGY4YmQxYWMwMGVhZmYxMjViNDU4MzNjZjA4YjYwYTJiY2M5ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjJlYmMwNzYyYWEwMDgwYTdlNmE4MWZkMGYwMjJiYzBlM2RhZWFhMDZiMmMwZGEwODdhNzU3OTZlZGQ2OWEzYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzQwYjNhNDAxYjc4NTZhYTFjYzVhMjQ3YzgxY2I5YmM1MDAxMmI0MjY2MzQ1OTliNDIzNGU2M2MyNmI2YWI4MCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_615cfc996df0480f8eee853e81a5374b",
+      "statement": "Mem0 extractor completions record usage against the identity bound on RouterLLM.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/memory.py#L393-L396",
+          "version": "repo-lines-v1:sha256:20c26eea4c88de08c2ca2e2d0bdb7237c607f012819aed3a91b4d5b8d607280b:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2RlNmNjOWM2ZTlmZGI3YWNkOTM5Mjk1NjhiMDlmMmYzNGZhOTk4ODJjNWI5OTcxMGQ0MWZlZjRjODZlMDYyYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTE4MTVmZDRjNTc5OWY0MDAyNTVjNTc4ODA1NzM2NjY1ZWU4Nzc5MTZiYThjOThlMGY5MjU5MGJiNzc5ZDVmNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjhlY2I5OTc1NjNiMDAyYzFmNmU1YTFlYTgxZGFhMmEzODdiZTc4YjFiYzcwNGJhZDFlZWM3YTFhZWVjYTJiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODMxNDgxNmE0N2E2MzIxNTRkZTdlMTc1NGM5ZTI0Mzg5YzliYjI0ZTRjMzM0MTY2ZDY0ZmM1YmRiYmJhZGY1MSJ9"
+        },
+        {
+          "resource": "repo://app/infrastructure/memory.py#L99-L104",
+          "version": "repo-lines-v1:sha256:6540de53cd95fab2b78911394273b67074fa91655a032bfa31645ae7bc220756:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM1MGE3Mzk5OGUzNjczYzQ2M2I5YjNiZjczMjAyMTgyODg3YTZlMjhjYTM4ZmMyNzRkMWMzNTQwMWJmZGMzMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkwOWE1M2E2MThkMDI4ZTFkMzAwMGMwYTdhYmNlZWNiZTVmYjM3ZjRlNTExZWZlNDY2NDNmYWQ2ZTY2ODcyZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTY2ZGZjNzBiMDBmZTA5YWM3YTBmMzhkNjdlNGYyMTBlNDdmNjRiMWMzZDc3ZWQ5MjJhMGY5MWE4M2FlZDJmOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOGUxZDc2ZTY0OTUyYjQwMDYwNDgxNmQ5ZTRkNGUwMDU2ZTc3NWViYzI0YWQ3NWYxOTMxMTRjMjUwMWUxOTM2NCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_09105eb7ccf445c69b29a36e7c32aeea",
+      "statement": "Guard model calls record usage with the identity_id passed into classification.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/guards.py#L205-L210",
+          "version": "repo-lines-v1:sha256:596d8f39b785b250ec72c5f17356047441e8f202e622b0dfb24f03e7f53ce89c:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjM1MGE3Mzk5OGUzNjczYzQ2M2I5YjNiZjczMjAyMTgyODg3YTZlMjhjYTM4ZmMyNzRkMWMzNTQwMWJmZGMzMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkwOWE1M2E2MThkMDI4ZTFkMzAwMGMwYTdhYmNlZWNiZTVmYjM3ZjRlNTExZWZlNDY2NDNmYWQ2ZTY2ODcyZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTY2ZGZjNzBiMDBmZTA5YWM3YTBmMzhkNjdlNGYyMTBlNDdmNjRiMWMzZDc3ZWQ5MjJhMGY5MWE4M2FlZDJmOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYThiMTlmMWFjMjkyYTUyYmQyOTVkNDYwZmExZTIwNTQ4ZmRhN2U5NWRlZTM5ZWQ1MGZlZjFhMjBmMGUwYTI3MyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_d85e54445c5e44deaabf0409b1da737e",
+      "statement": "Prompt source is Langfuse when remote prompts are enabled, otherwise local files when present.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/prompts.py#L39-L44",
+          "version": "repo-lines-v1:sha256:7722190b9d05564f737d4c2d4529b9afa82101e24cf1acbcd0bf34319bd60e75:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGI4NzhhNGZmMTljOTVjYzUxZjUxNmFjYjkxZTIxNGQ0YzkxNjU3Mjc3MjBjZjA4Y2M2OWUxN2I4NGYxNjVkYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZThkYzBmN2ZjNjNkYzYxYjZkZmU5MzM5MDE4Y2UzOGFhZTFmZWZhZTUwNDUwOTZkODY0MzkyMDZiZjhhZTdhYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzRhMzQwYjQ2MmMwZjU2NWU0MjYzOWRhMzM1NDUwMWYzNTMyMTE3NDhmNjYzNDcwYWZhMzk5ODk1MmZlODZiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjI2ZWRiODViYmE4MTA5YWYwZmFlOWRiOWMxOGQyOWVhZTJhYmMzZmYzNzBkOWJhODMyMDJiY2YwMThjNGYwNyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

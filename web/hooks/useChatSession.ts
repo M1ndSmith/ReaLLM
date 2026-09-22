@@ -7,7 +7,6 @@ import { formatCost, formatTokens } from "@/lib/formatters";
 import { GatewayError } from "@/lib/gateway";
 import type { ChatMessage } from "@/lib/types";
 
-export const USER_ID = "local";
 export const CONV_KEY = "realmm.conversation_id";
 export const INTRO =
   "Provider keys live in .env. This page picks a model. Paste GATEWAY_API_KEY if the gateway requires it. Leave Prompt on Messages only to skip named prompts.";
@@ -71,7 +70,6 @@ export function useChatSession(model: string, promptName: string, onUnauthorized
           model,
           messages: nextMessages,
           stream: true,
-          user_id: USER_ID,
           conversation_id: conversationId(),
         };
         if (promptName) body.prompt = promptName;

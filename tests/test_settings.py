@@ -20,6 +20,25 @@ def test_process_env_wins_over_dotenv(tmp_path, monkeypatch):
     reset_dotenv_loaded()
 
 
+def test_yaml_applies_until_env_overrides(tmp_path, monkeypatch):
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(
+        "budget:\n  max_output_tokens: 111\nrate_limits:\n  providers:\n    groq:\n      rpm: 15\n",
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("REALMM_CONFIG", str(policy))
+    monkeypatch.delenv("MAX_OUTPUT_TOKENS", raising=False)
+    monkeypatch.delenv("GROQ_RPM", raising=False)
+    settings = GatewaySettings()
+    assert settings.max_output_tokens == 111
+    assert settings.provider_rpm_limit("groq") == 15
+    monkeypatch.setenv("MAX_OUTPUT_TOKENS", "222")
+    monkeypatch.setenv("GROQ_RPM", "12")
+    settings = GatewaySettings()
+    assert settings.max_output_tokens == 222
+    assert settings.provider_rpm_limit("groq") == 12
+
+
 def test_empty_optional_budgets(monkeypatch):
     monkeypatch.setenv("MAX_INPUT_TOKENS", "")
     monkeypatch.setenv("DAILY_TOKEN_BUDGET", "  ")

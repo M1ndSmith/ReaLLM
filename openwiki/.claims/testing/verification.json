@@ -1,0 +1,84 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c6fe3a0ced87c352d33acff50c4b6b5bdfb30fddb94b72f00df9429488013654",
+  "claims": [
+    {
+      "id": "claim_aab7bc2d98f2403ba034b0c30cacd4b5",
+      "statement": "Pytest measures the app package and fails under 90 percent coverage, including when plugin autoload is disabled.",
+      "evidence": [
+        {
+          "resource": "repo://pyproject.toml#L44-L51",
+          "version": "repo-lines-v1:sha256:9d6fc3c4a913c61b8d4387e271a0ad5a08061f9d4f294f33cacd0f965f536573:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDEwODVhZDA5MDQyNTcxMWFkYjRmMTVmMjhlMjVjMTcxMDc5MmMxZDQ1ZGE3Mzk0ZWU5MTJlMDM4MTkwNDU5MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTMxMTllOTJiZTVlMDVlMWI0NzRkM2E5Y2ZlMmZmM2UzZDlmYzk4NDY1ZTJkNjNmN2Q4YTQwM2M4OWZmMjY1MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzE0MWZkZGQxNDVlOTY5MmY0NzU2MmNlNTE5MWQxM2ExYjAwYjk2ZGY2MTY2N2I2OTdlYjJlMDljZTRlOWQ2MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTJiNDk3ZmY4NWIyODE3YzBjNDNiMjNiNGIzMWRiOTIxYjQ3YmE1Y2I3YWI0YzM4NGEyOTI2NWM3MDBmNmNiNSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5ce95900ee564e6bacdab69f9ea75fbf",
+      "statement": "The test fixture sets a key pepper and clears worker and split-budget environment variables.",
+      "evidence": [
+        {
+          "resource": "repo://tests/conftest.py#L79-L85",
+          "version": "repo-lines-v1:sha256:5f739234100ed2b8b454de193b1235c3d8602fa4b05b30807ae60679a2cadd19:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTRmNTU3YjQ4MGVlYmI4NTdkNTNiOWU2ZGQ0YzIyYTQ1ZDVhNTlkODBmMzJiMWJkYWNkMmYzNWQ3YTcxNzgxNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjAzZmU3MWUwNDQ3M2ZjN2QyNzY3Y2IzNGQzMzU5Y2RlMjc1NTA0YmJjYTYyNGFkZDdjODFkYzFjZmY4ZmQ5YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDVmODU3ZGJkZTlkY2NkOTI1Y2Y1MWIxZmEzZTkwY2NlNjkwNDMwZThmZDAxYWI4NmFlZDhjYTg1ZThjNjY1OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGI3M2M5NmZiMDY0YTEyOWY1MjYzYjUyZDMxOTM1MDg5NzY3Y2RkNTU3Mjk4ODBhY2M0NzVlMmQ4ZmZhNTBjZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_68a1fa94f1b24a0b9169b27dee9ed6d2",
+      "statement": "Application code may not import FastAPI, LiteLLM, Mem0, Presidio, Redis, or the API and infrastructure packages.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_architecture.py#L25-L31",
+          "version": "repo-lines-v1:sha256:e11df98eafeb34cfb65601bacfdf909b25b0edfa44cb779d41ea8889643b2003:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMmU4NzU1YzE4ZGU1MzUyNGNlN2UzYmVkMmJhMTBkNzUzNzZhZjRjNzg2MDcwNzRiMmMxNDllMDk4OTM0ODI0MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGMyNzkzNjI2MGUyOTVmZjYzYTI1YTQwMGI2YWNiNDFmZTY2NTEyYjY3NmRiYzc5NDcwMzY5ZmIxNDAyNTAyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWFlMjc1NTFmYWRiNTdkYzcxNWQ4MjJkYjcyMGFlM2FiNTY4YTI3OGQwNTBlMmRmMzE1NWRlMzBkMTk2MmY5OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGU0MmQ5MDRjMjE1NjUwMmM1NTg5NDgwYzMzMjQ2MDZlMzk5NWEzYzIwZDUwM2UyOGI2ZmVmYTBlNzgwNzE2MiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3f3d6482f7bd40989238bd4ff105d83e",
+      "statement": "Only the router module may import litellm.Router or assign litellm.cache.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_architecture.py#L34-L45",
+          "version": "repo-lines-v1:sha256:80f7b66bc4c9e045e8395ec44237a2d32980d88bde2de99626f97fc9edc855f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlMDBmMmIxYmNhN2Y3YTc1YTFiNGNiY2E2YTI0NTg5YzZhMDVmYjUwMDgyOWJhZTQ2ZWMzZTMwZDYzNGIzZWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1YjRlNjVjYmVmNWIzMWU0MzZmYjc4MDEzNzI3MWQxZDA5ODQ2MjBhM2MyNjU5ZDFiYjFlODliNjA4NzU1MTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzYzgyNjYyNjY3NTJkOWNlZjgwZWI5ZTJhM2Y3ODdkZWUwMTgxMzFkNjk4MDdlOTc4MmEwOTIyOTBjN2VmMDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxNDQ1NWEzYmNkNTlmMzI4NzlmNjg1NzBkMzIxNTYzODE4ZDQ0YWE3OTUyZDBmMzdhMGI1NThlY2EwZTI5NDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_4bf26a088b734884a540adbfdc0b1607",
+      "statement": "API route modules may not import LiteLLM, Mem0, Presidio, or Redis.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_architecture.py#L48-L52",
+          "version": "repo-lines-v1:sha256:80085cd3d35b72298b909828c102b7a9c42cbb058ae29597dbc40108b558b5c5:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTU2OGMxODcwYWMyZDViN2E2NzZkZDVhYTQ0MDkzYTE0YjRmMTU2OWE0NzUzM2ZlYjVkNTIyMGIyMzk5NTI1OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI4NzkzZGZkZWU1ZjViYTBhN2QxNDYxNWRjNGNhZjZjZDU4ZDY5NmI2NDVjZGY1YTY4YzI4NjQ4ZWU3ODg3MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjVhMmQxMTUxZjJkNGUwNDBmNWU5YjZkMWMyMGJhYTBlOTQ2NGU5ODc0ZjAwZWFlMDNjZDNmOTAyYWE5M2FiYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDYxNTgyZTlkMmM0ZTBiNzJlMTQ0NzE4ZmRjODBlZDRhNWJkNzBkYzhlOTM5MGMzYWFkMWY2NjQ5YWQyNmEyZSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_24c3f7f3aae542e2b3688d9f3cd6afe8",
+      "statement": "Publish-readiness checks require LICENSE and SECURITY.md and do not assert operator-guide sentences.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_publish_readiness.py#L9-L11",
+          "version": "repo-lines-v1:sha256:4b9763555548427f014286a4a79485d6bc1ffda942831e5a297600722f14d3b0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQ4NWQ5YmJhODNhYWRlN2Q5NjRkNTRjYTY1NmM2ZWM2NGQxZGNkODRmZjFmNDRmZTY3OGM5NmE5YmRkNzhlYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA3YzZmOTIwNDE0Njc2ZTBiYzM1ZmFmNjllMzJhN2FiNzNjYjdmNjcxMDU3ZTAyZTJhOTI0NzU4MmFhODViMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGE3ZmJiNDdmOTcxNmE2YzllZmIxZDk5ZDhiMDY3ZjM0OTQwZDY4NTk5YjZlZmJmMmM5ZGVmOGI2YmU5YTVjYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjg4ZTQ3ZGZjZGI5NGExNGMzMGUxNjI3MjFmM2JmMTU3YzE1ZDUxY2M3NTYyY2I5YTJkYmJiOTBhYTA5ZDRhYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e2d1f64e69d424182b767dd8b2ea305",
+      "statement": "The console test script is vitest run, with coverage thresholds of 90 percent lines and statements.",
+      "evidence": [
+        {
+          "resource": "repo://web/package.json#L9-L9",
+          "version": "repo-lines-v1:sha256:241fc249efa71b0e7a97f7f4eb8b89494a59cb3f87d71be6aad63aa3ba5e3d3c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjJiN2RhNmRhYTdkMThkZDQzNGU3OGRhMmU1NDExZDhkOTgyOTg3NTM5MDcxOGE0MjBkZTgwZTkwNGQyMjljZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjQ4OWMwYWNiMzA1NTUxNjk0YmRiZGI2YmQ2OTFkZmRiMmJhOGI2ZmU1YzU0ZGViZTJlZTMwYTRkOTU1M2E4MSJ9"
+        },
+        {
+          "resource": "repo://web/vitest.config.ts#L14-L19",
+          "version": "repo-lines-v1:sha256:7865354abb1d48054b61c7ad471f6630ccb848cb6b923a040bab17387a515d33:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjhlNzQ5YzM1NTY5OWM1MDI0YTlmMWM5YjkyYWRlMjkxMWQ3OGM3YjU4NzVjOGRkZTY4NmNmYjFjZWFiMmU5NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjk3OGUyNTAzYjhjZjM3YTA2ZjdkNmYwYTNhNmI2ZmUzNTY5MWZiY2FiNTBiODc3NWNhYjZmYWJjNzFjNTkyYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGRiZmU1MmFlOTA2MzgwYmRmYzg5ZmI3MTIwNWUzYzcxNTk5ODE4NTMxMzg3MmE2OGU3YjY5OWI3NzZmZmE0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzYxYzBmY2RlOWNlMjk2NGQ5MjIxZGI1MmQ1YjZiMWFhYzE1NThmNDEyNGZiMDcyMzI0NmQ1MmM4N2MxY2EwZiJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

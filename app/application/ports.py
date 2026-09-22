@@ -109,7 +109,7 @@ class MemoryPort(Protocol):
         agent_id: str | None = None,
     ) -> object: ...
 
-    async def delete(self, memory_id: str) -> None: ...
+    async def delete(self, memory_id: str, *, user_id: str | None = None) -> None: ...
 
     async def drain(self, timeout: float = 5.0) -> None: ...
 
@@ -142,6 +142,17 @@ class UsageBudgetPort(Protocol):
 
     def assert_rpm(self, identity_id: str | None, rpm_limit: int | None) -> None: ...
 
+    def reserve(
+        self,
+        model: str,
+        estimated_tokens: int,
+        *,
+        identity_id: str | None = None,
+        quotas: IdentityQuotas | None = None,
+    ) -> str: ...
+
+    def release(self, reservation_id: str | None) -> None: ...
+
     def record_usage(
         self,
         *,
@@ -149,6 +160,7 @@ class UsageBudgetPort(Protocol):
         usd: float | None,
         cached: bool,
         identity_id: str | None = None,
+        reservation_id: str | None = None,
     ) -> None: ...
 
     def attach_cost(self, usage: UsageInfo | None, cost: float | None) -> UsageInfo | None: ...
@@ -186,11 +198,29 @@ class GuardPort(Protocol):
 
     def content_enabled(self, flags: RuntimeFlags) -> bool: ...
 
-    async def assert_inbound(self, messages: list[ChatMessage], flags: RuntimeFlags) -> None: ...
+    async def assert_inbound(
+        self,
+        messages: list[ChatMessage],
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None: ...
 
-    async def assert_outbound(self, assistant: str, flags: RuntimeFlags) -> None: ...
+    async def assert_outbound(
+        self,
+        assistant: str,
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None: ...
 
-    async def assert_memory_write(self, messages: list[ChatMessage], flags: RuntimeFlags) -> None: ...
+    async def assert_memory_write(
+        self,
+        messages: list[ChatMessage],
+        flags: RuntimeFlags,
+        *,
+        identity_id: str | None = None,
+    ) -> None: ...
 
 
 class FlagStorePort(Protocol):

@@ -1,0 +1,78 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:e9efac5c8d09bb4697699a5879478fe867e439b734c805b3ad757f8061e0366e",
+  "claims": [
+    {
+      "id": "claim_5e9c4bfb39a34dcfb685721246a48451",
+      "statement": "GET / and GET /healthz are mounted outside the authenticated router.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/app.py#L69-L79",
+          "version": "repo-lines-v1:sha256:1fbd3b440a9bddef482520e6bc2cb36077bda90c1566bb4112e096b6b1522e0e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2ZjU5NzA1OTM5YWE3OGYyZDI2YjJkNGIxZmQ1YTk5MGQ1ZjBjZmM4NjRlZDc0MDVhNzEwYTFlZTFjZGYyMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ0OGJhNDhhOTJmYzViYzg1MjhkYzdiYWMxYzQwNDg2YzE0YmMyYmEwZWQyNjBiYWZiZDllN2Q2ODAzNDg1ZWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1MTAxYTBlYWExM2FlZjlhMDJkNDdkNGJhZmJmMDk5NDc5Y2EyYzBmNWIxZTBkYzc5ODY0MTcwYjkzZGM2YWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmYWI2NjJjMTcyZjQ3YTYwOTgzMzQ1M2E3MzE0OWNhYjY5N2Q3MjQ2M2Q0NmViNDQzZjc3YWJkOGU4N2JmNmEifQ"
+        },
+        {
+          "resource": "repo://app/api/routes/root.py#L61-L68",
+          "version": "repo-lines-v1:sha256:d2657e4b9b8bf18911f8b52017e1c732516144dd980254fe9536206647b65972:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDE5NGIxZTNmNGUwMjc1MjgwMTk0OTVmYWMyZGU4YjA2OWQ0Yjg2MjFkNjE1MzkyMjY1ZThkYzk4ODhmNzA4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGU2NGVkNmFmOGQzZGVjNzA3MTIyOTU5NjVkMmM3Yjc1MzM0NTUxMTI2ZTZmZjM2YWNjNThlMmYxN2UwZWEwNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzhhZTYwYTA5YTc4NGI0N2VhMDg1MzE2YmZmOTJjNjgwMTFkZDY3MGQ4OWYyOGRhZjVkYTliYjZhZTQxYmM0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_b6e9b227fb8e47caadc5ea2de33c22c8",
+      "statement": "GET /healthz returns status ok and does not inspect providers or Redis.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/root.py#L66-L68",
+          "version": "repo-lines-v1:sha256:78ba844ce2211ac3d6387c50cb9cacf52de01d3eb7305014bad912cec17160be:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzg1ODhiZDBkZWRhYzE1NDI4OWU3YzNjZTQyNmRlOTdmMDBjNDc1MzExMjdkNWQ3OTRmNWMwN2YyMmZjZmNmNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGU2NGVkNmFmOGQzZGVjNzA3MTIyOTU5NjVkMmM3Yjc1MzM0NTUxMTI2ZTZmZjM2YWNjNThlMmYxN2UwZWEwNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmJjODkxYzg1MGNiYjE3NzE5MmRiZDFmYmY0ZGNiZDU1YjFkMWMyN2Q3YjcwYWIyNDk2YWQ5ZGQyYzg2ZmVlNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a5a1103fa00845fab3d07161ff37a8b7",
+      "statement": "GET /health, /providers, /models, /prompts, and /budget require the read scope.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/meta.py#L16-L54",
+          "version": "repo-lines-v1:sha256:1d3b8e0faae5999fb7203c332edebbd3dab012f388f62e3d54cb15dc89922045:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzZjIzMjBiZjAxNGVjYTI3ZDA1MDdkNDY2ZjU2NTg5ZWJmNDc0ZDk1ZGJiMjQ0ZGIwODc1ZDFhNDUwMzQwZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA1OWY1NTNkMDU2ZjIzOGQyZTc4NGNkMzEwYzEwZjA2MWM1MDRjYjE3YmY0Zjg1ODdkYjA4ZDcwZjJhODBiYmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyOTg2NTQ2YzgxMzE1OTNlMTE4ZGU3Zjg2MTVhYjA2MDJlZjNkYTM5N2E5MjA4OGIwZDFlYmQ3YTZjZjBlZmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxM2JmZGIwOThiOTM3OTg1NzgzMzE0YjJmZjAxNDhhMmQ3NDE3MjYxNDU5NzU2ZDQ1M2I0YzgyZTI3ODY3NTQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_81c754668e874d128c9b0654f6e3baa0",
+      "statement": "GET /ready returns 503 unless a provider is detected and Redis is reachable or degraded mode is allowed.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/ready.py#L8-L26",
+          "version": "repo-lines-v1:sha256:961f38287cde014375583f53b9cdf56bc332a435f908a7e6d457dd44e6f37d7a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEzZjIzMjBiZjAxNGVjYTI3ZDA1MDdkNDY2ZjU2NTg5ZWJmNDc0ZDk1ZGJiMjQ0ZGIwODc1ZDFhNDUwMzQwZGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5Mzc4NTRkMzRiZjA1ZWY0YjBkMjIwM2QwOWU3ODgyY2IwYmExY2Q4MzA1MTYwODRjYmMwNjI4ODg3NGMzOTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNzIzOTc0MDU0ZTc3ZmQ4NDgxOTY0Mzk5ZWI5OGFjYjhiMTZjNDNhZWM0NzZlMmU3ZDYzYmExZWZlMGMwMjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a91f636f57cb42419acee56cfcf7d12f",
+      "statement": "POST /chat and POST /v1/chat/completions both build a ChatCommand and refuse structured output while streaming.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/chat.py#L14-L44",
+          "version": "repo-lines-v1:sha256:0349a642fdfd4d48e621a14b6c5c883c69368d56338c30e677aff8b85ec57e95:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyMjgxZjUwYzcxN2YxNTg0MGY5NGUwZDY5NTc5MWUyOTE0NDZlZGM3NGRjYzkyZjVmY2QzNjVmOGQ1YjMzYTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMjgwMmI5NzRiOGMwY2VhMTAwNWM1MzY5ZDVmZjdiNGI3NjY2MmFkN2M4NjQxYjFhYmM0ZDZiZGY2N2ViMzQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNiOWExM2MwNTMwZmVlY2FlNTY3NTNhZTJhNDI3YTk0MTFkNDFhNDVlYjMzOTI5YjBkNGIxNWYyYjVmNDVkY2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY3NTU3ZjY0ZDg4YTQ0M2JlYzAzYzg3YjQ3ODcwMWY0Njk1NDAxZTQzYWJkZTZhZWNkODI3YmQzYzU1NjYzNzMifQ"
+        },
+        {
+          "resource": "repo://app/api/routes/openai.py#L75-L90",
+          "version": "repo-lines-v1:sha256:8689ff4bcf6a4720bdcf447fc8e523e3bba3069324d682c4b4de8343a7feb774:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjkyMzVhOWZjNTBjNjM4MDJlOGU0NGU5YmNhMDRlZWUzY2Y2YzVhMGMyMjYyNDExMDg4NzNkMTZiNjYxMGM0ZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiZjQwNTIyZmNmNzY4MTU0Mjc2ZDI5ODJiODcwMzViZDg0YzA0YjVhY2JhYTgyODUyNjQ2NWEyZDJlNTNjY2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmYmQwMDkzMTRiYzI3MDg0MTY3MzRhMDJhZTVmZjM5YTFlNDhhMDUwYmU5MWY0M2IyZmFhOTIwMDJjNjJiZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM3M2NhZTViMzY2YWQ5ZTcyN2QwYWY1OGYyMTY1YTFjMWE0OTA4YTIxNDFmYWY3NzJhY2ZiNjk5MDI0YTM0ZDEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_40ea37aa542a41c2bf63cf1cafc9694b",
+      "statement": "POST /v1/embeddings reserves a token estimate for the caller identity before the provider call.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/openai.py#L106-L123",
+          "version": "repo-lines-v1:sha256:bcc44c5ac394207160c3c879183e1199c507c8ce9e662b63ce9a4f74ca7e7881:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjOWI0NDY3MDI4MGY1OTk4MDZmMWUyYzVlNWZmMjgyMGNlODQ4MmRjZWJmODQ2NmQ2ZmQ1NzFhYTE5OTVhNWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MDlhNTNhNjE4ZDAyOGUxZDMwMDBjMGE3YWJjZWVjYmU1ZmIzN2Y0ZTUxMWVmZTQ2NjQzZmFkNmU2Njg3MmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5YmM3YzE0MzQ2NzlkY2YxOTMyY2M3ZjMwZmRjNGU3ZDk2N2EzMWEyNDRiMDRmZGIzNTkzODY5MTBmZmVkODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYzM2YxZTAwZmQxNTVkYTJjMmNhMjZjY2M1ZmY5NmI4MWUwYmUxMDVkZTU5OTAzOTUzNDA0OWIzZDRlZWJmZjYifQ"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-09-22T20:59:37.438Z"
+  }
+}

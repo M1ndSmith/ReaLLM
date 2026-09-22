@@ -1,0 +1,37 @@
+rate_limits:
+  default_rpm: 60
+  default_tpm: null
+  providers:
+    groq: {rpm: 30}
+    openai: {rpm: 500}
+    anthropic: {rpm: 50}
+    gemini: {rpm: 60}
+    xai: {rpm: 60}
+    mistral: {rpm: 60}
+    deepseek: {rpm: 60}
+    openrouter: {rpm: 60}
+reliability:
+  retries: 2
+  cache: true
+  cache_ttl: 120
+  fallbacks: null
+memory:
+  enabled: false
+  llm_model: ""
+  embedder: fastembed
+pii:
+  enabled: false
+  spacy_model: en_core_web_sm
+  entities: []
+guards:
+  enabled: false
+  injection: null
+  content: null
+  injection_model: groq/meta-llama/llama-prompt-guard-2-22m
+  content_model: groq/meta-llama/llama-guard-4-12b
+  content_ignore: []
+budget:
+  max_output_tokens: 2048
+  max_input_tokens: null
+  daily_token_budget: null
+  daily_usd_budget: null
