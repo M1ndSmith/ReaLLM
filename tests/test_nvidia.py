@@ -257,4 +257,3 @@ def test_empty_injection_model_replaces_groq_default(monkeypatch, tmp_path):
     guards = GuardService(settings, None, None, None)  # type: ignore[arg-type]
     with pytest.raises(GuardConfigError, match="injection_model"):
         guards._resolve_guard_model(guards.requested_injection_model(), "injection")
-
