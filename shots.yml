@@ -1,0 +1,25 @@
+# Console demo shots. The gateway key is not stored here.
+# Capture writes /tmp/realmm-demo-session.js from the environment, then deletes it.
+- output: assets/demo/playground.png
+  url: http://127.0.0.1:3000/
+  width: 1280
+  height: 1100
+  wait: 300
+  js_file: /tmp/realmm-demo-session.js
+  wait_for: "() => document.body.innerText.includes('Authenticated')"
+
+- output: assets/demo/connect.png
+  url: http://127.0.0.1:3000/connect
+  width: 1280
+  height: 1500
+  wait: 300
+  js_file: /tmp/realmm-demo-session.js
+  wait_for: "() => document.body.innerText.includes('Authenticated') && document.body.innerText.includes('Copy curl')"
+
+- output: assets/demo/settings.png
+  url: http://127.0.0.1:3000/settings
+  width: 1280
+  height: 1100
+  wait: 300
+  js_file: /tmp/realmm-demo-session.js
+  wait_for: "() => document.body.innerText.includes('These flags apply on the next chat.')"

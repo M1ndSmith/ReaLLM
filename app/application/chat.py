@@ -42,6 +42,13 @@ def _injected_message_index(before: list[ChatMessage], after: list[ChatMessage])
     return len(before)
 
 
+def _latest_user_text(messages: list[ChatMessage]) -> str:
+    for message in reversed(messages):
+        if message.role == "user" and message.content.strip():
+            return message.content.strip()
+    return ""
+
+
 def _pii_commit(redacted: str, emitted: str, holdback: int = _PII_STREAM_HOLDBACK) -> tuple[str, str]:
     commit_end = max(0, len(redacted) - holdback)
     committed = redacted[:commit_end]
@@ -336,7 +343,12 @@ class ChatService:
                     content, found = await self._pii.redact_text(content)
                     pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
                 if guard_passed:
-                    await self._guards.assert_outbound(content, flags, identity_id=command.identity_id)
+                    await self._guards.assert_outbound(
+                        content,
+                        flags,
+                        identity_id=command.identity_id,
+                        user_text=_latest_user_text(outgoing),
+                    )
                 if fmt is not None:
                     validate_output(content, fmt)
                 self._memory.schedule_record(
@@ -455,7 +467,12 @@ class ChatService:
                     assistant, found = await self._pii.redact_text(raw_assistant)
                     pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
                 if guard_passed:
-                    await self._guards.assert_outbound(assistant, flags, identity_id=command.identity_id)
+                    await self._guards.assert_outbound(
+                        assistant,
+                        flags,
+                        identity_id=command.identity_id,
+                        user_text=_latest_user_text(outgoing),
+                    )
                 if buffer_output and assistant:
                     yield StreamDelta(content=assistant)
                 self._memory.schedule_record(

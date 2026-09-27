@@ -15,7 +15,7 @@ from app.schemas import ModelInfo
 from app.settings import GatewaySettings
 
 _CACHE_TTL_SECONDS = 60.0
-_NON_CHAT_MARKERS = ("whisper", "tts", "orpheus", "prompt-guard", "llama-guard")
+_NON_CHAT_MARKERS = ("whisper", "tts", "orpheus", "prompt-guard", "llama-guard", "content-safety", "-embed-")
 _DEFAULT_OLLAMA_HOST = "http://127.0.0.1:11434"
 
 _DEFAULT_COMPAT_BASES = {
@@ -28,6 +28,7 @@ _DEFAULT_COMPAT_BASES = {
     "together_ai": "https://api.together.xyz/v1",
     "cerebras": "https://api.cerebras.ai/v1",
     "fireworks_ai": "https://api.fireworks.ai/inference/v1",
+    "nvidia_nim": "https://integrate.api.nvidia.com/v1",
 }
 
 
@@ -55,6 +56,15 @@ def ollama_host() -> str:
     return host or _DEFAULT_OLLAMA_HOST
 
 
+def promote_nvidia_nim_key() -> None:
+    """LiteLLM reads NVIDIA_NIM_API_KEY. build.nvidia.com calls the same secret NVIDIA_API_KEY."""
+    if (os.getenv("NVIDIA_NIM_API_KEY") or "").strip():
+        return
+    alias = (os.getenv("NVIDIA_API_KEY") or "").strip()
+    if alias:
+        os.environ["NVIDIA_NIM_API_KEY"] = alias
+
+
 def _provider_api_key(provider: str) -> str | None:
     compact = f"{provider.replace('_', '').upper()}_API_KEY"
     underscored = f"{provider.upper()}_API_KEY"
@@ -73,6 +83,7 @@ class ProviderCatalog:
         self._refresh_pending = False
 
     def detected_providers(self) -> list[str]:
+        promote_nvidia_nim_key()
         providers: list[str] = []
         for provider in _infer_valid_provider_from_env_vars():
             name = _provider_name(provider)
@@ -101,6 +112,8 @@ class ProviderCatalog:
             return os.getenv("CEREBRAS_API_BASE", _DEFAULT_COMPAT_BASES["cerebras"])
         if provider == "fireworks_ai":
             return os.getenv("FIREWORKS_API_BASE", _DEFAULT_COMPAT_BASES["fireworks_ai"])
+        if provider == "nvidia_nim":
+            return os.getenv("NVIDIA_NIM_API_BASE", _DEFAULT_COMPAT_BASES["nvidia_nim"])
         if provider == "ollama":
             return f"{ollama_host()}/v1"
         return _DEFAULT_COMPAT_BASES.get(provider)

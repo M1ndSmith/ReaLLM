@@ -64,7 +64,7 @@ class FakeGuardRouter:
         model = kwargs.get("model") or ""
         if "prompt-guard" in model:
             return FakeResponse(self.injection, model=model)
-        if "llama-guard" in model:
+        if "llama-guard" in model or "content-safety" in model:
             return FakeResponse(self.content, model=model)
         if kwargs.get("stream"):
 

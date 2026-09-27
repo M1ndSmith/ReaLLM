@@ -54,7 +54,7 @@ Short path from the repo root (chat only, memory, or full stack):
 
 ```bash
 cp env/groq.env .env
-# or: env/ollama.env  env/memory.env  env/full.env
+# or: env/ollama.env  env/memory.env  env/full.env  env/nvidia.env
 ```
 
 Each env preset sets `REALMM_CONFIG` to the matching file under [`config/`](config/). [`.env.example`](.env.example) is keys and deployment wiring. [`config/realmm.yaml`](config/realmm.yaml) is the policy file.

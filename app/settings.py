@@ -245,6 +245,8 @@ def flatten_policy(policy: dict[str, Any]) -> dict[str, Any]:
         out["memory_llm_model"] = str(memory["llm_model"])
     if memory.get("embedder") is not None:
         out["memory_embedder"] = memory["embedder"]
+    if "embedding_dims" in memory:
+        out["memory_embedding_dims"] = memory.get("embedding_dims")
 
     pii = _mapping(policy, "pii")
     if pii.get("enabled") is not None:
@@ -261,8 +263,8 @@ def flatten_policy(policy: dict[str, Any]) -> dict[str, Any]:
         out["guard_injection"] = _flag(guards.get("injection"))
     if "content" in guards:
         out["guard_content"] = _flag(guards.get("content"))
-    if guards.get("injection_model"):
-        out["guard_injection_model"] = str(guards["injection_model"])
+    if "injection_model" in guards:
+        out["guard_injection_model"] = str(guards.get("injection_model") or "").strip()
     if guards.get("content_model"):
         out["guard_content_model"] = str(guards["content_model"])
     if guards.get("content_ignore") is not None:
@@ -347,6 +349,7 @@ class GatewaySettings(BaseSettings):
     memory: str = "0"
     memory_llm_model: str = ""
     memory_embedder: str = "fastembed"
+    memory_embedding_dims: int | None = None
 
     pii: str = "0"
     pii_spacy_model: str = "en_core_web_sm"
@@ -446,10 +449,16 @@ class GatewaySettings(BaseSettings):
     @field_validator("memory_embedder", mode="before")
     @classmethod
     def _embedder(cls, value: Any) -> str:
-        raw = (value or "").strip().lower() or "fastembed"
-        if raw not in {"fastembed", "openai"}:
-            raise ValueError("MEMORY_EMBEDDER must be fastembed or openai.")
+        raw = (value or "").strip() or "fastembed"
+        lowered = raw.lower()
+        if lowered in {"fastembed", "openai"}:
+            return lowered
         return raw
+
+    @field_validator("memory_embedding_dims", mode="before")
+    @classmethod
+    def _embedding_dims(cls, value: Any) -> int | None:
+        return _optional_int(value)
 
     @model_validator(mode="after")
     def _langfuse_base(self) -> GatewaySettings:

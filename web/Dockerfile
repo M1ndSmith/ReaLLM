@@ -16,7 +16,7 @@ FROM node:22-bookworm-slim
 
 WORKDIR /app
 
-RUN adduser --disabled-password --gecos "" --uid 1000 realmm
+RUN adduser --disabled-password --gecos "" --uid 1001 realmm
 
 ENV NODE_ENV=production
 ENV NEXT_PUBLIC_GATEWAY_URL=http://127.0.0.1:8000

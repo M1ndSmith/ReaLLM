@@ -24,7 +24,7 @@ def test_public_guides_and_env_presets_are_publishable():
     assert "env/" not in ignore_lines
     assert (ROOT / "USAGE_WALKTHROUGH.md").is_file()
     assert (ROOT / "web" / "app" / "healthz" / "route.ts").is_file()
-    for name in ("groq.env", "ollama.env", "memory.env", "full.env"):
+    for name in ("groq.env", "ollama.env", "memory.env", "full.env", "nvidia.env"):
         preset = (ROOT / "env" / name).read_text(encoding="utf-8")
         assert "GATEWAY_ALLOW_OPEN=1" in preset
         assert "GATEWAY_KEY_PEPPER" in preset
@@ -54,6 +54,15 @@ def test_public_guides_and_env_presets_are_publishable():
     assert "enabled: true" in full_policy
     assert "injection_model: groq/meta-llama/llama-prompt-guard-2-22m" in full_policy
     assert "content_model: groq/meta-llama/llama-guard-4-12b" in full_policy
+    nvidia_env = (ROOT / "env" / "nvidia.env").read_text(encoding="utf-8")
+    nvidia_policy = (ROOT / "config" / "nvidia.yaml").read_text(encoding="utf-8")
+    assert "NVIDIA_NIM_API_KEY=" in nvidia_env
+    assert "REALMM_CONFIG=config/nvidia.yaml" in nvidia_env
+    assert "embedder: nvidia/nemotron-3-embed-1b" in nvidia_policy
+    assert "llm_model: nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b" in nvidia_policy
+    assert "content_model: nvidia_nim/nvidia/nemotron-3.5-content-safety" in nvidia_policy
+    assert "injection: false" in nvidia_policy
+    assert "injection_model: nvidia_nim/nvidia/nemotron-3.5-content-safety" in nvidia_policy
 
 
 def test_runtime_requirements_are_capped():

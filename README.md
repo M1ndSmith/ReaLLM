@@ -103,6 +103,12 @@ Use an id from `/models`. For OpenAI SDKs, set `base_url` to `http://127.0.0.1:8
 
 Open `http://localhost:3000`. Paste the gateway key if asked. Playground chats, Connect copies clients, Settings toggles layers and issues keys.
 
+<img src="assets/demo/playground.png" alt="Playground" width="1000">
+
+<img src="assets/demo/connect.png" alt="Connect" width="1000">
+
+<img src="assets/demo/settings.png" alt="Settings" width="1000">
+
 Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALKTHROUGH.md).
 
 ## Configuration
@@ -111,7 +117,7 @@ Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALK
 - `GROQ_API_KEY` (`string`, no default): required by the included `env/groq.env` provider preset.
 - `GATEWAY_API_KEY` (`secret string`, no default): required because Docker Compose sets `GATEWAY_ALLOW_OPEN=0`.
 - `GATEWAY_KEY_PEPPER` (`secret string`, no default): required when Docker Compose enables gateway authentication.
-- Optional layers live in [`config/realmm.yaml`](config/realmm.yaml). Host presets: [`env/`](env/) selects [`config/`](config/). Env overrides YAML. Memory uses local FastEmbed unless `memory.embedder` is `openai`. Stored facts are scoped to the authenticated key (`default` for `GATEWAY_API_KEY`). A client `user_id` is trace metadata only. Facts already stored under `local` do not appear under a real key. Guards need `guards.enabled` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`. With PII on, a streamed reply is buffered and redacted once at the end. The chat estimate is reserved before the provider call. Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
+- Optional layers live in [`config/realmm.yaml`](config/realmm.yaml). Host presets: [`env/`](env/) selects [`config/`](config/). Env overrides YAML. Memory uses local FastEmbed unless `memory.embedder` is `openai` or another embedding model id. `nvidia/nemotron-3-embed-1b` is one of those ids. Other ids need `memory.embedding_dims`. `env/nvidia.env` points at `config/nvidia.yaml` (Nemotron chat, embeddings, and content safety). Stored facts are scoped to the authenticated key (`default` for `GATEWAY_API_KEY`). A client `user_id` is trace metadata only. Facts already stored under `local` do not appear under a real key. Guards need `guards.enabled` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`. With PII on, a streamed reply is buffered and redacted once at the end. The chat estimate is reserved before the provider call. Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
 
 ## Contributing
 

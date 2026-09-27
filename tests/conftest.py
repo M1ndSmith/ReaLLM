@@ -85,6 +85,9 @@ def isolate_env(monkeypatch, tmp_path):
     monkeypatch.delenv("UVICORN_WORKERS", raising=False)
     monkeypatch.delenv("OLLAMA_API_KEY", raising=False)
     monkeypatch.delenv("OLLAMA_API_BASE", raising=False)
+    monkeypatch.delenv("NVIDIA_API_KEY", raising=False)
+    monkeypatch.delenv("NVIDIA_NIM_API_KEY", raising=False)
+    monkeypatch.delenv("NVIDIA_NIM_API_BASE", raising=False)
 
     monkeypatch.setattr(catalog_mod, "_infer_valid_provider_from_env_vars", lambda: ["groq", "openai"])
 

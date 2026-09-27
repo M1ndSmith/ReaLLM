@@ -10,6 +10,7 @@ from pathlib import Path
 from app.application.errors import MemoryConfigError, UnknownModelError
 from app.application.models import RuntimeFlags
 from app.application.ports import CompletionBackend, ModelCatalogPort, UsageBudgetPort
+from app.infrastructure.catalog import promote_nvidia_nim_key
 from app.schemas import ChatMessage, MemoryHit, MemoryInfo
 
 _DEFAULT_USER_ID = "local"
@@ -17,10 +18,59 @@ _FASTEMBED_MODEL = "BAAI/bge-small-en-v1.5"
 _FASTEMBED_DIMS = 384
 _OPENAI_EMBED_MODEL = "text-embedding-3-small"
 _OPENAI_EMBED_DIMS = 1536
+_NVIDIA_EMBED_MODEL = "nvidia_nim/nvidia/nemotron-3-embed-1b"
+_NVIDIA_EMBED_IDS = {_NVIDIA_EMBED_MODEL, "nvidia/nemotron-3-embed-1b"}
+_NVIDIA_EMBED_DIMS = 2048
+_NVIDIA_EMBED_BASE = "https://integrate.api.nvidia.com/v1"
 _EXTRACT_MAX_TOKENS = 512
 _SEARCH_TOP_K = 5
 
 logger = logging.getLogger(__name__)
+
+
+def _nvidia_embed_key() -> str:
+    promote_nvidia_nim_key()
+    key = (os.getenv("NVIDIA_NIM_API_KEY") or "").strip()
+    if not key:
+        raise MemoryConfigError("MEMORY_EMBEDDER=nvidia/nemotron-3-embed-1b requires NVIDIA_NIM_API_KEY.")
+    return key
+
+
+def _nvidia_embed_base() -> str:
+    return (os.getenv("NVIDIA_NIM_API_BASE") or "").strip() or _NVIDIA_EMBED_BASE
+
+
+class LiteLLMEmbedder:
+    """Mem0 embedder that calls LiteLLM. Nemotron Embed uses passage and query modes."""
+
+    def __init__(self, model: str, *, passage_query: bool = False):
+        self._model = model
+        self._passage_query = passage_query
+
+    def embed(self, text, memory_action=None):
+        import litellm
+
+        cleaned = text.replace("\n", " ")
+        kwargs: dict = {"model": self._model, "input": [cleaned]}
+        if self._passage_query:
+            action = (memory_action or "search").lower()
+            kwargs["input_type"] = "passage" if action in {"add", "update"} else "query"
+            kwargs["api_key"] = _nvidia_embed_key()
+            kwargs["api_base"] = _nvidia_embed_base()
+        response = litellm.embedding(**kwargs)
+        data = getattr(response, "data", None)
+        if not data:
+            raise MemoryConfigError("Embedder returned no vectors.")
+        first = data[0]
+        vector = first.get("embedding") if isinstance(first, dict) else getattr(first, "embedding", None)
+        if not isinstance(vector, list):
+            raise MemoryConfigError("Embedder returned no vectors.")
+        return vector
+
+
+class NvidiaNimEmbedder(LiteLLMEmbedder):
+    def __init__(self, model: str = _NVIDIA_EMBED_MODEL):
+        super().__init__(model, passage_query=True)
 
 
 class RouterLLM:
@@ -198,11 +248,21 @@ class MemoryRuntime:
     def enabled(self, flags: RuntimeFlags) -> bool:
         return flags.memory
 
-    def _embedder_provider(self) -> str:
-        raw = (self._settings.memory_embedder or "fastembed").strip().lower() or "fastembed"
-        if raw in {"fastembed", "openai"}:
-            return raw
-        raise MemoryConfigError("MEMORY_EMBEDDER must be fastembed or openai.")
+    def _embedder_name(self) -> str:
+        return (self._settings.memory_embedder or "fastembed").strip() or "fastembed"
+
+    def _embedder_dims(self, embedder: str) -> int:
+        lowered = embedder.lower()
+        if lowered == "fastembed":
+            return _FASTEMBED_DIMS
+        if lowered == "openai":
+            return _OPENAI_EMBED_DIMS
+        if lowered in _NVIDIA_EMBED_IDS:
+            return _NVIDIA_EMBED_DIMS
+        dims = self._settings.memory_embedding_dims
+        if dims is None:
+            raise MemoryConfigError(f"Set memory.embedding_dims for embedder '{embedder}'.")
+        return dims
 
     def _llm_model_id(self) -> str | None:
         requested = (self._settings.memory_llm_model or "").strip()
@@ -220,7 +280,7 @@ class MemoryRuntime:
         if not flags.memory:
             return MemoryInfo(enabled=False)
         try:
-            embedder = self._embedder_provider()
+            embedder = self._embedder_name()
         except MemoryConfigError:
             embedder = self._settings.memory_embedder or "fastembed"
         try:
@@ -239,8 +299,9 @@ class MemoryRuntime:
         if not model:
             raise MemoryConfigError("Memory needs a chat model. Set MEMORY_LLM_MODEL or add a PROVIDER_API_KEY.")
 
-        embedder = self._embedder_provider()
-        if embedder == "openai":
+        embedder = self._embedder_name()
+        lowered = embedder.lower()
+        if lowered == "openai":
             if not (os.getenv("OPENAI_API_KEY") or "").strip():
                 raise MemoryConfigError("MEMORY_EMBEDDER=openai requires OPENAI_API_KEY.")
             embedder_config = {
@@ -248,12 +309,22 @@ class MemoryRuntime:
                 "config": {"model": _OPENAI_EMBED_MODEL, "embedding_dims": _OPENAI_EMBED_DIMS},
             }
             dims = _OPENAI_EMBED_DIMS
-        else:
+        elif lowered == "fastembed":
             embedder_config = {
                 "provider": "fastembed",
                 "config": {"model": _FASTEMBED_MODEL, "embedding_dims": _FASTEMBED_DIMS},
             }
             dims = _FASTEMBED_DIMS
+        else:
+            dims = self._embedder_dims(embedder)
+            model_name = "nvidia/nemotron-3-embed-1b" if lowered in _NVIDIA_EMBED_IDS else embedder
+            embedder_config = {
+                "provider": "openai",
+                "config": {"model": model_name, "embedding_dims": dims},
+            }
+            if lowered in _NVIDIA_EMBED_IDS:
+                embedder_config["config"]["api_key"] = _nvidia_embed_key()
+                embedder_config["config"]["openai_base_url"] = _nvidia_embed_base()
 
         self._mem0_dir.mkdir(parents=True, exist_ok=True)
         self._qdrant_path.mkdir(parents=True, exist_ok=True)
@@ -284,6 +355,11 @@ class MemoryRuntime:
             }
         )
         memory.llm = RouterLLM(model, self._backend, self._budget)
+        if lowered not in {"fastembed", "openai"}:
+            memory.embedding_model = LiteLLMEmbedder(
+                _NVIDIA_EMBED_MODEL if lowered in _NVIDIA_EMBED_IDS else embedder,
+                passage_query=lowered in _NVIDIA_EMBED_IDS,
+            )
         return memory
 
     def get_memory(self, flags: RuntimeFlags | None = None):

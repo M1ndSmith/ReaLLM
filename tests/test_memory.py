@@ -123,16 +123,10 @@ def test_memory_status_and_get_memory(monkeypatch, tmp_path):
     status = rt.memory.status(flags(memory=True))
     assert status.enabled is True
     assert status.embedder == "fastembed"
-    monkeypatch.setenv("MEMORY_EMBEDDER", "nope")
-    from pydantic import ValidationError
+    monkeypatch.setenv("MEMORY_EMBEDDER", "vendor/any-embed")
+    from app.settings import GatewaySettings
 
-    try:
-        from app.settings import GatewaySettings
-
-        GatewaySettings()
-        raise AssertionError("expected ValidationError")
-    except ValidationError:
-        pass
+    assert GatewaySettings().memory_embedder == "vendor/any-embed"
     monkeypatch.setenv("MEMORY_EMBEDDER", "fastembed")
     monkeypatch.setenv("MEMORY_LLM_MODEL", "groq/openai/gpt-oss-20b")
     rt = runtime(tmp_path)

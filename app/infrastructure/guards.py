@@ -14,6 +14,7 @@ logger = logging.getLogger(__name__)
 _INJECTION_WINDOW = 512
 _INJECTION_MAX_TOKENS = 16
 _CONTENT_MAX_TOKENS = 64
+_NEMOTRON_CONTENT_MAX_TOKENS = 128
 _CONTENT_CATEGORY_NAMES = {
     "S1": "Violent Crimes",
     "S2": "Non-Violent Crimes",
@@ -47,6 +48,32 @@ def injection_is_malicious(text: str) -> bool:
     if head == "benign" or head.startswith("benign"):
         return False
     raise GuardConfigError("Prompt Guard returned an unrecognized verdict.")
+
+
+def _labeled_line(text: str, label: str) -> str | None:
+    prefix = f"{label.lower()}:"
+    for line in text.splitlines():
+        stripped = line.strip()
+        if stripped.lower().startswith(prefix):
+            return stripped.split(":", 1)[1].strip()
+    return None
+
+
+def parse_nemotron_verdict(text: str, role: str) -> tuple[bool, list[str]]:
+    user = _labeled_line(text, "User Safety")
+    response = _labeled_line(text, "Response Safety")
+    if role == "assistant":
+        chosen = response if response is not None else user
+    else:
+        chosen = user if user is not None else response
+    if chosen is None:
+        raise GuardConfigError("Nemotron Content Safety returned an unrecognized verdict.")
+    verdict = chosen.lower()
+    if verdict not in {"safe", "unsafe"}:
+        raise GuardConfigError("Nemotron Content Safety returned an unrecognized verdict.")
+    raw_categories = _labeled_line(text, "Safety Categories") or ""
+    categories = [part.strip() for part in raw_categories.split(",") if part.strip()]
+    return verdict == "unsafe", categories
 
 
 def parse_content_verdict(text: str) -> tuple[bool, list[str]]:
@@ -87,7 +114,7 @@ class GuardService:
         return flags.guard and flags.guard_injection
 
     def requested_injection_model(self) -> str:
-        return self._settings.guard_injection_model or "groq/meta-llama/llama-prompt-guard-2-22m"
+        return (self._settings.guard_injection_model or "").strip()
 
     def requested_content_model(self) -> str:
         return self._settings.guard_content_model or "groq/meta-llama/llama-guard-4-12b"
@@ -132,12 +159,13 @@ class GuardService:
             self.ignored_content_categories(strict=True)
 
     def _resolve_guard_model(self, requested: str, kind: str) -> str:
+        if not (requested or "").strip():
+            raise GuardConfigError(f"Set guards.{kind}_model to a catalog id.")
         try:
             return self._catalog.resolve_model(requested)
         except UnknownModelError as exc:
             raise GuardConfigError(
-                f"Guard {kind} model '{requested}' is not in the catalog. "
-                "Set GROQ_API_KEY or GUARD_INJECTION_MODEL / GUARD_CONTENT_MODEL to a catalog id."
+                f"Guard {kind} model '{requested}' is not in the catalog. Set guards.{kind}_model to a catalog id."
             ) from exc
 
     def _chunk_text(self, model: str, text: str, limit: int = _INJECTION_WINDOW) -> list[str]:
@@ -177,6 +205,7 @@ class GuardService:
         generation_name: str,
         max_tokens: int,
         identity_id: str | None = None,
+        extra_body: dict | None = None,
     ) -> str:
         params: dict = {
             "model": model,
@@ -190,6 +219,8 @@ class GuardService:
                 "tags": ["realmm", "guard"],
             },
         }
+        if extra_body:
+            params["extra_body"] = extra_body
         try:
             response = await self._backend.acompletion(**params)
         except GuardBlockedError:
@@ -224,15 +255,31 @@ class GuardService:
         chunks = self._chunk_text(model, text)
         if not chunks:
             return
+        nemotron = "content-safety" in model.lower()
 
         async def _one(chunk: str) -> None:
             verdict = await self._classify(
                 model,
                 [{"role": "user", "content": chunk}],
                 generation_name="guard-injection",
-                max_tokens=_INJECTION_MAX_TOKENS,
+                max_tokens=_NEMOTRON_CONTENT_MAX_TOKENS if nemotron else _INJECTION_MAX_TOKENS,
                 identity_id=identity_id,
+                extra_body=(
+                    {
+                        "chat_template_kwargs": {
+                            "enable_thinking": False,
+                            "request_categories": "/categories",
+                        }
+                    }
+                    if nemotron
+                    else None
+                ),
             )
+            if nemotron or "user safety:" in verdict.lower() or "response safety:" in verdict.lower():
+                unsafe, _categories = parse_nemotron_verdict(verdict, "user")
+                if unsafe:
+                    raise GuardBlockedError("injection", "Prompt injection blocked.")
+                return
             if injection_is_malicious(verdict):
                 raise GuardBlockedError("injection", "Prompt injection blocked.")
 
@@ -245,20 +292,42 @@ class GuardService:
         flags: RuntimeFlags,
         *,
         identity_id: str | None = None,
+        user_text: str = "",
     ) -> None:
         if not self.content_enabled(flags) or not text.strip():
             return
         if role not in {"user", "assistant"}:
             raise GuardConfigError("Llama Guard role must be user or assistant.")
         model = self._resolve_guard_model(self.requested_content_model(), "content")
+        nemotron = "content-safety" in model.lower()
+        if nemotron and role == "assistant":
+            messages = [
+                {"role": "user", "content": user_text or text},
+                {"role": "assistant", "content": text},
+            ]
+        else:
+            messages = [{"role": role, "content": text}]
         verdict = await self._classify(
             model,
-            [{"role": role, "content": text}],
+            messages,
             generation_name="guard-content",
-            max_tokens=_CONTENT_MAX_TOKENS,
+            max_tokens=_NEMOTRON_CONTENT_MAX_TOKENS if nemotron else _CONTENT_MAX_TOKENS,
             identity_id=identity_id,
+            extra_body=(
+                {
+                    "chat_template_kwargs": {
+                        "enable_thinking": False,
+                        "request_categories": "/categories",
+                    }
+                }
+                if nemotron
+                else None
+            ),
         )
-        unsafe, categories = parse_content_verdict(verdict)
+        if "user safety:" in verdict.lower() or "response safety:" in verdict.lower():
+            unsafe, categories = parse_nemotron_verdict(verdict, role)
+        else:
+            unsafe, categories = parse_content_verdict(verdict)
         if not unsafe:
             return
         ignore = set(self.ignored_content_categories(strict=True))
@@ -298,11 +367,12 @@ class GuardService:
         flags: RuntimeFlags,
         *,
         identity_id: str | None = None,
+        user_text: str = "",
     ) -> None:
         if not flags.guard or not flags.guard_content:
             return
         self._ensure_scanners(flags)
-        await self.scan_content(assistant, "assistant", flags, identity_id=identity_id)
+        await self.scan_content(assistant, "assistant", flags, identity_id=identity_id, user_text=user_text)
 
     async def assert_memory_write(
         self,

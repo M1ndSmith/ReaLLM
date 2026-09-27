@@ -93,6 +93,7 @@ def test_allow_open_defaults_off(monkeypatch):
 
 
 def test_memory_embedder_validated(monkeypatch):
-    monkeypatch.setenv("MEMORY_EMBEDDER", "nope")
-    with pytest.raises(ValidationError):
-        GatewaySettings()
+    monkeypatch.setenv("MEMORY_EMBEDDER", "vendor/any-embed")
+    assert GatewaySettings().memory_embedder == "vendor/any-embed"
+    monkeypatch.setenv("MEMORY_EMBEDDING_DIMS", "1024")
+    assert GatewaySettings().memory_embedding_dims == 1024

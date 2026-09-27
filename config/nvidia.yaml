@@ -1,0 +1,27 @@
+rate_limits:
+  default_rpm: 40
+  default_tpm: null
+  providers:
+    nvidia_nim: {rpm: 40}
+reliability:
+  retries: 2
+  cache: true
+  cache_ttl: 120
+  fallbacks: null
+memory:
+  enabled: true
+  llm_model: nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b
+  embedder: nvidia/nemotron-3-embed-1b
+pii:
+  enabled: false
+guards:
+  enabled: true
+  injection: false
+  content: true
+  content_model: nvidia_nim/nvidia/nemotron-3.5-content-safety
+  injection_model: nvidia_nim/nvidia/nemotron-3.5-content-safety
+budget:
+  max_output_tokens: 2048
+  max_input_tokens: null
+  daily_token_budget: null
+  daily_usd_budget: null

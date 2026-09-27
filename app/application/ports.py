@@ -212,6 +212,7 @@ class GuardPort(Protocol):
         flags: RuntimeFlags,
         *,
         identity_id: str | None = None,
+        user_text: str = "",
     ) -> None: ...
 
     async def assert_memory_write(
