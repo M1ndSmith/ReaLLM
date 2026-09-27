@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:43b95f043c39d0e9cced4beccca0bbf1f242c3ee38d334db9d819e6fdca00385",
+  "pageVersion": "sha256:28cb087ff3992f93316f16f45603dce9117fab1b24d9d70538d9a65c649081ec",
   "claims": [
     {
       "id": "claim_6d7c316840b941ffaeb62524f153e9b8",
@@ -61,10 +61,48 @@
           "version": "repo-lines-v1:sha256:dae9aeaa55f205efd68706db0254a7fee6f5fc74863e4ae23d06f8351929dd32:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGQ4ZDU5YTkzZWVmMDA5ZWFlMzU2ODVmMDcxYTI4YTk2YzFiNTBmODNhOGUxZGU2ZjlmZDc1YjhlM2ZjNzg0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjJhMDIzYTY0MDVmN2Y4ZmQwY2JjZTZiMTdkNjk2ZWJmOWQ4YjlmMTU0NGI0M2YxMWFjNzAwMTU5YzU3NjM0MCJ9"
         }
       ]
+    },
+    {
+      "id": "claim_0efbd70d6cc548afa9421b82c501bbcb",
+      "statement": "config/nvidia.yaml sets the lightning chat model, the Nemotron embedder, and the same content-safety id for content and injection.",
+      "evidence": [
+        {
+          "resource": "repo://config/nvidia.yaml#L11-L22",
+          "version": "repo-lines-v1:sha256:97f909c4b86b1292c4a95a2a1ebf9cfac690c650be7da9747e4436dc3779d40c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5YjVjMTQyYmM2NGQwZTkwMjI2YmFkMjUyMzdiMTQ4MGUxY2UwNDY0YzFmMzYyZjk5YWQ0NTQ1MDJjMmVlMzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1ZGVmNWQ2MWZjMjFhZjJlMDNmYjJlY2Y4OGE1MGExZWM1MmM2ZTgyYjhiNWU5OWZkYmEwYTNjMGUwMjNlNzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdkYTIzYzQ2YjY1NDY3OWJmYWI5NjczYmJjYzFmYTZmMTgyYjJkZDQ0ZTJkOTdjZGYyNGY1ZGQ0YzZhOTgxMDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYTFjZGZlNzFhMWY2ZmI0NDUyMjMxNDBlYWVlMzYzMzg3MDA2YjE0MDlhNDRlMzFlYTU0NDE4ODVmMTBlNGMifQ"
+        },
+        {
+          "resource": "repo://env/nvidia.env#L8-L11",
+          "version": "repo-lines-v1:sha256:eaf3f25fa6303616973beac9edd830b431f911d0d22cf9d6d7c464580121267a:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc4NTcwZTIxNzk3ODNhZThlOGU2MmE1OGJhZWVjNmU3MjIyMWQxOTQ5OGRkYzFiZTY2NDdiMjU1ZDE2ZWE4YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzlhZDA1M2I1MzM1YTRmZTYyOTA3NDZlYzM4M2M3NGMyNWI1YjgwMzVlNWM1Yjc1ZDk1MmZlY2E2MzgwMjZjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDUxODE2M2Y5NTg5NDkxNDhmMDhjNGFkNDEzYjk0ZWY4YjhhZjQ2OTE2N2E0MWQ1OGI4ZTdmMmI1YjM0OTViMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1a444569af9b469d8242abb9e0ed40cc",
+      "statement": "A present injection_model key is copied even when empty, and a present embedding_dims key is copied into settings.",
+      "evidence": [
+        {
+          "resource": "repo://app/settings.py#L246-L249",
+          "version": "repo-lines-v1:sha256:3f16258ff8d363aae207bc6c8ad78a6a096ec59bfe0ec69826ee6b4cd3b520fd:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzQxYmRmY2NiYzAyMGVmNTU0YWMyZjMwYTI4NjFkOTc3MzkzMTFmYjU4M2RiMWZkZDJhYjA2NjNmNTgyOGU0NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDgzY2IwNmNiOThhNzQ1ZGE2NmFkNDAwN2I3YTM4OWI0NDA5ODE5NDBhM2U1Y2IwNjA0NjUyOTg4N2UxNzI2YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzYyMmFkMmE3NWQyMmI2Njk3NWI2ODM1ZTQ5ZTAwNTU3NmZlODdhNDhmOWYwYjI3ZDI0NGUyMjEyNGFhMDkzMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjhlMDQ1NjM4ODBiZjViOWNmZGQ4NGY3ZDdlZGYzODdlYmVjNzI4ODZmZjZiOTY1OGFkYjNiMDllZmU1NDE1YyJ9"
+        },
+        {
+          "resource": "repo://app/settings.py#L266-L267",
+          "version": "repo-lines-v1:sha256:847304e60d55d85cb1aa8a9097c96acbfb7f3f0db3fff2b2d06fc3ac752da6dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWQyNDEwMGY5YzZkMTU1M2NiZGJiY2MxN2IzNmJjNjFhNjBkMTE1NmU2ZjA3NzU0OWQ2MGM2MDA0NTNiNGQzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWM0Zjk3MGI1NGQ0NzI4Yzc3NzI0YTRhMTBjYTU2ZWZkYWNhY2MzMTY1ZTY2NzhiM2ViMjY2OGExYWY1YWJmNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2IzMTgxMGQyYjk4NDg4MjAzZjVjYmYyMTU3NDM3YWM2Mzg3MTNjYzRmZTNmOTU2ODIyNTFiZjRiOGZkOThhMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmFhMzYyYzBmNGY2N2E3ZDQ0NzU5MDZhNzYxM2M5YzEwM2MwODkxMDZmZWZlOGEyODdlMWM2ZDAxNTYwYzY2NCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1951bfa3a99740338c8c8652d354c5f4",
+      "statement": "Compose forces GATEWAY_ALLOW_OPEN off and pins the gateway to one worker.",
+      "evidence": [
+        {
+          "resource": "repo://compose.yaml#L33-L37",
+          "version": "repo-lines-v1:sha256:ae47a85ebb101b053bdd63c646441f3240b0555852fb460951bef64977f8bed6:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI3NDYzMzRmZGJkNjUxMzIzOWYxMzI2ZGI4YjYxMjc1N2I1YjMyYzA4MDhiNTA4MWE5OTM3ZjY1MzNiOGRiOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODNkODcyYTdkMzlkNWM2ZGUzOWZjMTNmM2U3NDc3MGZkYzdiNDQ0OTI5NzA2MzQyMDRlYWRkNDc0OTg2MzBlYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjJhMDIzYTY0MDVmN2Y4ZmQwY2JjZTZiMTdkNjk2ZWJmOWQ4YjlmMTU0NGI0M2YxMWFjNzAwMTU5YzU3NjM0MCJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-22T20:59:37.438Z"
+    "at": "2026-09-27T22:14:48.530Z"
   }
 }

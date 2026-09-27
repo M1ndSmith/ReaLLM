@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c6fe3a0ced87c352d33acff50c4b6b5bdfb30fddb94b72f00df9429488013654",
+  "pageVersion": "sha256:3ed6f904b27c9c2b6d8ff78411574a7984036fd90376859c2b053701d65a06f6",
   "claims": [
     {
       "id": "claim_aab7bc2d98f2403ba034b0c30cacd4b5",
@@ -75,10 +75,52 @@
           "version": "repo-lines-v1:sha256:7865354abb1d48054b61c7ad471f6630ccb848cb6b923a040bab17387a515d33:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjhlNzQ5YzM1NTY5OWM1MDI0YTlmMWM5YjkyYWRlMjkxMWQ3OGM3YjU4NzVjOGRkZTY4NmNmYjFjZWFiMmU5NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjk3OGUyNTAzYjhjZjM3YTA2ZjdkNmYwYTNhNmI2ZmUzNTY5MWZiY2FiNTBiODc3NWNhYjZmYWJjNzFjNTkyYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGRiZmU1MmFlOTA2MzgwYmRmYzg5ZmI3MTIwNWUzYzcxNTk5ODE4NTMxMzg3MmE2OGU3YjY5OWI3NzZmZmE0OCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzYxYzBmY2RlOWNlMjk2NGQ5MjIxZGI1MmQ1YjZiMWFhYzE1NThmNDEyNGZiMDcyMzI0NmQ1MmM4N2MxY2EwZiJ9"
         }
       ]
+    },
+    {
+      "id": "claim_0bac5925434440488a2f567125efe6c3",
+      "statement": "Publish readiness checks the NVIDIA env preset and that both guard slots in config/nvidia.yaml use the content-safety model.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_publish_readiness.py#L27-L31",
+          "version": "repo-lines-v1:sha256:71db75362be23ab05c47b018c298f150428629afafc5b0dd6ed25aa525bdee83:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDJhNTY0OWNiZWM0M2QzYmNhMjU5N2I0MWY0OWQ2NjQwNThlZGNiN2VjMzNlNmFmYjU0MTYzYjE3ZGJkYTcwMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmU1ZTk0OTU3NGEyOWQ4NjBmZGNiMzFmN2RiN2YwNmRhOTFkMzI0YzQ3Y2E0YTNiNWM3ZDFhYzg4M2Y4MWU2MiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGE1ODU3NTZiYjM5YWZhZjA2NmM1NzcxMzE4ZDUyN2Q5ODVhNzgzNjI0OWFmYjg2MjQ2NGFkMTUxMjdlZmZjYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2U2ODk3MGU3ZDliNzA1YTMzOWM3MTg4MDNhMjRiNmY4NTdmYTJmNTU2NWU3N2ZlMmE5OWJlYWRiN2VkYzIwMiJ9"
+        },
+        {
+          "resource": "repo://tests/test_publish_readiness.py#L57-L65",
+          "version": "repo-lines-v1:sha256:db55b394d3e7fdcc369027b15f8f56f4d0d1ee7ba9a95d133403a7e812af4d88:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmY2ZjdhMmM1ZmE0ZWEzMjBlZmI0ZTQ3NjAxNmVlMGY5M2I0MTAzZWRlYTlmMjg1NWUyZmZlMTQwZmQzNTliMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmI2NmQyYmRiZDFmMDAwYmFlMWExZmY5MjVjMTA5ZGE5YzFlOTY2ZDM0MjhkZTIxMGRjNGQ0OTBjZWJhOTU1ZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTJkN2UzNDExZjFkYmI2ZmFjNGIwMGJkYmE1YjBkYzcwOWQwZjY5ZTEyZGZlOGNjZDliMDJlYTM2ZGZhYzNjMyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTA4NTE4MTc1NmU5NjE4NTUxZTA5ZGZhZmI1YzI5YzYwYTVmYWZmZjJhNTlhZmFiNjVmZmQ0NGYwMjU5MmNkZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_677ae67386f246f6b4ee7ef7b96505e4",
+      "statement": "NVIDIA tests cover the key alias, non-chat markers, the outbound user-then-assistant scan, and the embedding_dims requirement for a custom embedder.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_nvidia.py#L132-L156",
+          "version": "repo-lines-v1:sha256:9d8883dbd114663259e5f2061aac714881004e38e93faa4076dafb29c4fd4bec:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE0NjM0MzRiNTgyNThjNjFhMjgwMTNhYjUwY2VlMTY4ODAyMmI5ZjM3ZWQ3N2FkNzU0NTNlYTMyN2RlMThhYmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNzg4Zjc1ZWRiYWFjZDE1N2Y1NWJiMjc4ZjQyMmI5NmUzNjI5YzIwMzg3Y2M4OGE1Yjg5OTY2ZmEwZmU3NDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyYjc0OGUxYjg4MDg3MDQ2OTYyMGY5ZWJhOTk4NWM4OGFmZWIxYjAzMzU2Y2E1MDFkNTllYzQ2MWFiYjRlMDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3M2RhZTFiOTczNDAxNDI5ZWQxNzk1MzgzMTc1MTBlZjUzNDVkNGM1ZTBlMTBmYzNmYjEwNjRkZWMwYzZkYzIifQ"
+        },
+        {
+          "resource": "repo://tests/test_nvidia.py#L18-L35",
+          "version": "repo-lines-v1:sha256:752eb89ac53460f6178eec88997e735f2159a05b751e53225ef7b99e25b22592:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIxN2YyZmI5N2RlM2E3YTlhMzQ5ZWVjNTUzMjU2OTI1MDU3NGM5MDEwZjJkODQ2MmI2NDI3ODBjNjRjYTFkOWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjNjhiZGU5OGJmZTRkYzQyMjY3YTk1NzQxZDVmYTEwZDQ5YWU1NzRlNGYxODI4OTZlNTY3MjEyMGJmZGM3OGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI2ZWRmNTFiMjFiZmRjMDAzODY4MmJkMDNhMGMwYjJmZTEwMzI3ZTlmODg3NGM0YWU5YjcyOTIwNzczNDI1NTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1MDBkMmNjODk3NTgxZDMyYTNhMjcwZGJiOWQ1ZTBjNjIxZmJlYzU4OWZmMmNiYTE5YWQzMGI4OTQwOGZlY2YifQ"
+        },
+        {
+          "resource": "repo://tests/test_nvidia.py#L216-L223",
+          "version": "repo-lines-v1:sha256:f9f9b435327b1026e42479e4afb6904b429aff1ea8e085341b21f51a41e75487:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjk2ZDFhYzJmYjk5YzgzZTcwMWMxMDRjNTM2M2IwOWJkZDJjZmIwMWZlZGIxOWIyMGE5OGIzMTIwYTI1MWE1ZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMGJkODg4ODZlNmQxMTY1NGJlMTczNzg4M2ZkOWRiZGM2MjI3MWM4OTA3MGUzMzJmNThjNTVhZjcwNTJiMjZmNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTE4YmQxMDg1MWZjYmUzZmVjOGM5YTFiZDdiODhmZDYyMjY2YjdjOGI4NDc1ZGJhNmZkZjYyMWE4ZWZlZjUzOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDZiM2JjYmFhMjU4MzY0NjJiMGRiY2Q5NmNlNGRlMWFiMTBhOGQ0NTJmNDlkODE5ZTE0OGI0NTI0M2VkNjg5YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_84df1d85955f4e85bfb2153fd9169b5c",
+      "statement": "CI runs Ruff and pytest on Python 3.12, 3.13, and 3.14, with plugin autoload disabled.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/ci.yml#L23-L53",
+          "version": "repo-lines-v1:sha256:7598163af1e2910fd1d4452afa31881b00558c0b05c619e5890b81417bcdbefc:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOWM5ZDBhMDNlYjYxMDhhZDY1Yzk5NGFjYjA3MDQ0OGZhMzBiMTYzZTZiNmUyYTQ5ZTY4MTRiMTViYjcyNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViYmZjMWRiNzZlYzM3YThiNWExNDVjNmE0ZjZkYWQ0YzJiZDg2ODNkNTMxNjRmNjFjMTE1ZjM0MDAyYzYxNzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NTViYTcyMDc1NDEwZGNhMWE5YTk5ZjJjZTFmODRjMzI4ZWI5MWFhNDc5YmFmZTA5ODBlYmJhY2Y4MzQzODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MDM0ZDNiZGE0N2FlNjNlOWY2MTMxZmRiN2Q5NzgwOTIzMjU4MGMyOWE2MTczNWNjYWQ3NGVjYThhMGU3NzgifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-22T20:59:37.438Z"
+    "at": "2026-09-27T22:14:48.530Z"
   }
 }

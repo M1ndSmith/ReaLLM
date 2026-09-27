@@ -1,15 +1,17 @@
 ---
 type: Request pipeline
 title: Chat Pipeline
-description: How ChatService prepares a prompt, reserves budget, calls the router, and redacts a streamed reply once when PII is on.
-tags: [chat, pipeline, pii, budget, memory]
+description: How ChatService prepares a prompt, reserves budget, calls the router, redacts a buffered stream once, and sends the latest user turn with the assistant reply to a content-safety outbound scan.
+tags: [chat, pipeline, pii, budget, memory, guards]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-22T20:59:37.438Z
+    at: 2026-09-27T22:14:48.530Z
 sources:
   - id: openwiki-source-614e7ba5f26867e646a960f7
     resource: repo://app/application/chat.py
-generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
+  - id: openwiki-source-c408e90cd85dd093896698de
+    resource: repo://app/infrastructure/guards.py
+generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
 ---
 
 # Chat Pipeline
@@ -28,7 +30,7 @@ When the guard layer is on, `assert_inbound` runs with the same `identity_id`. T
 
 `complete` passes `response_format` through when it is set and validates the assistant text after the call. `record_usage` is called with the reservation id so the estimate is replaced by the actual token count. The local reservation id is cleared so the `finally` block does not release it a second time. If the provider call raises, `finally` releases the reservation.
 
-Outbound PII redaction, the outbound content guard, and `schedule_record` use `identity_id` as the memory tenant.
+Outbound PII redaction runs when the preflight PII flag is set. The outbound content guard then runs when the inbound guard passed. Both `complete` and `stream` pass `_latest_user_text(outgoing)` as `user_text`. `schedule_record` uses `identity_id` as the memory tenant.
 
 ## Streaming
 
@@ -38,6 +40,10 @@ Outbound PII redaction, the outbound content guard, and `schedule_record` use `i
 
 Usage recording and reservation release follow the same order as `complete`. A fallback model yields `StreamFallback` after the provider section.
 
+## Outbound content-safety pair
+
+`GuardService.scan_content` treats a model id that contains `content-safety` as Nemotron content safety. For an assistant scan of that model, the classifier messages are the latest user text, then the assistant text. A user-role scan stays a single user message. See [Optional Pipeline Layers](../integrations/optional-layers.md).
+
 ## Tests
 
-`tests/test_llm.py` covers identity-scoped memory attach, injected-memory-only redaction, a split-address SSE body, and reservation release when the provider raises. `tests/test_pipeline.py` records the preflight order.
+`tests/test_llm.py` covers identity-scoped memory attach, injected-memory-only redaction, a split-address SSE body, and reservation release when the provider raises. `tests/test_pipeline.py` records the preflight order. `tests/test_nvidia.py` checks that an outbound content-safety scan sends `user` then `assistant`.

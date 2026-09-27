@@ -1,14 +1,22 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3ac57522b092309351f278b929edc286a053a8e9c0bbc78c5ce319bca8a9bf7f",
+  "pageVersion": "sha256:ae1b13c4cecbbd7896771228dfc03828af8c9efb547b9c3a68d4f36582fe5d17",
   "claims": [
     {
       "id": "claim_986a8a4254194b5db330f067df098818",
-      "statement": "A provider is detected only when its API key environment variable is a non-empty string.",
+      "statement": "A provider is detected only when its API key environment variable is a non-empty string. An empty NVIDIA_NIM_API_KEY is filled from NVIDIA_API_KEY before that check.",
       "evidence": [
         {
-          "resource": "repo://app/infrastructure/catalog.py#L58-L83",
-          "version": "repo-lines-v1:sha256:5a9a2f052cc8095b7bd5f31f9a56a6039fc7085a2ec73696d7cffca023944999:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNTAwNTk0OGRmZmJjYTk1MjM2MTJiOTFkMDU1YjQ4ODliZDEzZjRjZjk5OTAwNWNhNjAzNmExZWU5ZDQxNzEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTNlNTQyMzdhZjMwMzU5OGY1ZTIwMTQ1NDkxNzAxYmJmYzU0ODMzMTA3NGE0ZWRmNzZlY2MwZTQ4OTFmNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFiOWI1YjQ1Y2Y2ZjM3OTk4ZjlkZWJmNmJjMTdlNWMzYWE2YmFkNDIxYTQ0YzE4NDBmNTFmZjEyMjVjYmMzMDAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0MDVmYjVkZmZhZjYwNjdiNGJjOWNlZWI0NjI3ZjZkZDZjMjM2NzQzODM5YmY4Y2Y1N2NiN2U3OTQxYWQxYjIifQ"
+          "resource": "repo://app/infrastructure/catalog.py#L59-L65",
+          "version": "repo-lines-v1:sha256:208b91c80c01a76cf8494bebe11fb2daa42b688b1b94c115b9e3e9bfbcfeed71:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzNjY2MyOWFjNTEwYzY2YWM1NzU3NWViYjk5MThiODAzNTZlODgyMDNlNThmOWU2MTU2NDA2ODkzMjJhYzY4NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYmVkMzQwNWYxZDAwZDk5MzBkMTQ5ZTZmNTcxZTRlMzM2ZjQwZTM0MzYyNWI0ZmRjYzUyOGEzZjc4N2E4MzhkMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYWI5YjViNDVjZjZmMzc5OThmOWRlYmY2YmMxN2U1YzNhYTZiYWQ0MjFhNDRjMTg0MGY1MWZmMTIyNWNiYzMwMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZGIxMmMwODliNDkyMzMyYzE0MTIxMTgwZWY4YjBlNGIxYjhjMmE2YzVmMmNjNjlhZGY2MDU4MGU0ZGEzNzRmNCJ9"
+        },
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L68-L76",
+          "version": "repo-lines-v1:sha256:750007f5cd3ee2d5a0a23cd933f4e44cc80662018fc2f682cc3ad4633db9d9a7:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTA1MDA1OTQ4ZGZmYmNhOTUyMzYxMmI5MWQwNTViNDg4OWJkMTNmNGNmOTk5MDA1Y2E2MDM2YTFlZTlkNDE3MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDE5MmQ2ZTJiMWU4Y2RlMzA5YTBlMGVlZWUwODJmYzMyODU5OTE4NDYzNjY4NzFiMDViMTIyMGY5OTgwM2QxNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmIzNTU1YjE3Nzg0YWU4MTJjNmU2MWE2ZGYyYTMwZDAxMDJkYzQ0OWEzODRhZjQ2OTI5NzM0ZTY0Zjg3MmJkYSJ9"
+        },
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L85-L94",
+          "version": "repo-lines-v1:sha256:19af1c185fc7f8d876fc58451fbda23961ae65306c729ce31dd94874d3defa1a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhM2E3MWQzYmFiMGYyNDkyZWUxMDAwMWFkMmIwOWY5OTcxMmJlOWJiMWM1ZDBjNWI0NTE4M2UwNzNmNTkwZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTNlNTQyMzdhZjMwMzU5OGY1ZTIwMTQ1NDkxNzAxYmJmYzU0ODMzMTA3NGE0ZWRmNzZlY2MwZTQ4OTFmNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZhODk2NzQwMTBhZGVlNWJmOGI0MzIyMGU2MTgwMGNkODc4NDgwZTQzOTQ5YjkxYTk4YzIzYmNiYzQxNzgzMDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ0MDVmYjVkZmZhZjYwNjdiNGJjOWNlZWI0NjI3ZjZkZDZjMjM2NzQzODM5YmY4Y2Y1N2NiN2U3OTQxYWQxYjIifQ"
         }
       ]
     },
@@ -31,10 +39,28 @@
           "version": "repo-lines-v1:sha256:bae4576a9ae7e65cd9a31a1926acb18f823bc9afce9e5ce28c6513990a783e9b:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWM5YjQ0NjcwMjgwZjU5OTgwNmYxZTJjNWU1ZmYyODIwY2U4NDgyZGNlYmY4NDY2ZDZmZDU3MWFhMTk5NWE1YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGIxMzU5NDQyZDNmZWEzOTUxMDI4ZTgwOThkNTIyYzg4ZmNkNmIwNTQ2ZTM2MzViZDEwZDYxOWJkNjhjMjgwMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTliYzdjMTQzNDY3OWRjZjE5MzJjYzdmMzBmZGM0ZTdkOTY3YTMxYTI0NGIwNGZkYjM1OTM4NjkxMGZmZWQ4MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTg0NTE3ZjNkZjVkM2IzZTgxNDc0NjA3NDE3M2Y1YTVlODBlNjNlYzIyMmFmY2E5MDdkN2NmYmNjNzdlZjM1OCJ9"
         }
       ]
+    },
+    {
+      "id": "claim_81c82fc90e02438d8ff4d705d2886415",
+      "statement": "nvidia_nim defaults to https://integrate.api.nvidia.com/v1, and is_chat_model rejects ids containing content-safety or -embed-.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L115-L116",
+          "version": "repo-lines-v1:sha256:6f6e782c9fef4e5fff79afe320c32bcc69e726c9b27e34054179d6c29a63a434:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzJhYTJhMmM2ZTNhOWIyNmQzZjFjMzg3ZGNjYzI1YWEyOWZiNTE2MjhkNzhiMzIwNDAwNDYxNzg0MDFkYzc4ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTY0NzkyOGJjMDZiYWQ2YTEyZjhlY2Y0ZDgxZTYzNTEzZjZmZjExMWIzNDZkNDdjY2M2YTcxMzQ1NGJkZjEwMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmM3YWNhZGY4MGRhYTU1Y2NhM2VjNWU3Y2I2OTJhNTE1NDk5ZjMzMGNmYTlkM2Y2NTY4ZWRjOGFhZWY4M2E1MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGE0ZTgyODYyYzQ0N2FiZjI5YjAxOTg2YjlhYTc0ZTg2YzUzOGIyMDM4ZmVjODQzMjZhZDJiOTdkOWJjYjE5NyJ9"
+        },
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L18-L37",
+          "version": "repo-lines-v1:sha256:70679f969a0afd580aba0e915c58af662736041433b5f6b0c9af9f8c944425b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YzZmZGU4YjgyZjAzYzMwNjZiOWYxMzkzZTAxNDQ3M2Y1Mzc2M2FmNmZjY2MwOTVmYzI4OGE3MzNjMmFhYWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZjMWI1Y2I5MTQ5MzJmNzdlMDgxNTYzOWVmY2Q1ZDkyMjcxYzM5NjhhMWM3YWE4MjE3MTFhYjU0NzZkZDA5MzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyYTExZjQ5ODJiZGJiNWVjOTBmYjdiNDdmYWYzMzE3ZTJkNDQ0ZDk2ODllNTI1OTVkMjk1NjFlZTNlNmNkYjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE1ODQ4NmY2MDk0YzMxYjVlMzcyZmE1ZWEwNjYwNTEzNjQ5ZGUzZmY0NDMwMjdkZThiOGNjOGRiYzdmNzE5NzAifQ"
+        },
+        {
+          "resource": "repo://app/infrastructure/catalog.py#L31-L31",
+          "version": "repo-lines-v1:sha256:fa605412db2a1f158fcdc2092d6e8e9ef33d1fc1877a4493900ea6e98d99fcb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE2MDU0MTJkYjJhMWYxNThmY2RjMjA5MmQ2ZThlOWVmMzNkMWZjMTg3N2E0NDkzOTAwZWE2ZTk4ZDk5ZmNiNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE2MDU0MTJkYjJhMWYxNThmY2RjMjA5MmQ2ZThlOWVmMzNkMWZjMTg3N2E0NDkzOTAwZWE2ZTk4ZDk5ZmNiNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzgwZGY0ODQ1NDExZWE0Zjg2OTUwODBlYjFhNGNmYmZhNzg4NDU2MjliZTNjYzU2MzgzMmExMjliMTMwNDUxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDlmOTMwODNjMTk3MTIxYjk4MjcwMGJhOGFmYWJkMTcyMmNmMWQzZTc0MDQ1MDllODBlZmEyNzI0N2Y2MmYwNyJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-22T20:59:37.438Z"
+    "at": "2026-09-27T22:14:48.530Z"
   }
 }

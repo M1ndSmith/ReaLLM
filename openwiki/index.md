@@ -4,7 +4,7 @@ okf_version: "0.2"
 
 # Files
 
-- [ReaLMM Quickstart](quickstart.md) - Where to start the gateway and console, and which wiki pages hold the architecture, API, and operations detail.
+- [ReaLMM Quickstart](quickstart.md) - Where to start the gateway and console, including the NVIDIA preset, and which wiki pages hold the architecture, API, and operations detail.
 
 # Directories
 

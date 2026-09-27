@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:869c38156f7060a3036cc1a94d1cd9067349363b603f6c1cea06751aca9eb75a",
+  "pageVersion": "sha256:f80d407c58795ca81000af4e331bbfa89f0bfd873421782c4640f39472bc7eca",
   "claims": [
     {
       "id": "claim_67902facbfa8482188d4a3a360f0e638",
@@ -51,10 +51,20 @@
           "version": "repo-lines-v1:sha256:ba5e3cc34d360fcca7540c0d71a9b3ca8ba3fc2192c19330402939ecd7b6509e:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjJjMDQyMThhNDQ2ZTA0YmRiZjQ3OWJhOWE1NmFlM2VhMWMyYWQ4MjM3MWQyYWNmN2QyYzIwNDI2YWVhOThkNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTkwOWE1M2E2MThkMDI4ZTFkMzAwMGMwYTdhYmNlZWNiZTVmYjM3ZjRlNTExZWZlNDY2NDNmYWQ2ZTY2ODcyZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzk2NGFkODUwY2JlODdiNDc3YTc2NTQyYWU1OTA2YmNiMmI4NDZjODcxMjBlOGU0NzQ0ZDdhY2E1ODk5NTI5MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjlkNGYwZGNhM2MxMWU5MzBlNjA3MDdjMDcxMzAwZTA1NWNhMjVmNmNlYWUwODQzZmRiYTkxMmZjZWE2NmFlOCJ9"
         }
       ]
+    },
+    {
+      "id": "claim_feaddefa85ae4267bdfac7d4535eab29",
+      "statement": "env/nvidia.env sets GATEWAY_ALLOW_OPEN=1 and REALMM_CONFIG=config/nvidia.yaml for a host loopback run.",
+      "evidence": [
+        {
+          "resource": "repo://env/nvidia.env#L8-L11",
+          "version": "repo-lines-v1:sha256:eaf3f25fa6303616973beac9edd830b431f911d0d22cf9d6d7c464580121267a:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc4NTcwZTIxNzk3ODNhZThlOGU2MmE1OGJhZWVjNmU3MjIyMWQxOTQ5OGRkYzFiZTY2NDdiMjU1ZDE2ZWE4YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzlhZDA1M2I1MzM1YTRmZTYyOTA3NDZlYzM4M2M3NGMyNWI1YjgwMzVlNWM1Yjc1ZDk1MmZlY2E2MzgwMjZjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDUxODE2M2Y5NTg5NDkxNDhmMDhjNGFkNDEzYjk0ZWY4YjhhZjQ2OTE2N2E0MWQ1OGI4ZTdmMmI1YjM0OTViMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-22T20:59:37.438Z"
+    "at": "2026-09-27T22:14:48.530Z"
   }
 }
