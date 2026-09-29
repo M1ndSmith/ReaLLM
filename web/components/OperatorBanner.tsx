@@ -10,7 +10,7 @@ type Props = {
 export function OperatorBanner({ state, runtimeError }: Props) {
   if (!state.message && !runtimeError) return null;
   return (
-    <div className="hint" role="status" aria-live="polite">
+    <div className="banner hint" role="status" aria-live="polite">
       {runtimeError ? `Action failed: ${runtimeError}` : state.message}
     </div>
   );

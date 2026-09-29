@@ -10,34 +10,41 @@ type Props = {
 
 export function StatusSidebar({ providers, lamps, redisMode }: Props) {
   return (
-    <div className="bus">
-      <div className="label">Providers</div>
-      <div className="lamps" aria-live="polite">
-        {providers?.length ? (
-          providers.map((name) => (
-            <span key={name} className="lamp on">
+    <div className="status-row">
+      <section className="status-card">
+        <div className="label">Providers</div>
+        <div className="lamps" aria-live="polite">
+          {providers?.length ? (
+            providers.map((name) => (
+              <span key={name} className="lamp on">
+                <i />
+                {name}
+              </span>
+            ))
+          ) : (
+            <p className="hint">No API keys found in .env.</p>
+          )}
+        </div>
+      </section>
+      <section className="status-card">
+        <div className="label">Sidecars</div>
+        <div className="lamps">
+          {lamps.map((lamp) => (
+            <span key={lamp.key} className={lamp.on ? "lamp on" : "lamp"}>
               <i />
-              {name}
+              {lamp.label}
             </span>
-          ))
-        ) : (
-          <p className="hint">No API keys found in .env.</p>
-        )}
-      </div>
-      <div className="label">Sidecars</div>
-      <div className="lamps">
-        {lamps.map((lamp) => (
-          <span key={lamp.key} className={lamp.on ? "lamp on" : "lamp"}>
-            <i />
-            {lamp.label}
-          </span>
-        ))}
-      </div>
-      <p className="hint">
-        Sidecar lamps are live state. Toggle MEMORY / PII / GUARD on Settings when a gateway key is set. Provider
-        keys, Redis, and budgets stay in .env.
-        {redisMode ? ` Redis mode: ${redisMode}.` : ""}
-      </p>
+          ))}
+        </div>
+      </section>
+      <section className="status-card">
+        <div className="label">Redis</div>
+        <p className="hint">
+          Sidecar lamps are live state. Toggle MEMORY / PII / GUARD on Settings when a gateway key is set. Provider keys,
+          Redis, and budgets stay in .env.
+          {redisMode ? ` Redis mode: ${redisMode}.` : ""}
+        </p>
+      </section>
     </div>
   );
 }

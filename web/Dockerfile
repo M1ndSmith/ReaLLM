@@ -24,6 +24,7 @@ ENV NEXT_PUBLIC_GATEWAY_URL=http://127.0.0.1:8000
 COPY --from=build /src/package.json /src/package-lock.json ./
 COPY --from=build /src/node_modules ./node_modules
 COPY --from=build /src/.next ./.next
+COPY --from=build /src/public ./public
 COPY --from=build /src/next.config.ts ./
 COPY --from=build /src/tsconfig.json ./
 

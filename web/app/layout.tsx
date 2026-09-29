@@ -1,12 +1,21 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import { IBM_Plex_Mono, IBM_Plex_Sans, Syne } from "next/font/google";
+import localFont from "next/font/local";
 
 import "./globals.css";
 
-const syne = Syne({ subsets: ["latin"], weight: ["700", "800"], variable: "--font-display" });
-const sans = IBM_Plex_Sans({ subsets: ["latin"], weight: ["400", "500", "600"], variable: "--font-body" });
-const mono = IBM_Plex_Mono({ subsets: ["latin"], weight: ["400", "500"], variable: "--font-mono" });
+const sans = localFont({
+  src: "../fonts/Outfit-Variable.ttf",
+  weight: "400 600",
+  variable: "--font-body",
+});
+const mono = localFont({
+  src: [
+    { path: "../fonts/IBMPlexMono-Regular.ttf", weight: "400", style: "normal" },
+    { path: "../fonts/IBMPlexMono-Medium.ttf", weight: "500", style: "normal" },
+  ],
+  variable: "--font-mono",
+});
 
 export const metadata: Metadata = {
   title: "ReaLMM console",
@@ -16,7 +25,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en">
-      <body className={`${syne.variable} ${sans.variable} ${mono.variable}`}>{children}</body>
+      <body className={`${sans.variable} ${mono.variable}`}>{children}</body>
     </html>
   );
 }
