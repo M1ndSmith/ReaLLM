@@ -3,8 +3,6 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
-from app.application.billing import BillingCoordinator
-from app.application.models import BillingLineItem
 from app.api.dependencies import bound_identity_id, get_runtime, require_scopes
 from app.api.encoders.openai import (
     completion_id,
@@ -15,6 +13,8 @@ from app.api.encoders.openai import (
 )
 from app.api.errors import raise_chat
 from app.api.routes.chat import command_from_chat
+from app.application.billing import BillingCoordinator
+from app.application.models import BillingLineItem
 from app.container import GatewayRuntime
 from app.schemas import EmbeddingRequest, OpenAIChatRequest
 from app.structured import SchemaError, normalize_response_format

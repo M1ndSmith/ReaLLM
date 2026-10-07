@@ -4,7 +4,14 @@ from collections.abc import AsyncIterator
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from app.application.models import BillingLineItem, BillingStatus, BillingSubject, IdentityQuotas, PromptMeta, RuntimeFlags
+from app.application.models import (
+    BillingLineItem,
+    BillingStatus,
+    BillingSubject,
+    IdentityQuotas,
+    PromptMeta,
+    RuntimeFlags,
+)
 from app.schemas import (
     BudgetInfo,
     ChatMessage,

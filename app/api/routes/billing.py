@@ -48,7 +48,9 @@ async def billing_usage(
     return BillingUsagePage(items=rows, total=total, offset=offset, limit=limit)
 
 
-@router.get("/billing/teams/{team_id}", response_model=TeamBillingPolicy, dependencies=[Depends(require_scopes("admin"))])
+@router.get(
+    "/billing/teams/{team_id}", response_model=TeamBillingPolicy, dependencies=[Depends(require_scopes("admin"))]
+)
 async def get_team_policy(
     team_id: str,
     runtime: GatewayRuntime = Depends(get_runtime),
@@ -62,7 +64,9 @@ async def get_team_policy(
     )
 
 
-@router.patch("/billing/teams/{team_id}", response_model=TeamBillingPolicy, dependencies=[Depends(require_scopes("admin"))])
+@router.patch(
+    "/billing/teams/{team_id}", response_model=TeamBillingPolicy, dependencies=[Depends(require_scopes("admin"))]
+)
 async def patch_team_policy(
     team_id: str,
     body: TeamBillingPolicy,
@@ -89,4 +93,3 @@ async def billing_reconcile(runtime: GatewayRuntime = Depends(get_runtime)) -> d
         raise_chat(exc)
         raise
     return {"ok": result.ok, "mode": result.mode, "detail": result.detail}
-

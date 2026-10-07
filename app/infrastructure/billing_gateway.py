@@ -24,7 +24,9 @@ class BillingGateway:
 
     def reconcile(self) -> BillingGatewayReconcileResult:
         if self._mode == "ledger":
-            return BillingGatewayReconcileResult(ok=True, mode=self._mode, detail="Ledger-authoritative reconciliation.")
+            return BillingGatewayReconcileResult(
+                ok=True, mode=self._mode, detail="Ledger-authoritative reconciliation."
+            )
         if self._mode == "arc":
             if self._store is None or not hasattr(self._store, "refresh_chain_balance"):
                 return BillingGatewayReconcileResult(ok=False, mode=self._mode, detail="Arc wallet is not configured.")
@@ -35,4 +37,3 @@ class BillingGateway:
                 detail=f"Arc USDC available {available:.6f}.",
             )
         return BillingGatewayReconcileResult(ok=False, mode=self._mode, detail="Unknown reconciliation mode.")
-

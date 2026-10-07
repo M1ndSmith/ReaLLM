@@ -269,7 +269,9 @@ class BillingStore:
             self.refresh_chain_balance()
         with self._lock:
             state = self._load()
-            team = self._team_entry(state, subject.team_id) if subject.team_id else {"balance_usdc": 0.0, "spent_usd": 0.0}
+            team = (
+                self._team_entry(state, subject.team_id) if subject.team_id else {"balance_usdc": 0.0, "spent_usd": 0.0}
+            )
             totals = state.get("line_item_totals") if isinstance(state.get("line_item_totals"), dict) else {}
             line_item_totals = {
                 str(key): round(max(0.0, _coerce_float(value)), 8)
@@ -317,4 +319,3 @@ class BillingStore:
             "daily_usd_cap": daily_usd_cap,
             "prepaid_balance_usdc": team["balance_usdc"],
         }
-

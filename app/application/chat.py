@@ -217,13 +217,21 @@ class ChatService:
     ) -> list[BillingLineItem]:
         items: list[BillingLineItem] = []
         if flags.guard and flags.guard_injection:
-            items.append(BillingLineItem(kind="security_injection_scan", usd=self._line_item_rate("security_injection_scan")))
+            items.append(
+                BillingLineItem(kind="security_injection_scan", usd=self._line_item_rate("security_injection_scan"))
+            )
         if flags.guard and flags.guard_content:
-            items.append(BillingLineItem(kind="security_content_scan", usd=self._line_item_rate("security_content_scan")))
+            items.append(
+                BillingLineItem(kind="security_content_scan", usd=self._line_item_rate("security_content_scan"))
+            )
         if flags.memory and memories_used is not None:
-            items.append(BillingLineItem(kind="memory_retrieve_attach", usd=self._line_item_rate("memory_retrieve_attach")))
+            items.append(
+                BillingLineItem(kind="memory_retrieve_attach", usd=self._line_item_rate("memory_retrieve_attach"))
+            )
         if flags.memory and include_memory_record:
-            items.append(BillingLineItem(kind="memory_record_extract", usd=self._line_item_rate("memory_record_extract")))
+            items.append(
+                BillingLineItem(kind="memory_record_extract", usd=self._line_item_rate("memory_record_extract"))
+            )
         if pii_entities is not None:
             base = self._line_item_rate("pii_redaction")
             per_entity = self._line_item_rate("pii_entity")

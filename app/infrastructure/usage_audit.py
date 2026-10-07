@@ -41,7 +41,9 @@ class UsageAuditLog:
             "total_usd": round(float(total_usd), 8),
             "status": status,
             "reason": reason,
-            "items": [{"kind": item.kind, "usd": round(float(item.usd), 8), "units": float(item.units)} for item in items],
+            "items": [
+                {"kind": item.kind, "usd": round(float(item.usd), 8), "units": float(item.units)} for item in items
+            ],
         }
         self._path.parent.mkdir(parents=True, exist_ok=True)
         with self._lock:
@@ -71,4 +73,3 @@ class UsageAuditLog:
             return 0
         with self._lock:
             return len(self._path.read_text(encoding="utf-8").splitlines())
-

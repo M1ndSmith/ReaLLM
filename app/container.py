@@ -5,10 +5,10 @@ import os
 from dataclasses import dataclass
 
 from app.application.chat import ChatService
-from app.infrastructure.budget import BudgetRuntime
 from app.infrastructure.billing_gateway import BillingGateway
 from app.infrastructure.billing_noop import NoopBilling
 from app.infrastructure.billing_store import BillingStore
+from app.infrastructure.budget import BudgetRuntime
 from app.infrastructure.catalog import ProviderCatalog
 from app.infrastructure.flags import RuntimeFlagStore
 from app.infrastructure.guards import GuardService

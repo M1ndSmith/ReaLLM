@@ -93,4 +93,3 @@ class BillingCoordinator:
         if reservation is None:
             return
         self._holds.release(reservation.hold_id)
-

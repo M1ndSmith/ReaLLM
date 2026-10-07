@@ -6,6 +6,8 @@ from pathlib import Path
 
 import pytest
 from fastapi.testclient import TestClient
+from tests.factories import PROMPTS_DIR
+from tests.fakes import FakeResponse
 
 from app.application.billing import BillingCoordinator
 from app.application.errors import BillingUnavailableError, BudgetExceededError
@@ -17,8 +19,6 @@ from app.infrastructure.billing_gateway import BillingGateway
 from app.infrastructure.billing_noop import NoopBilling
 from app.infrastructure.billing_store import BillingStore
 from app.infrastructure.usage_audit import UsageAuditLog
-from tests.fakes import FakeResponse
-from tests.factories import PROMPTS_DIR
 from app.settings import GatewaySettings
 
 
@@ -458,6 +458,7 @@ def test_arc_usdc_http_and_bad_payloads(monkeypatch):
         ArcUsdcReader(transport=lambda _payload: {"result": "0xzz"}).balance_usdc(address)
     with pytest.raises(BillingUnavailableError):
         ArcUsdcReader(transport=lambda _payload: []).balance_usdc(address)
+
     def raise_unavailable(_payload):
         raise BillingUnavailableError("Arc USDC balance is unavailable.")
 
@@ -530,10 +531,14 @@ def test_arc_reconcile_deposit_and_settle_do_not_restore_spend(monkeypatch, tmp_
     def transport(_payload):
         return {"result": hex(int(chain["usdc"] * 1_000_000))}
 
-    settings = _settings(monkeypatch, BILLING_MODE="wallet", BILLING_PREPAID_REQUIRED="1", BILLING_FUNDED_TEAM_ID="operator")
+    settings = _settings(
+        monkeypatch, BILLING_MODE="wallet", BILLING_PREPAID_REQUIRED="1", BILLING_FUNDED_TEAM_ID="operator"
+    )
     reader = ArcUsdcReader(transport=transport)
     address = "0x7E5F4552091A69125d5DfCb7b8C2659029395Bdf"
-    store = BillingStore(settings, state_path=tmp_path / "billing-state.json", chain_reader=reader, wallet_address=address)
+    store = BillingStore(
+        settings, state_path=tmp_path / "billing-state.json", chain_reader=reader, wallet_address=address
+    )
     gateway = BillingGateway(mode="arc", store=store)
 
     first = gateway.reconcile()

@@ -70,4 +70,3 @@ class NoopBilling:
             "daily_usd_cap": daily_usd_cap,
             "prepaid_balance_usdc": prepaid_balance_usdc,
         }
-
