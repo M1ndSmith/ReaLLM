@@ -40,3 +40,6 @@ window to patch before public disclosure.
 - Provider `*_API_KEY` values stay in `.env`. Do not put them in `NEXT_PUBLIC_*`.
   Operator policy lives in [`config/realmm.yaml`](config/realmm.yaml). Env
   overrides YAML.
+- Wallet mode reads the USDC balance for `billing.funded_team_id`. The private
+  key is created in `data/arc-wallet.json`. That path is under `data/`, which
+  is gitignored. Do not commit it or paste the key into docs, logs, or issues.

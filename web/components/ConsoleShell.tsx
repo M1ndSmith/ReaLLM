@@ -10,11 +10,14 @@ import { OperatorBanner } from "@/components/OperatorBanner";
 import { PlaygroundView } from "@/components/PlaygroundView";
 import { SettingsView } from "@/components/SettingsView";
 import { StatusSidebar } from "@/components/StatusSidebar";
+import { Badge } from "@/components/ui";
+import { useBillingState } from "@/hooks/useBillingState";
 import { useChatSession } from "@/hooks/useChatSession";
 import { useGatewayCatalog } from "@/hooks/useGatewayCatalog";
 import { useGatewayKey } from "@/hooks/useGatewayKey";
 import { useOperatorState } from "@/hooks/useOperatorState";
 import { useRuntimeConfig } from "@/hooks/useRuntimeConfig";
+import { formatCost } from "@/lib/formatters";
 import type { ConfigLayers } from "@/lib/types";
 import { curlSnippet, openaiSnippet, pythonSnippet } from "@/lib/snippets";
 
@@ -29,6 +32,7 @@ const TITLES: Record<View, string> = {
 export function ConsoleShell({ view }: { view: View }) {
   const key = useGatewayKey();
   const config = useRuntimeConfig();
+  const billing = useBillingState();
   const catalog = useGatewayCatalog();
   const chat = useChatSession(catalog.model, catalog.promptName, () => key.setNeedsAuth(true));
   const [copied, setCopied] = useState<string | null>(null);
@@ -45,7 +49,7 @@ export function ConsoleShell({ view }: { view: View }) {
     if (result.ok) {
       key.setNeedsAuth(false);
       try {
-        await config.refresh();
+        await Promise.all([config.refresh(), billing.refresh()]);
       } catch (err) {
         chat.reportError(err instanceof Error ? err.message : "Could not load runtime config.");
       }
@@ -53,7 +57,7 @@ export function ConsoleShell({ view }: { view: View }) {
     }
     if (result.unauthorized) key.setNeedsAuth(true);
     chat.reportError(result.message);
-  }, [catalog.load, chat.reportError, config.refresh, key.setNeedsAuth]);
+  }, [billing.refresh, catalog.load, chat.reportError, config.refresh, key.setNeedsAuth]);
 
   useEffect(() => {
     void loadAll();
@@ -71,6 +75,14 @@ export function ConsoleShell({ view }: { view: View }) {
       await loadAll();
     } catch (err) {
       chat.reportError(err instanceof Error ? err.message : "Could not update layers.");
+    }
+  }
+
+  async function reconcileBilling() {
+    try {
+      await billing.reconcile();
+    } catch (err) {
+      chat.reportError(err instanceof Error ? err.message : "Billing reconcile failed.");
     }
   }
 
@@ -102,13 +114,21 @@ export function ConsoleShell({ view }: { view: View }) {
         </nav>
       </aside>
       <main className="stage">
-        <h1 className="page-title">{TITLES[view]}</h1>
-        <OperatorBanner state={operator} runtimeError={config.configError} />
-        <StatusSidebar
-          providers={catalog.catalog.health?.providers}
-          lamps={catalog.lamps}
-          redisMode={catalog.catalog.ready?.redis_mode || catalog.catalog.health?.reliability?.redis_mode}
-        />
+        <header className="page-header">
+          <div>
+            <h1 className="page-title">{TITLES[view]}</h1>
+            <p className="hint">Gateway endpoint: {catalog.gateway}</p>
+          </div>
+          <div className="page-header-badges">
+            <Badge tone={operator.authState === "authorized" ? "good" : operator.authState === "open" ? "warn" : "danger"}>
+              auth: {operator.authState}
+            </Badge>
+            <Badge tone={billing.status?.mode === "wallet" ? "good" : "neutral"}>
+              billing: {billing.status?.mode || "off"}
+            </Badge>
+          </div>
+        </header>
+        <OperatorBanner state={operator} runtimeError={config.configError || billing.error} billingHint={billing.blockedHint} />
         {view === "play" ? (
           <section className="chat-card">
             <div className="toolbar">
@@ -155,15 +175,49 @@ export function ConsoleShell({ view }: { view: View }) {
             <p className="hint">Layer flags write data/runtime-flags.json. They do not rewrite .env secrets.</p>
             <SettingsView
               config={config.config}
+              billing={billing.status}
+              billingLoading={billing.loading}
               needsAuth={key.needsAuth}
               toggleBusy={config.toggleBusy}
               onToggle={toggleLayer}
               canAdmin={operator.authState !== "needs_key" && !operator.blockedActions.includes("admin")}
+              onReconcileBilling={() => void reconcileBilling()}
               onAdminError={(message) => chat.reportError(message)}
             />
           </>
         )}
       </main>
+      <aside className="ops-rail">
+        <StatusSidebar
+          providers={catalog.catalog.health?.providers}
+          lamps={catalog.lamps}
+          redisMode={catalog.catalog.ready?.redis_mode || catalog.catalog.health?.reliability?.redis_mode}
+          billing={billing.status}
+        />
+        <section className="panel usage-panel">
+          <div className="snippet-head">
+            <h2>Recent usage</h2>
+            <button className="ghost" type="button" onClick={() => void billing.refresh()} disabled={billing.loading}>
+              {billing.loading ? "Loading" : "Refresh"}
+            </button>
+          </div>
+          {billing.usage?.items?.length ? (
+            <ul className="usage-list">
+              {billing.usage.items.slice(0, 5).map((item) => (
+                <li key={`${item.idempotency_key}-${item.timestamp}`}>
+                  <div>
+                    <strong>{item.route}</strong>
+                    <p className="hint">{item.model}</p>
+                  </div>
+                  <span>{formatCost(item.total_usd) || "$0"}</span>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <p className="hint">No captured usage rows yet.</p>
+          )}
+        </section>
+      </aside>
     </div>
   );
 }

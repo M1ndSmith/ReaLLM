@@ -17,6 +17,14 @@ class BudgetExceededError(ValueError):
     """Raised when the daily token or USD budget would be exceeded."""
 
 
+class InsufficientPrepaidBalanceError(ValueError):
+    """Raised when prepaid USDC balance cannot cover a request or settlement."""
+
+
+class TeamCapExceededError(ValueError):
+    """Raised when a team-level daily spend cap would be exceeded."""
+
+
 class IdentityRateLimitError(ValueError):
     """Raised when a gateway key exceeds its requests-per-minute cap."""
 
@@ -47,3 +55,7 @@ class GuardBlockedError(ValueError):
         self.scanner = scanner
         self.categories = list(categories or [])
         self.category_names = list(category_names or [])
+
+
+class BillingUnavailableError(ValueError):
+    """Raised when billing backend is unavailable in strict modes."""

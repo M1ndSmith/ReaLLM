@@ -1,0 +1,35 @@
+{
+  "summary": "web/ is the realmm-console Next.js 15 app. Three pages mount the same ConsoleShell with a different view. The browser calls the Python gateway with a Bearer token from sessionStorage. Native chat is SSE POST /chat. The OpenAI /v1 path is shown in snippets and is not the console's own chat client.",
+  "nodes": [
+    {"id": "ui.page_play", "kind": "ui", "path": "web/app/page.tsx", "role": "PlaygroundPage renders Console view=play."},
+    {"id": "ui.page_connect", "kind": "ui", "path": "web/app/connect/page.tsx", "role": "Connect page."},
+    {"id": "ui.page_settings", "kind": "ui", "path": "web/app/settings/page.tsx", "role": "Settings page."},
+    {"id": "ui.healthz", "kind": "ui", "path": "web/app/healthz/route.ts", "role": "GET /healthz on the Next process."},
+    {"id": "ui.console", "kind": "ui", "path": "web/components/ConsoleShell.tsx", "role": "Nav, key field, catalog load, layer toggles, and view branch. Console.tsx re-exports it."},
+    {"id": "ui.chatlog", "kind": "ui", "path": "web/components/ChatLog.tsx", "role": "Transcript and composer. PlaygroundView passes through to it."},
+    {"id": "ui.connect", "kind": "ui", "path": "web/components/ConnectView.tsx", "role": "curl, Python, and OpenAI SDK snippets."},
+    {"id": "ui.settings", "kind": "ui", "path": "web/components/SettingsView.tsx", "role": "Layer toggles and AdminKeysPanel."},
+    {"id": "ui.keys", "kind": "ui", "path": "web/components/AdminKeysPanel.tsx", "role": "List, create, revoke gateway keys. Secret shown once."},
+    {"id": "ui.sidebar", "kind": "ui", "path": "web/components/StatusSidebar.tsx", "role": "Provider and sidecar lamps, Redis hint."},
+    {"id": "ui.banner", "kind": "ui", "path": "web/components/OperatorBanner.tsx", "role": "Auth and scope guidance."},
+    {"id": "ui.useChatSession", "kind": "ui", "path": "web/hooks/useChatSession.ts", "role": "draft, busy, messages, abort. Persists realmm.conversation_id. 401 calls onUnauthorized."},
+    {"id": "ui.useGatewayCatalog", "kind": "ui", "path": "web/hooks/useGatewayCatalog.ts", "role": "Loads health, models, prompts, ready. Persists realmm.model."},
+    {"id": "ui.useGatewayKey", "kind": "ui", "path": "web/hooks/useGatewayKey.ts", "role": "Saves the gateway key through lib/auth."},
+    {"id": "ui.useRuntimeConfig", "kind": "ui", "path": "web/hooks/useRuntimeConfig.ts", "role": "refresh GET /config. toggleLayer PATCH /config with layers."},
+    {"id": "ui.useOperatorState", "kind": "ui", "path": "web/hooks/useOperatorState.ts", "role": "authState open | needs_key | authorized and blockedActions chat | config | admin."},
+    {"id": "ui.streamChat", "kind": "ui", "path": "web/lib/chatClient.ts", "role": "POST {gateway}/chat."},
+    {"id": "ui.sse", "kind": "ui", "path": "web/lib/sseParser.ts", "role": "Splits data frames. [DONE] is done. JSON with error is error. Other JSON is a content or sidecar event."},
+    {"id": "ui.gateway", "kind": "ui", "path": "web/lib/gateway.ts", "role": "gatewayUrl, fetchJson, fetchReady. Ready treats 503 detail as a payload."},
+    {"id": "ui.auth", "kind": "ui", "path": "web/lib/auth.ts", "role": "GATEWAY_KEY realmm.gateway_key. authHeaders sets Authorization Bearer when a key is stored."},
+    {"id": "ui.admin_client", "kind": "ui", "path": "web/lib/adminKeys.ts", "role": "GET /admin/keys?include_revoked=true, POST /admin/keys, DELETE /admin/keys/{id}."},
+    {"id": "ui.snippets", "kind": "ui", "path": "web/lib/snippets.ts", "role": "Connect examples. OpenAI snippet uses base_url {gateway}/v1."}
+  ],
+  "notes": [
+    "Runtime dependencies are next ^15.5.4 and react ^19.1.1. No UI kit and no third-party SSE client.",
+    "Scripts: dev and start on port 3000, build, typecheck, test, test:coverage.",
+    "Vitest coverage includes app, components, hooks, and lib, excludes app/layout.tsx. Thresholds: lines and statements 90, functions 85, branches 80.",
+    "Session storage keys: realmm.gateway_key, realmm.conversation_id, realmm.model.",
+    "Default gateway URL is http://127.0.0.1:8000. Compose and web/Dockerfile set NEXT_PUBLIC_GATEWAY_URL to that host loopback so the browser does not use the Docker DNS name gateway.",
+    "Console JavaScript does not call POST /v1/chat/completions. That route is for agents using an OpenAI SDK."
+  ]
+}

@@ -5,10 +5,12 @@ description: Memory, PII, guards, and prompts are optional. Memory and guard spe
 tags: [memory, pii, guards, prompts, nvidia]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-27T22:14:48.530Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
   - id: openwiki-source-bdfcb6714146f50144a89001
     resource: repo://app/api/routes/memory.py
+  - id: openwiki-source-614e7ba5f26867e646a960f7
+    resource: repo://app/application/chat.py
   - id: openwiki-source-c408e90cd85dd093896698de
     resource: repo://app/infrastructure/guards.py
   - id: openwiki-source-0a97995f7bc8c67bb27b072e
@@ -19,12 +21,12 @@ sources:
     resource: repo://app/settings.py
   - id: openwiki-source-cb7b64ac5490a877c9488251
     resource: repo://config/nvidia.yaml
-generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # Optional Pipeline Layers
 
-Memory, PII, guards, and remote prompts are off unless policy or a runtime flag turns them on. Guard and Mem0 extractor calls use the same `CompletionBackend` as chat. Their token counts are recorded with the caller `identity_id`. See [Chat Pipeline](../architecture/chat-pipeline.md) and [Provider Catalog](providers.md).
+Memory, PII, guards, and remote prompts are off unless policy or a runtime flag turns them on. Guard and Mem0 extractor calls use the same `CompletionBackend` as chat. Their token counts are recorded with the caller `identity_id`. When billing is on, a chat settlement also adds a feature line item for each layer that ran: injection scan, content scan, memory retrieve, memory record, and PII redaction. PII adds the base rate plus the entity rate times the entity count. See [Chat Pipeline](../architecture/chat-pipeline.md), [Wallet Billing](../operations/billing.md), and [Provider Catalog](providers.md).
 
 ## Memory
 

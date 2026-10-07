@@ -1,0 +1,27 @@
+{
+  "summary": "ChatService.complete and ChatService.stream share _prepare_outgoing, then call the completion backend, then post-process. Telemetry buckets are preflight, provider, and postprocess. tests/test_pipeline.py locks the complete() call order when PII, memory, and guards are on.",
+  "nodes": [
+    {"id": "sym.ChatService", "kind": "symbol", "path": "app/application/chat.py", "role": "complete() returns ChatResponse. stream() yields StreamStarted, StreamDelta, optional StreamFallback, StreamUsage, StreamFinished."},
+    {"id": "stage.prompt", "kind": "symbol", "path": "app/application/chat.py", "role": "PromptPort.prepare_messages. Recorder name prompt."},
+    {"id": "stage.pii_in", "kind": "symbol", "path": "app/application/chat.py", "role": "PiiPort.redact_messages when flags.pii. Injected memory text is redacted separately after attach."},
+    {"id": "stage.memory", "kind": "symbol", "path": "app/application/chat.py", "role": "MemoryPort.attach. user_id passed to memory is command.identity_id."},
+    {"id": "stage.guard_in", "kind": "symbol", "path": "app/application/chat.py", "role": "GuardPort.assert_inbound when flags.guard."},
+    {"id": "stage.catalog", "kind": "symbol", "path": "app/application/chat.py", "role": "ModelCatalogPort.resolve_model."},
+    {"id": "stage.budget", "kind": "symbol", "path": "app/application/chat.py", "role": "token_count, then assert_rpm(identity, quotas.rpm_limit), then reserve. Recorder names budget, budget_rpm, budget_assert."},
+    {"id": "stage.provider", "kind": "symbol", "path": "app/application/chat.py", "role": "CompletionBackend.acompletion. Stream sets caching false and stream_options.include_usage."},
+    {"id": "stage.usage", "kind": "symbol", "path": "app/application/chat.py", "role": "record_usage. On failure the finally block release()s the reservation if it is still held."},
+    {"id": "stage.pii_out", "kind": "symbol", "path": "app/application/chat.py", "role": "redact_text on assistant content when inbound PII was on."},
+    {"id": "stage.guard_out", "kind": "symbol", "path": "app/application/chat.py", "role": "assert_outbound when inbound guard ran."},
+    {"id": "stage.schema", "kind": "symbol", "path": "app/structured.py", "role": "validate_output only on complete() when response_format is set. stream() rejects response_format with SchemaError before the provider call."},
+    {"id": "stage.memory_record", "kind": "symbol", "path": "app/application/chat.py", "role": "MemoryPort.schedule_record after outbound checks."},
+    {"id": "test.pipeline", "kind": "test", "path": "tests/test_pipeline.py", "role": "test_complete_pipeline_stage_order and test_stream_pipeline_event_order."}
+  ],
+  "notes": [
+    "Locked complete() order: prompt, pii_in, memory, guard_in, catalog, budget, budget_rpm, budget_assert, router, usage, pii_out, guard_out, memory_record. Schema validation is not in that list because the fixture sends no response_format.",
+    "Stream buffering: buffer_output is true when PII ran or when guard ran and content_enabled(flags). Deltas are withheld until the assistant text is redacted and scanned, then one StreamDelta is yielded.",
+    "Stream event order in the fixture ends with StreamFallback, StreamUsage, StreamFinished. StreamFallback is yielded when the served model differs from the resolved model or fallback_from is set.",
+    "Output token cap is min(requested max_tokens, budget max_output_tokens), at least 1 when a request value parses as int.",
+    "Identity quotas come from IdentityQuotaPort.quotas_for. A missing identities port yields empty IdentityQuotas.",
+    "HTTP mapping in app/api/errors.py classify(): UnknownModel, UnknownPrompt, InputTooLarge, GuardBlocked, Schema, LiteLLM BadRequestError are 400. BudgetExceeded is 402. IdentityRateLimit and LiteLLM RateLimitError are 429. GuardConfig, PiiConfig, MemoryConfig are 503. LiteLLM AuthenticationError is 401. LiteLLM APIError is 502. Unmapped exceptions are not turned into HTTP by classify."
+  ]
+}

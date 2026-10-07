@@ -1,7 +1,8 @@
 "use client";
 
 import { AdminKeysPanel } from "@/components/AdminKeysPanel";
-import type { ConfigLayers, ConfigResponse } from "@/lib/types";
+import { formatCost, formatUsdc, groupedFeatureSpend } from "@/lib/formatters";
+import type { BillingStatusResponse, ConfigLayers, ConfigResponse } from "@/lib/types";
 
 const DEFAULT_LAYERS: ConfigLayers = {
   memory: false,
@@ -13,18 +14,63 @@ const DEFAULT_LAYERS: ConfigLayers = {
 
 type Props = {
   config: ConfigResponse | null;
+  billing: BillingStatusResponse | null;
+  billingLoading: boolean;
   needsAuth: boolean;
   toggleBusy: string | null;
   onToggle: (field: keyof ConfigLayers, value: boolean) => void;
   canAdmin: boolean;
+  onReconcileBilling: () => void;
   onAdminError: (message: string) => void;
 };
 
-export function SettingsView({ config, needsAuth, toggleBusy, onToggle, canAdmin, onAdminError }: Props) {
+export function SettingsView({
+  config,
+  billing,
+  billingLoading,
+  needsAuth,
+  toggleBusy,
+  onToggle,
+  canAdmin,
+  onReconcileBilling,
+  onAdminError,
+}: Props) {
   const layers = config?.layers || DEFAULT_LAYERS;
   const canPatch = Boolean(config?.auth_required) && !needsAuth;
+  const spend = groupedFeatureSpend(billing?.line_item_totals);
   return (
     <div className="snippets">
+      <section className="setting-row setting-row-stack">
+        <div>
+          <h2>Billing mode</h2>
+          <p className="hint">
+            {config?.billing
+              ? `${String(config.billing.mode).toUpperCase()} mode, unpriced policy ${config.billing.unpriced_model_policy}, cache billable ${
+                  config.billing.cache_billable ? "yes" : "no"
+                }.`
+              : "Billing hints unavailable. Load /config with a key that has read scope."}
+          </p>
+        </div>
+        <div className="billing-quick-grid">
+          <div>
+            <div className="label">Prepaid balance</div>
+            <strong>{formatUsdc(billing?.prepaid_balance_usdc) || "n/a"}</strong>
+          </div>
+          <div>
+            <div className="label">Today burn</div>
+            <strong>{formatCost(billing?.team_daily_spent_usd) || "$0"}</strong>
+          </div>
+          <div>
+            <div className="label">Feature split</div>
+            <strong>
+              {formatCost(spend.model) || "$0"} / {formatCost(spend.security + spend.memory + spend.pii) || "$0"}
+            </strong>
+          </div>
+          <button className="ghost" type="button" onClick={onReconcileBilling} disabled={!canAdmin || billingLoading}>
+            {billingLoading ? "Refreshing" : "Reconcile billing"}
+          </button>
+        </div>
+      </section>
       <p className="hint">
         {canPatch
           ? "These flags apply on the next chat. Changing embedder, Presidio entities, Redis, budgets, or provider keys still needs .env and a restart."

@@ -24,6 +24,10 @@ def test_route_surface_includes_gateway_contract(make_app):
         "/metrics",
         "/admin/keys",
         "/admin/keys/{key_id}",
+        "/billing/status",
+        "/billing/usage",
+        "/billing/teams/{team_id}",
+        "/billing/reconcile",
     }
     assert expected.issubset(paths)
     home = client.get("/")
@@ -36,3 +40,7 @@ def test_admin_routes_expose_expected_methods(make_app):
     spec = TestClient(make_app()).get("/openapi.json").json()["paths"]
     assert {"get", "post"}.issubset(spec["/admin/keys"].keys())
     assert {"patch", "delete"}.issubset(spec["/admin/keys/{key_id}"].keys())
+    assert {"get", "patch"}.issubset(spec["/billing/teams/{team_id}"].keys())
+    assert {"get"}.issubset(spec["/billing/status"].keys())
+    assert {"get"}.issubset(spec["/billing/usage"].keys())
+    assert {"post"}.issubset(spec["/billing/reconcile"].keys())

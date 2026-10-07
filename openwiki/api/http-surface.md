@@ -3,12 +3,11 @@ type: API surface
 title: HTTP API Surface
 description: Public liveness versus authenticated routes, and how native and OpenAI-compatible chat both become a ChatCommand.
 tags: [http, api, openai, chat]
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-22T20:59:37.438Z
 sources:
   - id: openwiki-source-1a98b5004c773391f6b97056
     resource: repo://app/api/app.py
+  - id: openwiki-source-7f65a53097020df6ced82736
+    resource: repo://app/api/routes/billing.py
   - id: openwiki-source-0bc324b91567c3bd271944bb
     resource: repo://app/api/routes/chat.py
   - id: openwiki-source-e812c2e9eae3d62ac11cc5a2
@@ -19,7 +18,10 @@ sources:
     resource: repo://app/api/routes/ready.py
   - id: openwiki-source-dd71c44d9894dc90e18c4579
     resource: repo://app/api/routes/root.py
-generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
+verified:
+  - by: openwiki/0.5.2
+    at: 2026-10-07T02:38:11.806Z
 ---
 
 # HTTP API Surface
@@ -53,6 +55,18 @@ These routes require the `read` scope, except `GET /config`, which only requires
 
 Memory routes are `GET /memory` (`read` or `chat`), `POST /memory` (`chat`), and `DELETE /memory/{id}` (`chat`). Admin key routes require `admin` and are described on the authentication page.
 
+## Billing
+
+These routes sit on the authenticated router. Status and usage need `read`. Team policy and reconcile need `admin`. Hold and settle behavior is on [Wallet Billing](../operations/billing.md).
+
+| Method and path | Scope |
+| --- | --- |
+| `GET /billing/status` | `read` |
+| `GET /billing/usage` | `read` |
+| `GET /billing/teams/{team_id}` | `admin` |
+| `PATCH /billing/teams/{team_id}` | `admin` |
+| `POST /billing/reconcile` | `admin` |
+
 ## Tests
 
-`tests/test_route_surface.py` locks which paths exist. Chat and OpenAI compatibility behavior is covered by `tests/test_main.py` and `tests/test_openai_compat.py`.
+`tests/test_route_surface.py` locks which paths exist. Chat and OpenAI compatibility behavior is covered by `tests/test_main.py` and `tests/test_openai_compat.py`. Billing routes are covered by `tests/test_billing.py`.

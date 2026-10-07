@@ -4,7 +4,7 @@ from collections.abc import AsyncIterator
 from contextlib import AbstractContextManager
 from typing import Protocol
 
-from app.application.models import IdentityQuotas, PromptMeta, RuntimeFlags
+from app.application.models import BillingLineItem, BillingStatus, BillingSubject, IdentityQuotas, PromptMeta, RuntimeFlags
 from app.schemas import (
     BudgetInfo,
     ChatMessage,
@@ -131,6 +131,8 @@ class UsageBudgetPort(Protocol):
 
     def max_output_tokens(self) -> int: ...
 
+    def estimated_input_usd(self, model: str, prompt_tokens: int) -> float | None: ...
+
     def assert_allowed(
         self,
         model: str,
@@ -234,3 +236,61 @@ class FlagStorePort(Protocol):
 
 class ChatStream(Protocol):
     def __aiter__(self) -> AsyncIterator[object]: ...
+
+
+class BillingEntitlementPort(Protocol):
+    def subject_for(self, identity_id: str | None, quotas: IdentityQuotas | None = None) -> BillingSubject: ...
+
+    def assert_can_spend(
+        self,
+        subject: BillingSubject,
+        estimated_usd: float | None,
+        *,
+        quotas: IdentityQuotas | None = None,
+    ) -> None: ...
+
+
+class BillingHoldPort(Protocol):
+    def hold(
+        self,
+        *,
+        subject: BillingSubject,
+        estimated_usd: float | None,
+        idempotency_key: str,
+    ) -> str | None: ...
+
+    def release(self, hold_id: str | None) -> None: ...
+
+
+class BillingSettlementPort(Protocol):
+    def settle(
+        self,
+        *,
+        hold_id: str | None,
+        actual_usd: float | None,
+        idempotency_key: str,
+        items: list[BillingLineItem] | None = None,
+        subject: BillingSubject | None = None,
+    ) -> None: ...
+
+
+class UsageAuditPort(Protocol):
+    def append_usage_event(
+        self,
+        *,
+        idempotency_key: str,
+        subject: BillingSubject,
+        hold_id: str | None,
+        model: str,
+        route: str,
+        items: list[BillingLineItem],
+        total_usd: float,
+        status: str,
+        reason: str | None = None,
+    ) -> None: ...
+
+    def list_usage_events(self, *, offset: int = 0, limit: int = 100) -> list[dict]: ...
+
+
+class BillingStatusPort(Protocol):
+    def status(self, identity_id: str | None = None, quotas: IdentityQuotas | None = None) -> BillingStatus: ...

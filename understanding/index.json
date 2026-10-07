@@ -1,0 +1,30 @@
+{
+  "summary": "Source-derived map of ReaLMM. The graph is the cross-links. Each map file is one slice: process layers, chat stages, HTTP, console, configuration, tests, and how the processes are run. Evidence is code, tests, YAML, and JSON. Markdown files were not opened.",
+  "files": [
+    {"path": "understanding/graph.json", "role": "Nodes and directed edges across modules, ports, adapters, routes, stores, the console, and a few locking tests."},
+    {"path": "understanding/map/system.json", "role": "Composition root, GatewayRuntime lifecycle, and port-to-adapter wiring."},
+    {"path": "understanding/map/chat-pipeline.json", "role": "Stage order inside ChatService and the HTTP error map."},
+    {"path": "understanding/map/http.json", "role": "Routes, auth, and scopes."},
+    {"path": "understanding/map/console.json", "role": "Next pages, hooks, and which gateway routes they call."},
+    {"path": "understanding/map/config.json", "role": "Settings precedence, YAML presets, and on-disk state paths."},
+    {"path": "understanding/map/tests.json", "role": "What each Python module and the web suite lock, from test names plus the files that were read in full."},
+    {"path": "understanding/map/ops.json", "role": "Compose, Docker, CI, and the screenshot capture file."}
+  ],
+  "relations": [
+    "graph.json edges implements and calls are expanded in map/system.json and map/chat-pipeline.json.",
+    "graph.json route nodes match map/http.json. Console edges to those routes are expanded in map/console.json.",
+    "PolicyYamlSource and the data/* stores in the graph are explained in map/config.json.",
+    "tested_by edges in the graph point at architecture, pipeline, and settings. map/tests.json lists the rest of the suite.",
+    "compose and CI nodes are expanded in map/ops.json."
+  ],
+  "uncertainties": [
+    "pydantic dotenv_settings is in settings_customise_sources, but GatewaySettings.model_config sets env_file to None. The .env file is applied by load_dotenv_once(override=False) into os.environ before GatewaySettings() is built, so those keys are seen as environment. tests/test_settings.py locks that process env wins over dotenv.",
+    "File secrets are the last source in the tuple. No file-secret path was traced beyond that return value.",
+    "Provider detection calls LiteLLM _infer_valid_provider_from_env_vars and then keeps names that have an API key, with an extra ollama branch. The local compat-base table names groq, openai, deepseek, xai, mistral, openrouter, together_ai, cerebras, fireworks_ai, nvidia_nim, and ollama. Other providers LiteLLM can infer are not listed in that table.",
+    "validate_output runs on complete() only when response_format is set. The stage-order test does not include it.",
+    "StreamFallback is conditional on a model change. The event-order test's recorder always produces a fallback, so the locked tail is StreamFallback, StreamUsage, StreamFinished for that fixture.",
+    "data/gateway-keys.json, data/budget-state.json, and data/runtime-flags.json were not opened. Paths are from bootstrap and RuntimeFlagStore.",
+    "tests/conftest.py, factories, and fakes were not read line by line. Suite roles in map/tests.json come from def test_ names, except architecture and pipeline, which were read.",
+    "Markdown, including openwiki pages and README, was not used. Anything that exists only there is absent from this folder."
+  ]
+}

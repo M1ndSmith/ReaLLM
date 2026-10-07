@@ -1,0 +1,128 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:85424f02403d8fea0dedeeb6f75c9b747e581ddce45be671a6ac71a259e630fb",
+  "claims": [
+    {
+      "id": "claim_cbda7de8f4354c84ab610ba34a87ec87",
+      "statement": "billing mode off disables the store. hybrid and wallet enforce spend checks. shadow does not.",
+      "evidence": [
+        {
+          "resource": "repo://app/settings.py#L673-L686",
+          "version": "repo-lines-v1:sha256:92e03ff779968ed06e4926cfe0119c93656a2e7c0544ad6ffbf62118342d5609:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3ZTRkNTdhYmYzZTY4MjNkZDAzMmNjNTA5ZjliZWQ0YWUyNWJjNDBjZmIzODA2Y2QwYjY0NTNlZmIzMDgzZTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzODFiZGUzNDA0NTMzNDNiMzg2ODM2NmJhZWMyYmI1ZmQ4Yjk3MDY3OGJjZDEyNzk5NzU0ZGM5OWM1OTdiMDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYwODdhYzdlYjQyNWFlNmYwNmU2Y2Y4Y2Q2YTYyNWNhODk2NjhhZWZlNmU5OGM4MDE2MjUyNTdmNDU0NjM4MWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmMWY1YmI1ZTYyMmRiZWQ3MjI1YjY1MWQ4MzIyNjZkM2Q0ZjIxOTZhNjRmZDRmODc4NzJmYTNmZWMwZTViOTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_275dacd1de6247a88eca7d85700802ef",
+      "statement": "The checked-in gateway config sets billing.mode to wallet, Arc chain id 5042002, and the USDC contract 0x3600000000000000000000000000000000000000.",
+      "evidence": [
+        {
+          "resource": "repo://config/realmm.yaml#L38-L45",
+          "version": "repo-lines-v1:sha256:f9102d49014559996eed46e4fe972c9c8870ba9d54556c9d70a6eb5e1c2e22e5:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmFjOGU4NTI3OTBhYWE0NDk3YTUwNjFiYTJkYmI0YTQ2NThkNTU2ZmJhNDdmNDAzMWM1NjYxZDljOTUzOWFiNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmZiMGEzOGUyM2I3ZGMyMDUyY2E1NTU3NDFjZGE4YjBiZGQzZmNkMzRhYWEyNmRhZTE5NDg2MDg1Yjc1ZjY5YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmI3NGY4ZjNkNDgyOWFlODA5MjYwZjkzYWZhNTY1NjY5YzRhZGFmYjQzNTdlNGJiYmJhOTYzNjhjYjdkYTU2YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODY5NDI0Y2YxNTRkYzhiYzZhYTdmZTY4NzgwMTdkZTRlNGYxZWE3Zjg1OWVmYTMwZjc0ODk4N2ZjZWUwODJkZCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dcef47cff95c410380c65dbad656aa26",
+      "statement": "Available USDC for the funded team is the on-chain balance minus lifetime_settled_usdc.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/billing_store.py#L119-L135",
+          "version": "repo-lines-v1:sha256:e2f4813bdbb14048e8b8400ba958c95ebcb998827fb52dfbb9c6379dad33a0fa:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ2ZGI3NzMxZmNkNzJjNGYzZTY5OWNiY2FhMTA5ODM3NDk1Y2Y4NWJlNTIzNmQ1YTNjNzM3M2VmNGUzOTIzMjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5MTc3YTkwZmEzZTdhYzFhZTc0YmZhOGYyODI2ODliOWQ3NmZhYjU0YThjZGY0YmVhOTMwOGNhZGU4ZDg3MWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEyNzQ0MmY1YTI5ODE0OTljMzE1Y2Q0NGYwMDkxZjJmZGNkYTgyODkzNzMzYTc3M2Y1MzljMGNkNThhZTFiODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNlMjMwZTgyYzY0ZjU5MmE1MThmYjZhMTczYjgwY2QyMjljNThjNjk2MzdjYmYzNWJhNmI5OWVmN2ZiMmQ2ODYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_558c6f031b24451cb90748dbc4739391",
+      "statement": "In wallet mode an identity with no team_id uses the funded team. An explicit team_id is kept.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/billing_store.py#L97-L105",
+          "version": "repo-lines-v1:sha256:3c99d33d0b7bc4302f661212de8cef03d290cf7ea76f2f9202947812e93bd02a:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjZmZjE3MGQxMTQ1NGI0YjdiMzcwNDU3NmQzNzJlOTVhNjIwZmFjMjgyZjdmZTM0NWI1ODE3ZjFhOGViODc4OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTNmZDkyNjBmZTQ0ZTBhMGYyYTJlMDYxYjcyNWY3ZjYwZWY3NmVkYzFjMWY5N2YzMzI0NjJmNzA1OGFlMTUzMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmEzMjc0N2YwNjg2M2RiZWNjOWE4ZDQxZGEwMTgxNjUxNGIwM2RmZmJiMjMyZDgyYzg1ZDhjOWM0NzI1OGIzZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzhiY2VmMTk0MGI5ODBmOGQ4YTgyOWYzNjMxYTNmZGQ3YjI3NjM2OTJmMDdlZDNjMDY5MmVkNWM3YjhiN2Q2YiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_1835c9fa6fb8438180bdb05a3966d03c",
+      "statement": "Wallet mode always requires prepaid balance before a spend.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/billing_store.py#L165-L174",
+          "version": "repo-lines-v1:sha256:f932a7c0575c0a4cd3ca8225724c5d1dd74299e8c8032b5599706aaa939b22e0:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NjJiZDZkZDg0YWE4ZDkyOTljOTExODRlYzEyMjgyNDNiMDYwYTY1YmY3NTNkZjcyMDQ2NGEzZDk5YTdhYzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUxMDM0ODFjNTdkMGYwZGMwZjc2Y2QyY2M4YjM2MDRjNGU4Mjk2ZGE0MTIyYWRkMTllODE3NDVkYzdlMzMxYTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJlODY5YzE3NWVjNmUzYzRmMTUzY2ZiMzExNzJjOGM5NzI3MzQ0ZTkwNTQwYTBjZTFjZmQ5YzA4MWUxYzYzODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNjMDkyOGI3YjRhNTI4YTNmNjQ5MjI5ODc2N2ZkMGIyNTRkYTczOTFhNzFjODM2ODg1Mjc1MzIxMDQyNzk5MzAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e81a9cf7309242ccaf520651a9ee6721",
+      "statement": "A new UTC day resets spent_usd to zero and keeps balance_usdc and lifetime_settled_usdc.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/billing_store.py#L62-L72",
+          "version": "repo-lines-v1:sha256:0ac7328ff7529852820e74d4b4dfac6338c6b8d24c308c1d20cba383dc7786be:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVjNDRiODc1MzQ4ODhjYjI5NjQ0ZTkzMTA5YTg2ZTUxNGU5ODA0MmQ3OTY5NmUzZmFjN2I3NzViN2FhODgzYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkYjMzOWMxN2Q0Y2M1NGU3MGM0ZmNmZWNiNjExYmI5ZTdkMzYzZjI1YjE4ZTA5MjNhMWQzMDZjYzk1OTI0ZTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyZDQwNWZiNzdkMWEzNjk0Zjk3ZDNmZWFmZWUwOGY5NGE2NWJhNmNjMzZhNjMyOWJjZmZiMThmODg5NDNkM2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJkNDg3Nzg1MmNmNDUxZTNlZDRmNjBiNWEzMTQ3MGFlMjdhMjk4NGEyZmI1MzcxMTgyMDliY2NjZWYwMGFhZTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_00dc615cda314f2ab686695d18ca13cc",
+      "statement": "Arc USDC balance is an eth_call balanceOf result divided by 1000000.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/arc_usdc.py#L33-L58",
+          "version": "repo-lines-v1:sha256:529040741ff8bcbda1d11a01ca347b940a11045eeec4af08f9978b1747698f69:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MDk4NmNlMmFiNzVjZTk5YTMwMzIyOGVhZmNkZDJlYTc1MTYzNjhiYzFlN2VmYTRjOTEzOTU5MDllZjhiZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyZDA1OTM5YzExZDllNzA2MmZhMWEwODhhZGI2OTRhNThhYzJjZDE3ZDQyM2Q2YmQ3NjI3NDU1NGI2ZjdmZGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA1YThlNjMwMTIxOTQ4OGYwMGVjYWY5NDUyZWM3YTk3ZTViMzg5ZGZkZWExNmYyMzRjYjU4NWU2YjhlZGFiN2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNmMTVlYmU2NWE0OGFmMmM2NjBmNWFiYTg5OGRmM2E2Y2UzMGEwMDRiN2MzNGQ0YTA0ZWM3OWQ1MjBhMzFkZjIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_501220f8f85d4c1ab6cdb12f80359141",
+      "statement": "A new Arc wallet file is created at mode 0600 and stores the private key.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/arc_wallet.py#L144-L155",
+          "version": "repo-lines-v1:sha256:972b87b9b833ecf0b9bb53ad87d2b11d0228da23c2a2846adcac7c1a93ed6e6f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2MTNjNjliMzBmZjI2ZTQzMzMyNzdhM2RkZTdhNGRjNDQyOGY2ODE3NzZmZGUxOTEyNzU2MjM5OWZiMjZkMDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ODUwOWI5MmFiMGY0NmFmN2QxYTJmOWViMGJjNmQzOGFkZDZhMGNmMmNlODA0MmY3Zjc2ZTc5MTA4MDNkM2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjNzFkMDAxOWFhZTBiNTg3OTQwZTEyZWM5MzQ0YTZjMDcwYTlmNjAyN2Q4N2NlN2Y2OWFmMzgwY2E3YjUxMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNiOTQ2NTA3ODI2ZjlhZTY5Mjg3OTNkYjUwNTI0MmY0OTQyODQwZjJjMDdhODg5ZmYzODY1MjY5NTg1YjI2NDQifQ"
+        },
+        {
+          "resource": "repo://app/infrastructure/arc_wallet.py#L184-L192",
+          "version": "repo-lines-v1:sha256:656ef284d4322e3aea000fe7e81ca32ee6c203a2aef22efe3196ce21de128a92:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODNjZWUwZmFhNTYzMjk3OWExMTc4MmQ4NGE5NzA0NGRiMWRjNTcwMTNiZjY5OTgxNDE1MmVkM2U0ZmEyZjcxOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTc1MGRhZmU3NzNjYjI1NTVhMjgwZTc4MTZkMzI1MTdhYTBmMmU3YmIzZGM0NDU3NWU0YmYzMDIzYTc5MzE4NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZGUyMTIwNTJhZjk4MzRjNDk4MmJlMDExZDkxMjMzOGFhMDE0MDQwNjIzNmQwZDk1OTBkYTc0OGIzZmY1Yjc4OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_bbb131bb127c4f9fa7cf964b64fb5c6c",
+      "statement": "The billing idempotency key is bill: plus the first 32 hex characters of a SHA-256 over identity, request, route, and turn.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/billing.py#L32-L41",
+          "version": "repo-lines-v1:sha256:c948841c29707967facfe6f0e53ab269bd363cc50033e00d5bc995c9f5964d9b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4MTg1MDNhNTZhNmFlZmFjYjliMzgyZTU0NGM3OTllNjMwZDM4NGRlM2M2YzIyMGIxNzBkMGJlNWYzM2ExOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZjA1Njc2MDNjZDQyZGY3MmU5ZGVmMjliMmU5YzM5ZmY2MDEwNDk3MmQ3OWNhZGY4ZjlmZjZhZGUzZWM2ODQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM0NjNhZjA1Y2NjNmNmMmIwZGQzMDFlYWViY2JiMTJjYjlhMTVlYzJjY2U3ZDg3NTc5OGNhZmQwZDU3ZTU2ZjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVmODY4MDdlMTgzMTFhYmI2Nzk5ODYwN2U0ZmE0OTVmZTU2OWIzNTU0M2IxZTgyN2MwNTMxY2UyZTZjNWQ2MmEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_21cdea7df71845a0818cb1c9f6b0550b",
+      "statement": "Arc reconcile refreshes the chain balance and reports Arc USDC available to six decimal places. Ledger reconcile reports the local ledger.",
+      "evidence": [
+        {
+          "resource": "repo://app/infrastructure/billing_gateway.py#L25-L36",
+          "version": "repo-lines-v1:sha256:9d6bad22c4e0c70a8d066f12c31a771bb3a8096287deff366b1d0f40c438fa23:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmNjc0OTY2N2Q0ZjY2NWU3NjA1ZTc3NTIwODljMmIzZTQ5YzhjOTIzNTc3ZWQ2ZDI0ZTNkMjMyZWRiODVhODQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU1MDMyZTk2NGQwOTMyMzUxZTVkMTg1MjY5MjgxYjE3MWEzYTA5YjA4YjI4NmU2NjFlYTQ3MDMyM2M4MmViNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZmM2U3YWZiMWFiNGNhMWRlN2MxNjIxMTE5OGMyNTQ0NzhjNjcwODY3ZGY4OWZhNmZjY2JhMzViOGJjMGRjYjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg3YTM4OWQ0YzYyMDI0M2E4ZTA5ZmVlYjRjNWRiMDM0MmY2NzczZjE4ODM2NzE1Mzk2OWUyYWMzOGQ1NjFjNDgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_01d35694678e4cad8d364339fbd47933",
+      "statement": "BudgetExceededError is HTTP 402. BillingUnavailableError is HTTP 503.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/errors.py#L48-L49",
+          "version": "repo-lines-v1:sha256:fe09ce7aaf8f72ee0855e0ae5b2b19b3830ee7de73da8ca1935711a35fd558c4:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTE3MjdkZjliMTZlYjZjZDVjZjUwYzNhZTFkYmRjNTBmN2M3OGZkNzE2Mjc2OWNhMzEwM2NkN2Q1MzliOTNjOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODk3Yjc0Y2I2ZmMwYmFhZWZiNDVjYzJkMDM3MzQ4NDJlM2VmNzdhYmY1MDllMzA1ZDhlMTNkNDc5NzNjMGExMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjYyYzg0YzFhYWFkMWJiM2E3MWNmMmUxNWQ4OTY2ZDRlMWQyNzVjYWY1N2Y4NTEwZmQxMTAxODc5MjVlOWYxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWJiYjZhZWM3MTExMTI2NjZjMjkzZGI2ZmZhNTdkYmI0MmM1MjBiMGU5YzhiZmFlMDQwOTk1NjgzZGY1MzNlOSJ9"
+        },
+        {
+          "resource": "repo://app/api/errors.py#L69-L70",
+          "version": "repo-lines-v1:sha256:73fead2723aebdcb3d8ae9bca81c8cda7fbfaed4927131299ba934468fd53675:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTAxOWEyNzAxNmRmMTMxN2YxOWFkODMzMmI3NzZlZDczM2RmZmVhNWJkOWRlOGE5MjE5YjFlMmY0NzJmN2IzZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDMzNGRmNzgwOGNmZGZhMmRkMDg4YjRmYjgyNWJiZTlkNDJiMDIwZWI4YTA5ZDRhYTc1ZmJhODc4NDdhZWI5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzczYmNlMjcyZDQ1YTY1ZjVhYTU4ZmJkYjVlOWUxYzgwZWU1OGY5MTE3MGRlYmU3Njk3ODkxNDFiZGE2YmU3YSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTJhNjI1ZDM5NzY1YWMwYzZhMzcxM2M2MDU4MzlmZWE3NDczMGE4YzRjYWY5MmYyZTNmMzQ4NjBkZDM3MzViNyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.5.2",
+    "at": "2026-10-07T02:38:11.806Z"
+  }
+}

@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import pytest
 from fastapi.testclient import TestClient
 from tests.conftest import FROZEN_CATALOG
 
@@ -317,6 +318,48 @@ def test_v1_embeddings_shape(make_app, monkeypatch):
     assert body["usage"]["total_tokens"] == 2
     assert recorded["tokens"] == 2
     assert recorded["cached"] is False
+
+
+def test_v1_embeddings_forwards_optional_fields_and_records_billing(monkeypatch, make_app):
+    monkeypatch.setenv("BILLING_MODE", "hybrid")
+    app = make_app()
+    seen: dict = {}
+
+    class UsageObj:
+        def model_dump(self):
+            return {"prompt_tokens": 3, "total_tokens": 3}
+
+    class ItemObj:
+        embedding = [0.3, 0.7]
+        index = 0
+
+    class EmbedObj:
+        model = "groq/openai/gpt-oss-20b"
+        data = [ItemObj()]
+        usage = UsageObj()
+
+    async def fake_embed(**kwargs):
+        seen.update(kwargs)
+        return EmbedObj()
+
+    monkeypatch.setattr(app.state.runtime.router, "aembedding", fake_embed)
+    monkeypatch.setattr(app.state.runtime.budget, "completion_usd", lambda *_a, **_k: 0.25)
+    client = TestClient(app)
+    response = client.post(
+        "/v1/embeddings",
+        json={
+            "model": "groq/openai/gpt-oss-20b",
+            "input": "hello",
+            "encoding_format": "float",
+            "user": "tester-1",
+        },
+        headers={"X-Request-ID": "trace_embed_billing"},
+    )
+    assert response.status_code == 200
+    assert seen["encoding_format"] == "float"
+    assert seen["user"] == "tester-1"
+    assert app.state.runtime.billing.status().line_item_totals["inference_model_call"] == pytest.approx(0.25)
+    assert app.state.runtime.billing_audit.count() >= 1
 
 
 def test_v1_embeddings_respects_identity_budget(monkeypatch, make_app):

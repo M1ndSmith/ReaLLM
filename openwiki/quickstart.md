@@ -5,7 +5,7 @@ description: Where to start the gateway and console, including the NVIDIA preset
 tags: [quickstart, compose, uvicorn, routing, nvidia]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-27T22:14:48.530Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
   - id: openwiki-source-614e7ba5f26867e646a960f7
     resource: repo://app/application/chat.py
@@ -15,11 +15,15 @@ sources:
     resource: repo://app/main.py
   - id: openwiki-source-e201e686a785f09b6d899f0b
     resource: repo://compose.yaml
+  - id: openwiki-source-c0159de4398b69b176680e62
+    resource: repo://config/realmm.yaml
   - id: openwiki-source-a2621f3f09932d0c0a1db7e1
     resource: repo://env/groq.env
   - id: openwiki-source-d95c6ba201846bc81d4f6fbe
     resource: repo://env/nvidia.env
-generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # ReaLMM Quickstart
@@ -40,6 +44,7 @@ A host venv copies the same preset, which sets `GATEWAY_ALLOW_OPEN=1` for a loop
 - [Provider Catalog](integrations/providers.md) and [Optional Pipeline Layers](integrations/optional-layers.md) for models, memory, PII, guards, and the NVIDIA embedder.
 - [Operator Console](console/operator-ui.md) for the Next.js UI.
 - [Configuration and Runtime Flags](operations/configuration.md) and [Reliability, Budget, and Health](operations/reliability.md) for YAML, the NVIDIA preset, flags, budget, and readiness.
+- [Wallet Billing](operations/billing.md) for prepaid USDC, reconcile, and spend denial. `config/realmm.yaml` sets `billing.mode` to `wallet`. `env/nvidia.env` points `REALMM_CONFIG` at `config/nvidia.yaml`, which has no billing block, so that process stays on the code default unless `BILLING_MODE` is set.
 - [Tests and Architecture Guards](testing/verification.md) for pytest, Ruff, and Vitest.
 
 Operator steps live in `README.md` and `USAGE_WALKTHROUGH.md`. Contribution steps live in `CONTRIBUTING.md`.

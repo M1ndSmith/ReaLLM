@@ -35,3 +35,21 @@ budget:
   max_input_tokens: null
   daily_token_budget: null
   daily_usd_budget: null
+billing:
+  mode: wallet
+  prepaid_required: true
+  arc_rpc_url: https://rpc.testnet.arc.io
+  arc_chain_id: 5042002
+  usdc_address: "0x3600000000000000000000000000000000000000"
+  wallet_key_path: data/arc-wallet.json
+  funded_team_id: operator
+  usd_to_usdc_rate: 1.0
+  cache_billable: false
+  unpriced_model_policy: deny
+  settlement_timeout_sec: 120
+  security_injection_usd: 0.0
+  security_content_usd: 0.0
+  memory_retrieve_usd: 0.0
+  memory_record_usd: 0.0
+  pii_base_usd: 0.0
+  pii_entity_usd: 0.0

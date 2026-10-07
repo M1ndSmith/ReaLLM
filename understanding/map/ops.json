@@ -1,0 +1,20 @@
+{
+  "summary": "The published run path is Compose: Redis, one gateway worker, and the Next console. Host ports bind loopback. CI is gitleaks plus a Python matrix and a web job. A separate scheduled workflow updates OpenWiki; that workflow was read as YAML only.",
+  "nodes": [
+    {"id": "cfg.compose", "kind": "config", "path": "compose.yaml", "role": "Services redis, gateway, web. Volume redis-data. Gateway depends on healthy Redis. Web depends on gateway."},
+    {"id": "ops.dockerfile", "kind": "config", "path": "Dockerfile", "role": "CMD python -m uvicorn app.main:app --host 0.0.0.0 --port 8000. HEALTHCHECK hits http://127.0.0.1:8000/healthz."},
+    {"id": "ops.web_dockerfile", "kind": "config", "path": "web/Dockerfile", "role": "CMD next start --hostname 0.0.0.0 --port 3000. Build arg NEXT_PUBLIC_GATEWAY_URL http://127.0.0.1:8000. HEALTHCHECK fetches :3000/healthz."},
+    {"id": "ext.redis", "kind": "external", "path": "compose.yaml", "role": "redis:7-alpine. Gateway REDIS_URL is redis://redis:6379/0."},
+    {"id": "cfg.ci", "kind": "config", "path": ".github/workflows/ci.yml", "role": "On push and pull_request. Jobs secrets, python, web."},
+    {"id": "ops.openwiki_workflow", "kind": "config", "path": ".github/workflows/openwiki-update.yml", "role": "workflow_dispatch and cron 0 8 * * *. Runs openwiki code --update. Not the product test job."},
+    {"id": "ops.shots", "kind": "config", "path": "shots.yml", "role": "Screenshot capture for / , /connect, and /settings on port 3000. Session script path is /tmp and is not a stored gateway key."},
+    {"id": "ops.pyproject", "kind": "config", "path": "pyproject.toml", "role": "Package realmm 0.1.0. Hatch wheel packages app. Runtime deps include litellm, fastapi, uvicorn, langfuse, mem0ai, fastembed, redis, presidio, jsonschema, pydantic-settings, pyyaml. Optional extra pii is spacy."}
+  ],
+  "notes": [
+    "Compose comment block: do not scale the gateway. WEB_CONCURRENCY and UVICORN_WORKERS are pinned to 1. GATEWAY_ALLOW_OPEN is forced to 0. Browser must use http://127.0.0.1:8000, not http://gateway:8000.",
+    "Gateway env_file is .env. Published ports are 127.0.0.1:8000 and 127.0.0.1:3000. ./data is mounted at /app/data.",
+    "CI secrets job runs gitleaks and checks that LICENSE and SECURITY.md exist. Python job matrix is 3.12, 3.13, 3.14 with a Redis service, then ruff check, ruff format --check, and pytest. Web job uses Node 22, npm ci, typecheck, test:coverage, and build.",
+    "There is no scripts/ directory and no [project.scripts] entry point.",
+    "shots.yml is capture config for the console, not a runtime policy file."
+  ]
+}

@@ -11,13 +11,17 @@ type Props = {
 export function ConnectView({ curl, python, openai, copied, onCopy }: Props) {
   return (
     <div className="snippets">
-      <p className="hint">
-        Copy a client for agents or workflows. This is an opinionated LiteLLM operator stack, not a
-        Portkey or LiteLLM Proxy replacement. This is not a new URL and not a virtual key. Optional{" "}
-        <code>response_format</code> is JSON on the request, not a control in this console. Use{" "}
-        <code>/v1</code> when an OpenAI SDK needs <code>base_url</code>; native <code>/chat</code> keeps sidecar
-        fields in the body.
-      </p>
+      <section className="callout">
+        <p className="hint">
+          Copy production-ready snippets for agents and workflows. This is an opinionated LiteLLM operator stack, not a
+          Portkey or LiteLLM Proxy replacement. Calls are usage-billed by model and enabled sidecars, so route each team
+          through scoped gateway keys and policy caps.
+        </p>
+        <p className="hint">
+          Optional <code>response_format</code> is request JSON, not a console toggle. Use <code>/v1</code> when an OpenAI
+          SDK needs <code>base_url</code>; native <code>/chat</code> preserves sidecar metadata.
+        </p>
+      </section>
       <section>
         <div className="snippet-head">
           <h2>curl</h2>

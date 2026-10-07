@@ -3,9 +3,6 @@ type: Architecture
 title: System Architecture
 description: One FastAPI process wires ports to infrastructure in bootstrap, owns a single LiteLLM Router, and refuses a second worker when Redis is off.
 tags: [architecture, fastapi, litellm, workers]
-verified:
-  - by: openwiki/0.5.2
-    at: 2026-09-22T20:59:37.438Z
 sources:
   - id: openwiki-source-d542bf3e8de790d5c55e054f
     resource: repo://app/bootstrap.py
@@ -15,7 +12,10 @@ sources:
     resource: repo://app/main.py
   - id: openwiki-source-f84c72498a1dc633d755f2da
     resource: repo://tests/test_architecture.py
-generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
+verified:
+  - by: openwiki/0.5.2
+    at: 2026-10-07T02:38:11.806Z
 ---
 
 # System Architecture
@@ -26,11 +26,13 @@ generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
 
 ## Runtime
 
-`GatewayRuntime` holds settings, flags, catalog, router, prompts, budget, memory, PII, guards, identities, metrics, Redis health, and the chat service. `start` loads flags, enforces the auth and pepper rules, checks worker topology, then refreshes the catalog and prompts.
+`GatewayRuntime` holds settings, flags, catalog, router, prompts, budget, memory, PII, guards, identities, metrics, Redis health, the chat service, the billing store, the usage audit, and the billing gateway. `start` loads flags, enforces the auth and pepper rules, checks worker topology, then refreshes the catalog and prompts.
 
-`ChatService` receives the router as a `CompletionBackend`. Guard and memory model calls go through that same backend. There is not a second router.
+`ChatService` receives the router as a `CompletionBackend`. Guard and memory model calls go through that same backend. There is not a second router. The same `build_runtime` passes the billing store and the usage audit into `ChatService`.
 
-Files under `data/` are process-local: `gateway-keys.json`, `runtime-flags.json`, `budget-state.json`, and `mem0/`. Redis, when configured, shares cache, RPM, and the daily budget. It does not store the key file or the flag overlay.
+In wallet mode, `build_runtime` loads or creates the Arc wallet and an `ArcUsdcReader` before constructing `BillingStore`. When billing is disabled, that slot is `NoopBilling`. `BillingGateway` uses mode `arc` only in wallet mode. Otherwise it is `ledger`. See [Wallet Billing](../operations/billing.md).
+
+Files under `data/` are process-local: `gateway-keys.json`, `runtime-flags.json`, `budget-state.json`, `billing-state.json`, `usage-audit.jsonl`, `arc-wallet.json` when wallet mode has started, and `mem0/`. Redis, when configured, shares cache, RPM, and the daily budget. It does not store the key file, the flag overlay, or the billing ledger.
 
 ## Workers
 

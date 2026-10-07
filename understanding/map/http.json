@@ -1,0 +1,33 @@
+{
+  "summary": "create_app mounts root.router with no auth, then an APIRouter whose dependency is require_gateway_auth. That router includes meta, ready, metrics, config, memory, chat, openai, and admin. Scopes are read, chat, config, and admin. require_scopes treats its arguments as alternatives: the identity must hold at least one.",
+  "nodes": [
+    {"id": "sym.require_gateway_auth", "kind": "symbol", "path": "app/api/auth.py", "role": "Accepts Authorization Bearer or X-Api-Key. When identities.auth_enabled(), resolve() must return an identity or the response is 401 gateway_unauthorized. Otherwise a configured GATEWAY_API_KEY is compared with hmac.compare_digest."},
+    {"id": "sym.require_scopes", "kind": "symbol", "path": "app/api/dependencies.py", "role": "No identity and auth on: 401. No identity and auth off: allow. Identity scopes disjoint from the required set: 403 forbidden with required_scope."},
+    {"id": "route.root", "kind": "route", "path": "app/api/routes/root.py", "role": "GET /. HTML pointer. include_in_schema false."},
+    {"id": "route.healthz", "kind": "route", "path": "app/api/routes/root.py", "role": "GET /healthz returns status ok."},
+    {"id": "route.health", "kind": "route", "path": "app/api/routes/meta.py", "role": "GET /health. Scope read. Providers, reliability, prompts, budget, memory, pii, guard."},
+    {"id": "route.providers", "kind": "route", "path": "app/api/routes/meta.py", "role": "GET /providers. Scope read."},
+    {"id": "route.models", "kind": "route", "path": "app/api/routes/meta.py", "role": "GET /models. Scope read."},
+    {"id": "route.prompts", "kind": "route", "path": "app/api/routes/meta.py", "role": "GET /prompts. Scope read."},
+    {"id": "route.budget", "kind": "route", "path": "app/api/routes/meta.py", "role": "GET /budget. Scope read."},
+    {"id": "route.ready", "kind": "route", "path": "app/api/routes/ready.py", "role": "GET /ready. Scope read. ready requires detected providers and Redis ok. Redis counts as ok when unconfigured, reachable, or configured and READINESS_ALLOW_REDIS_DEGRADED. Otherwise 503 with the same payload in detail."},
+    {"id": "route.metrics", "kind": "route", "path": "app/api/routes/metrics.py", "role": "GET /metrics. Scope read. Prometheus text or 404."},
+    {"id": "route.config_get", "kind": "route", "path": "app/api/routes/config.py", "role": "GET /config. Auth only."},
+    {"id": "route.config_patch", "kind": "route", "path": "app/api/routes/config.py", "role": "PATCH /config. Scope config. require_configured_gateway_key returns 403 gateway_key_required when auth is off and no legacy key is set."},
+    {"id": "route.memory_search", "kind": "route", "path": "app/api/routes/memory.py", "role": "GET /memory. Scope read or chat."},
+    {"id": "route.memory_add", "kind": "route", "path": "app/api/routes/memory.py", "role": "POST /memory. Scope chat."},
+    {"id": "route.memory_delete", "kind": "route", "path": "app/api/routes/memory.py", "role": "DELETE /memory/{memory_id}. Scope chat."},
+    {"id": "route.chat", "kind": "route", "path": "app/api/routes/chat.py", "role": "POST /chat. Scope chat. stream true returns text/event-stream via encode_native."},
+    {"id": "route.v1_models", "kind": "route", "path": "app/api/routes/openai.py", "role": "GET /v1/models. Scope read or chat."},
+    {"id": "route.v1_chat", "kind": "route", "path": "app/api/routes/openai.py", "role": "POST /v1/chat/completions. Scope chat."},
+    {"id": "route.v1_embeddings", "kind": "route", "path": "app/api/routes/openai.py", "role": "POST /v1/embeddings. Scope chat."},
+    {"id": "route.admin_keys", "kind": "route", "path": "app/api/routes/admin.py", "role": "GET and POST /admin/keys. PATCH and DELETE /admin/keys/{key_id}. Scope admin. Create returns the secret once."}
+  ],
+  "notes": [
+    "Identity id for a chat command is bound_identity_id(request), not a client-supplied user_id. Memory routes are covered by tests that ignore a client user id.",
+    "CORS default origins are http://localhost:3000 and http://127.0.0.1:3000. BoundCORSMiddleware re-reads cors_origin_list from the live runtime settings. allow_credentials is false.",
+    "HTTPException handler wraps detail with request_id when the middleware stored one.",
+    "Contract paths are asserted by tests/test_route_surface.py.",
+    "restart_for advertised by the flag store payload is keys, redis, budgets, MEMORY_EMBEDDER, PII_ENTITIES. Layer toggles themselves are the overlay, not that restart list."
+  ]
+}

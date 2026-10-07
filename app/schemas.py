@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field
@@ -70,6 +72,10 @@ class IdentityQuotasPayload(BaseModel):
     daily_token_budget: int | None = None
     daily_usd_budget: float | None = None
     rpm: int | None = None
+    team_id: str | None = None
+    team_daily_usd_cap: float | None = None
+    prepaid_required: bool | None = None
+    max_per_call_usd: float | None = None
 
 
 class IdentityPublic(BaseModel):
@@ -111,6 +117,7 @@ class ConfigResponse(BaseModel):
     layers: ConfigLayers
     restart_for: list[str]
     identity: IdentityPublic | None = None
+    billing: BillingModeInfo | None = None
 
 
 class ModelInfo(BaseModel):
@@ -161,6 +168,61 @@ class BudgetInfo(BaseModel):
     max_input_tokens: int | None = None
     max_output_tokens: int
     ledger: str = "file"
+    line_item_totals: dict[str, float] = Field(default_factory=dict)
+
+
+class BillingLineItemInfo(BaseModel):
+    kind: str
+    usd: float
+    units: float = 1.0
+
+
+class BillingStatusResponse(BaseModel):
+    mode: str
+    prepaid_required: bool
+    ledger: str
+    team_id: str | None = None
+    prepaid_balance_usdc: float | None = None
+    team_daily_spent_usd: float | None = None
+    team_daily_cap_usd: float | None = None
+    line_item_totals: dict[str, float] = Field(default_factory=dict)
+    wallet_address: str | None = None
+    chain_id: int | None = None
+    faucet_url: str | None = None
+
+
+class BillingUsageItem(BaseModel):
+    timestamp: str
+    idempotency_key: str
+    identity_id: str | None = None
+    team_id: str | None = None
+    hold_id: str | None = None
+    model: str
+    route: str
+    total_usd: float
+    status: str
+    reason: str | None = None
+    items: list[BillingLineItemInfo] = Field(default_factory=list)
+
+
+class BillingUsagePage(BaseModel):
+    items: list[BillingUsageItem] = Field(default_factory=list)
+    total: int
+    offset: int
+    limit: int
+
+
+class TeamBillingPolicy(BaseModel):
+    team_id: str
+    daily_usd_cap: float | None = None
+    prepaid_balance_usdc: float | None = None
+    prepaid_required: bool | None = None
+
+
+class BillingModeInfo(BaseModel):
+    mode: str
+    cache_billable: bool
+    unpriced_model_policy: str
 
 
 class MemoryInfo(BaseModel):

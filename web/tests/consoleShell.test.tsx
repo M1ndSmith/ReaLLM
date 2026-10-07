@@ -48,6 +48,26 @@ const chatMock = {
   reportError: vi.fn(),
 };
 
+const billingMock = {
+  status: {
+    mode: "hybrid",
+    prepaid_required: false,
+    ledger: "file",
+    team_id: "team-a",
+    prepaid_balance_usdc: 10,
+    team_daily_spent_usd: 1,
+    team_daily_cap_usd: 10,
+    line_item_totals: {},
+  },
+  usage: { items: [], total: 0, offset: 0, limit: 25 },
+  loading: false,
+  error: null as string | null,
+  blockedHint: null as string | null,
+  refresh: vi.fn(async () => undefined),
+  patchTeam: vi.fn(),
+  reconcile: vi.fn(async () => ({ ok: true, mode: "ledger", detail: "ok" })),
+};
+
 const runtimeMock = {
   config: {
     auth_required: true,
@@ -77,6 +97,10 @@ vi.mock("@/hooks/useChatSession", () => ({
 
 vi.mock("@/hooks/useRuntimeConfig", () => ({
   useRuntimeConfig: () => runtimeMock,
+}));
+
+vi.mock("@/hooks/useBillingState", () => ({
+  useBillingState: () => billingMock,
 }));
 
 vi.mock("@/lib/adminKeys", () => ({
@@ -116,6 +140,10 @@ beforeEach(() => {
   runtimeMock.setConfig = vi.fn();
   runtimeMock.refresh = vi.fn(async () => undefined);
   runtimeMock.toggleLayer = vi.fn(async () => undefined);
+  billingMock.refresh = vi.fn(async () => undefined);
+  billingMock.reconcile = vi.fn(async () => ({ ok: true, mode: "ledger", detail: "ok" }));
+  billingMock.error = null;
+  billingMock.blockedHint = null;
 });
 
 describe("ConsoleShell", () => {

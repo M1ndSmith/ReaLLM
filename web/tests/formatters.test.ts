@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 
-import { budgetText, formatCost, formatTokens } from "@/lib/formatters";
+import { budgetText, dominantSpendDriver, formatCost, formatTokens, formatUsdc, groupedFeatureSpend } from "@/lib/formatters";
 
 describe("formatTokens", () => {
   it("prefers total_tokens and otherwise sums parts", () => {
@@ -17,6 +17,34 @@ describe("formatCost", () => {
     expect(formatCost(0)).toBe("$0");
     expect(formatCost(0.0012)).toBe("$0.0012");
     expect(formatCost("nope")).toBe("");
+  });
+});
+
+describe("formatUsdc", () => {
+  it("formats USDC balances", () => {
+    expect(formatUsdc(null)).toBe("");
+    expect(formatUsdc(0)).toBe("0 USDC");
+    expect(formatUsdc(12.5)).toBe("12.5 USDC");
+  });
+});
+
+describe("billing spend helpers", () => {
+  it("groups line items and finds dominant driver", () => {
+    const grouped = groupedFeatureSpend({
+      inference_model_call: 0.4,
+      security_injection_scan: 0.02,
+      memory_retrieve_attach: 0.03,
+      pii_redaction: 0.01,
+    });
+    expect(grouped.model).toBe(0.4);
+    expect(grouped.security).toBe(0.02);
+    expect(grouped.memory).toBe(0.03);
+    expect(grouped.pii).toBe(0.01);
+    expect(dominantSpendDriver({ inference_model_call: 0.4, memory_retrieve_attach: 0.03 })).toEqual({
+      kind: "inference_model_call",
+      usd: 0.4,
+    });
+    expect(dominantSpendDriver({})).toBeNull();
   });
 });
 

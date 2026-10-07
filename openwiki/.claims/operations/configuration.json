@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:28cb087ff3992f93316f16f45603dce9117fab1b24d9d70538d9a65c649081ec",
+  "pageVersion": "sha256:4a68dd5ad7d12594772a9bb18ac34aaeb9df86fb329af7216e0b27b6a9a90888",
   "claims": [
     {
       "id": "claim_6d7c316840b941ffaeb62524f153e9b8",
@@ -99,10 +99,34 @@
           "version": "repo-lines-v1:sha256:ae47a85ebb101b053bdd63c646441f3240b0555852fb460951bef64977f8bed6:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjI3NDYzMzRmZGJkNjUxMzIzOWYxMzI2ZGI4YjYxMjc1N2I1YjMyYzA4MDhiNTA4MWE5OTM3ZjY1MzNiOGRiOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZGFlOWFlYWE1NWYyMDVlZmQ2ODcwNmRiMDI1NGE3ZmVlNmY1ZmM3NDg2M2U0YWUyM2QwNmY4MzUxOTI5ZGQzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODNkODcyYTdkMzlkNWM2ZGUzOWZjMTNmM2U3NDc3MGZkYzdiNDQ0OTI5NzA2MzQyMDRlYWRkNDc0OTg2MzBlYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjJhMDIzYTY0MDVmN2Y4ZmQwY2JjZTZiMTdkNjk2ZWJmOWQ4YjlmMTU0NGI0M2YxMWFjNzAwMTU5YzU3NjM0MCJ9"
         }
       ]
+    },
+    {
+      "id": "claim_f69734d2a0f348838dc73f9f6fcebb08",
+      "statement": "The billing YAML block maps mode, prepaid, rates, Arc fields, and funded_team_id onto GatewaySettings. BILLING_MODE must be off, shadow, hybrid, or wallet.",
+      "evidence": [
+        {
+          "resource": "repo://app/settings.py#L284-L303",
+          "version": "repo-lines-v1:sha256:d59760253dfa6cfbebdcaffa9c18a3e4650d4a2a8a4f696de16f02d6984753d8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVkMGE5YmY1YmZmYTIxNmE5ODMxYTg4Y2NkMzkwOWVkZmUwYjBiODAyZTczODFkN2FjMGQ0MmU1MGRhNjFmODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMwMTRhZWIwMTVlOGI4ZTcxMDdjNTQyNmZjODY2ZGZmOWRiYWMyNjBjNmYxMTZhYzM1ODYxYjcwOTk5OGM4ZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjZmUzODRlNDI4YWE3ZGU3NTY3ZmM5NjM3YTU1OTMzYjFlZmQ0OWQ2OGU5YzE0NTI5Y2ZhYzVhZjBmYzUwMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEzNGI3ZThhOGE4MTU4ZWVlZmI1ZWUyMTYzMjZkMjU3MTc4MTEzYjc1NzNjM2IzZDBjYzUwNjk4YWU5ZDU5ZTIifQ"
+        },
+        {
+          "resource": "repo://app/settings.py#L489-L494",
+          "version": "repo-lines-v1:sha256:5011e9a29baabf1d61872197defc4d6c5d8c384e277d89ae1f4db371e156512c:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTU0MGRiNGVmYjNjZDZhZGQwN2ZhYTRlYWMzMDUwNjEyZjRjZmZlY2UyNGM5NjY5ZDY3ZTU4Nzg1ZGJlZDMzNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzA5OTI4ZGM0ODlhYmRlZTg5Mjk3YTc2ZDU3Yzc0NWIzOWE1NTAxODZiNWU3N2MwM2RhODdiMDIzZDVmOTE2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzVlZmQwMjk3YjlhNjY3ZGI2MWRhMWNkYTI2NTQ4Mzg5YmRkYTc5ZTYzOTNlYTZkMjAxMDMxNWVlNWZiMDM1YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDc4OGZhNWQwMDcwZDNjNGU3YTQ0NDBhOTM2N2RhOTNhNWE0ZTdmYjczNGIwODE0ODkzMTAwOGE4NGZhNGYwNCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_6e4c5c661c944c439b84326f570a2f0e",
+      "statement": "config/realmm.yaml sets billing.mode to wallet. config/nvidia.yaml does not contain a billing block.",
+      "evidence": [
+        {
+          "resource": "repo://config/realmm.yaml#L38-L45",
+          "version": "repo-lines-v1:sha256:f9102d49014559996eed46e4fe972c9c8870ba9d54556c9d70a6eb5e1c2e22e5:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmFjOGU4NTI3OTBhYWE0NDk3YTUwNjFiYTJkYmI0YTQ2NThkNTU2ZmJhNDdmNDAzMWM1NjYxZDljOTUzOWFiNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmZiMGEzOGUyM2I3ZGMyMDUyY2E1NTU3NDFjZGE4YjBiZGQzZmNkMzRhYWEyNmRhZTE5NDg2MDg1Yjc1ZjY5YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmI3NGY4ZjNkNDgyOWFlODA5MjYwZjkzYWZhNTY1NjY5YzRhZGFmYjQzNTdlNGJiYmJhOTYzNjhjYjdkYTU2YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODY5NDI0Y2YxNTRkYzhiYzZhYTdmZTY4NzgwMTdkZTRlNGYxZWE3Zjg1OWVmYTMwZjc0ODk4N2ZjZWUwODJkZCJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-27T22:14:48.530Z"
+    "at": "2026-10-07T02:38:11.806Z"
   }
 }

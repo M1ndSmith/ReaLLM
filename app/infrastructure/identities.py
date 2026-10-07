@@ -65,6 +65,26 @@ def _normalize_quota_float(value: object) -> float | None:
     return parsed
 
 
+def _normalize_optional_str(value: object) -> str | None:
+    if value is None:
+        return None
+    text = str(value).strip()
+    return text or None
+
+
+def _normalize_optional_bool(value: object) -> bool | None:
+    if value is None:
+        return None
+    if isinstance(value, bool):
+        return value
+    text = str(value).strip().lower()
+    if text in {"1", "true", "yes", "on"}:
+        return True
+    if text in {"0", "false", "no", "off"}:
+        return False
+    return None
+
+
 class GatewayIdentityStore:
     def __init__(self, settings: GatewaySettings, path: Path):
         self._settings = settings
@@ -120,6 +140,10 @@ class GatewayIdentityStore:
             daily_token_budget=_normalize_quota_int(quotas_raw.get("daily_token_budget")),
             daily_usd_budget=_normalize_quota_float(quotas_raw.get("daily_usd_budget")),
             rpm_limit=_normalize_quota_int(quotas_raw.get("rpm")),
+            team_id=_normalize_optional_str(quotas_raw.get("team_id")),
+            team_daily_usd_cap=_normalize_quota_float(quotas_raw.get("team_daily_usd_cap")),
+            prepaid_required=_normalize_optional_bool(quotas_raw.get("prepaid_required")),
+            max_per_call_usd=_normalize_quota_float(quotas_raw.get("max_per_call_usd")),
         )
         return GatewayIdentity(
             id=key_id,
@@ -181,7 +205,15 @@ class GatewayIdentityStore:
                 "created_at": now,
                 "revoked_at": None,
                 "last_used_at": None,
-                "quotas": {"daily_token_budget": None, "daily_usd_budget": None, "rpm": None},
+                "quotas": {
+                    "daily_token_budget": None,
+                    "daily_usd_budget": None,
+                    "rpm": None,
+                    "team_id": None,
+                    "team_daily_usd_cap": None,
+                    "prepaid_required": None,
+                    "max_per_call_usd": None,
+                },
             }
             self._save_unlocked()
 
@@ -208,6 +240,10 @@ class GatewayIdentityStore:
                     "daily_token_budget": identity.quotas.daily_token_budget,
                     "daily_usd_budget": identity.quotas.daily_usd_budget,
                     "rpm": identity.quotas.rpm_limit,
+                    "team_id": identity.quotas.team_id,
+                    "team_daily_usd_cap": identity.quotas.team_daily_usd_cap,
+                    "prepaid_required": identity.quotas.prepaid_required,
+                    "max_per_call_usd": identity.quotas.max_per_call_usd,
                 },
             }
             rows.append(row)
@@ -279,6 +315,10 @@ class GatewayIdentityStore:
                     "daily_token_budget": quota_obj.daily_token_budget,
                     "daily_usd_budget": quota_obj.daily_usd_budget,
                     "rpm": quota_obj.rpm_limit,
+                    "team_id": quota_obj.team_id,
+                    "team_daily_usd_cap": quota_obj.team_daily_usd_cap,
+                    "prepaid_required": quota_obj.prepaid_required,
+                    "max_per_call_usd": quota_obj.max_per_call_usd,
                 },
             }
             self._save_unlocked()
@@ -314,6 +354,10 @@ class GatewayIdentityStore:
                     "daily_token_budget": quotas.daily_token_budget,
                     "daily_usd_budget": quotas.daily_usd_budget,
                     "rpm": quotas.rpm_limit,
+                    "team_id": quotas.team_id,
+                    "team_daily_usd_cap": quotas.team_daily_usd_cap,
+                    "prepaid_required": quotas.prepaid_required,
+                    "max_per_call_usd": quotas.max_per_call_usd,
                 }
             self._save_unlocked()
             return self._identity_from_record(key_id, record)

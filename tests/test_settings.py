@@ -20,6 +20,36 @@ def test_process_env_wins_over_dotenv(tmp_path, monkeypatch):
     reset_dotenv_loaded()
 
 
+def test_yaml_wallet_arc_fields(tmp_path, monkeypatch):
+    policy = tmp_path / "policy.yaml"
+    policy.write_text(
+        "\n".join(
+            [
+                "billing:",
+                "  mode: wallet",
+                "  prepaid_required: true",
+                "  arc_rpc_url: https://rpc.testnet.arc.io",
+                "  arc_chain_id: 5042002",
+                '  usdc_address: "0x3600000000000000000000000000000000000000"',
+                "  wallet_key_path: data/arc-wallet.json",
+                "  funded_team_id: operator",
+            ]
+        ),
+        encoding="utf-8",
+    )
+    monkeypatch.setenv("REALMM_CONFIG", str(policy))
+    monkeypatch.delenv("BILLING_MODE", raising=False)
+    monkeypatch.delenv("BILLING_PREPAID_REQUIRED", raising=False)
+    settings = GatewaySettings()
+    assert settings.billing_wallet_mode() is True
+    assert settings.billing_prepaid_required_on() is True
+    assert settings.billing_arc_chain_id == 5042002
+    assert settings.billing_funded_team_id == "operator"
+    assert settings.billing_arc_rpc_url == "https://rpc.testnet.arc.io"
+    with pytest.raises(ValidationError):
+        GatewaySettings(billing_arc_chain_id=0)
+
+
 def test_yaml_applies_until_env_overrides(tmp_path, monkeypatch):
     policy = tmp_path / "policy.yaml"
     policy.write_text(

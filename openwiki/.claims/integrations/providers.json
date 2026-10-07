@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ae1b13c4cecbbd7896771228dfc03828af8c9efb547b9c3a68d4f36582fe5d17",
+  "pageVersion": "sha256:6fafba1a9a9161c3be94d31a335d177dda1318a4ffecaac9961437540f1beb15",
   "claims": [
     {
       "id": "claim_986a8a4254194b5db330f067df098818",
@@ -57,10 +57,24 @@
           "version": "repo-lines-v1:sha256:fa605412db2a1f158fcdc2092d6e8e9ef33d1fc1877a4493900ea6e98d99fcb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE2MDU0MTJkYjJhMWYxNThmY2RjMjA5MmQ2ZThlOWVmMzNkMWZjMTg3N2E0NDkzOTAwZWE2ZTk4ZDk5ZmNiNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmE2MDU0MTJkYjJhMWYxNThmY2RjMjA5MmQ2ZThlOWVmMzNkMWZjMTg3N2E0NDkzOTAwZWE2ZTk4ZDk5ZmNiNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzgwZGY0ODQ1NDExZWE0Zjg2OTUwODBlYjFhNGNmYmZhNzg4NDU2MjliZTNjYzU2MzgzMmExMjliMTMwNDUxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDlmOTMwODNjMTk3MTIxYjk4MjcwMGJhOGFmYWJkMTcyMmNmMWQzZTc0MDQ1MDllODBlZmEyNzI0N2Y2MmYwNyJ9"
         }
       ]
+    },
+    {
+      "id": "claim_9bb1212078c941898fea1af079de0328",
+      "statement": "GET /config reports unpriced_model_policy. The accepted values are deny, estimate, and allow_zero, and the code default is deny.",
+      "evidence": [
+        {
+          "resource": "repo://app/api/routes/config.py#L21-L21",
+          "version": "repo-lines-v1:sha256:ee0986e9796f438147457d41c93341af9107af1e62597c140edaeda72c5ee407:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWUwOTg2ZTk3OTZmNDM4MTQ3NDU3ZDQxYzkzMzQxYWY5MTA3YWYxZTYyNTk3YzE0MGVkYWVkYTcyYzVlZTQwNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZWUwOTg2ZTk3OTZmNDM4MTQ3NDU3ZDQxYzkzMzQxYWY5MTA3YWYxZTYyNTk3YzE0MGVkYWVkYTcyYzVlZTQwNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYzNlMDNkMTk2YTVhNmVkMTdhYWZmZWM0NDhiYzIyYjdhNzQ3M2M0OGM1MWM1YzExNDY0ZDk3YzVjZDFlMDBiNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWJmMjJlM2ZlYzViOGJhNzQzNzE0MWYwN2M1NGNhOTRkODNlNjU0MThhMjNhOTlmOTNiYzBmOTA1ZDI2ZjI4OSJ9"
+        },
+        {
+          "resource": "repo://app/settings.py#L556-L561",
+          "version": "repo-lines-v1:sha256:1742b964928fd462271af452efdb4152c476b860ed62ed73e712c3cd197ffd58:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTBkODM5MzFhZDc5NjhhNzBiZTkxMWYyYTczYjkwYjE0ZTJlYWNlMzQ3ZTljZmY5ZTVkMDhkZjQ2YWUwMDkxOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWE0OTE3ZTc1Y2IyNTNlZjI4MDUwNjM3ODBlYjA4NWVmNzZhMWM1ZGJmNWM3ZDRhNDI4ZGIyMWE1ZDQwNmRlZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTU2NzA3MGM0MzhiZGI4ZjkxYzY5ZjMyY2M2YzNiZWI5YzE1MDA5MmJjMWU5NDNjMGI2OTgyNzhhMzE3MTEyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmViYTdjMTBhMzlmZmQzZTMxZmRmYTBhNmI3MWE1YTg4NGYxZTEzODBlOTVkZWE4YmUzYjMxZDRmYWJhODAzNCJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-27T22:14:48.530Z"
+    "at": "2026-10-07T02:38:11.806Z"
   }
 }

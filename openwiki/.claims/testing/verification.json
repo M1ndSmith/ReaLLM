@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3ed6f904b27c9c2b6d8ff78411574a7984036fd90376859c2b053701d65a06f6",
+  "pageVersion": "sha256:92f88186fd2578ae352d8050bdf08d731af9fe25c2b425c913b4332bd7bc4624",
   "claims": [
     {
       "id": "claim_aab7bc2d98f2403ba034b0c30cacd4b5",
@@ -117,10 +117,48 @@
           "version": "repo-lines-v1:sha256:7598163af1e2910fd1d4452afa31881b00558c0b05c619e5890b81417bcdbefc:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmOWM5ZDBhMDNlYjYxMDhhZDY1Yzk5NGFjYjA3MDQ0OGZhMzBiMTYzZTZiNmUyYTQ5ZTY4MTRiMTViYjcyNDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjViYmZjMWRiNzZlYzM3YThiNWExNDVjNmE0ZjZkYWQ0YzJiZDg2ODNkNTMxNjRmNjFjMTE1ZjM0MDAyYzYxNzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU3NTViYTcyMDc1NDEwZGNhMWE5YTk5ZjJjZTFmODRjMzI4ZWI5MWFhNDc5YmFmZTA5ODBlYmJhY2Y4MzQzODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY4MDM0ZDNiZGE0N2FlNjNlOWY2MTMxZmRiN2Q5NzgwOTIzMjU4MGMyOWE2MTczNWNjYWQ3NGVjYThhMGU3NzgifQ"
         }
       ]
+    },
+    {
+      "id": "claim_accb26f5fafb43c1bc388562d869f0d9",
+      "statement": "The shared pytest fixture sets BILLING_MODE to off so tests do not create an Arc wallet unless they opt in.",
+      "evidence": [
+        {
+          "resource": "repo://tests/conftest.py#L50-L51",
+          "version": "repo-lines-v1:sha256:cc62985183a696eb96ada373c8f1396acf617eecbf16287760d9c626b00da3e4:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ5Zjk0ZjQzYjJmMTk3YTQzOWMxMzYzMWE4YzQ1OTU0OWVkMjc0MzEwNzNkYjczODJlMTg1ZDQ5MmJhMWZjYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2RkOTIwZDk3N2ZhZjQ4Mjk5NzMxNzRmZTU1NTkyMDliZTllNDI3YzRiMmZiMzk3MWNkYjk1MzI2NjIxY2RiMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzUxOTNjOWQ0NzExZmM1ZGE1Yjg3NDEzM2YzMDY2M2Y1MmFiYTFlNWIyMmU4M2Q4NzNhYjU0OGNhZjk3NDg2MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjVhODdkYzE4ODkzM2FmZGU5ODhhMGE0NjhmYTNmMWZmOTU4ZDBkZjYzMzk2ZjE3ODhkZTQ4N2M5OTEwYzhjMSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_4b7b1ff866d042ccac913e45ba48c08c",
+      "statement": "tests/test_billing.py covers wallet prepaid, UTC-day rollover, and Arc RPC failure as 503.",
+      "evidence": [
+        {
+          "resource": "repo://tests/test_billing.py#L135-L135",
+          "version": "repo-lines-v1:sha256:3373047dfccc7678aaa77f68d02f5494eb00d73d150ad5b8e02ae2164285ac98:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzM3MzA0N2RmY2NjNzY3OGFhYTc3ZjY4ZDAyZjU0OTRlYjAwZDczZDE1MGFkNWI4ZTAyYWUyMTY0Mjg1YWM5OCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzM3MzA0N2RmY2NjNzY3OGFhYTc3ZjY4ZDAyZjU0OTRlYjAwZDczZDE1MGFkNWI4ZTAyYWUyMTY0Mjg1YWM5OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmViODAwNzkwMTNhMzBhYzAxODhkYWJmNTVjNjJmODY2NWM4ODFmMDczMjNmNWRkZDJiNTM2MTEzNmZiZDIxNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiY2I4MGUxYWYzZDNmZTYyMjVkZTM2NjZmNmRmN2I0N2Y2ZGQ2ZmFhYTk5M2I0NjM0MjZhNzJhOGMwZjc0YzVlMyJ9"
+        },
+        {
+          "resource": "repo://tests/test_billing.py#L395-L395",
+          "version": "repo-lines-v1:sha256:285791d5c838685867bf4db9e507abebffb99513e016193e8b998d093e6bc77c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjg1NzkxZDVjODM4Njg1ODY3YmY0ZGI5ZTUwN2FiZWJmZmI5OTUxM2UwMTYxOTNlOGI5OThkMDkzZTZiYzc3YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjg1NzkxZDVjODM4Njg1ODY3YmY0ZGI5ZTUwN2FiZWJmZmI5OTUxM2UwMTYxOTNlOGI5OThkMDkzZTZiYzc3YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjFhMTZjZDY5OTA1NmQyOGVhOGVmZTk3MmI0NWU2MWM3Yjg4NDM3ODc5NTU3MzA0YjZmZjA5MzA3ZTc3MzhlMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTkxYmZlN2Q5ZThjMDIzODFmNjAyM2ZmY2ViM2E2N2JjZTA5MjczODEwZWY5N2M1N2QzZDAxMmIxNDY5MGYyYSJ9"
+        },
+        {
+          "resource": "repo://tests/test_billing.py#L618-L618",
+          "version": "repo-lines-v1:sha256:27eb405234d614a800f2fd6276862b2db60975ac44b4c12a47a20c928a54a995:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlYjQwNTIzNGQ2MTRhODAwZjJmZDYyNzY4NjJiMmRiNjA5NzVhYzQ0YjRjMTJhNDdhMjBjOTI4YTU0YTk5NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlYjQwNTIzNGQ2MTRhODAwZjJmZDYyNzY4NjJiMmRiNjA5NzVhYzQ0YjRjMTJhNDdhMjBjOTI4YTU0YTk5NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODQwMGJlZDA2Y2E0MDc4OTNjMWVjMjhkNjY4MDdkN2ViYzNhODFlOTVjNTcwMWI0MTlmZWM1ODhkOTU3NWJjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDY2MmE2MzNjZWI2M2JmNjUwZWRhNGI1YjExZGI0NmYyMmQzMTMwNDgyZDdhYjRiYjc2NzcwYjAwZWM2YmI2YyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_99d14aa629d14239b0e562cef81689db",
+      "statement": "The console billing client test fetches status, usage, a team-policy patch, and reconcile.",
+      "evidence": [
+        {
+          "resource": "repo://web/tests/billingClient.test.ts#L9-L14",
+          "version": "repo-lines-v1:sha256:3920dea79f3e26b56135e8f9b72cd0381fd25f4ef2dc07b055f8497d075aef7e:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGI0NzgzOTVhYjg1ZTMwOWE0ZTUyNzY2ODYzNDYzNTA5MjZlZmJmNjdlNTgwYTc5YWQ1YmY5NGIzNTA4Mjc2MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWViMDI4ZTgzN2MyZmEzYTc0OTdmNjg0ZTYyYTA4NTkxMWM0ZjI0ZjdkNTE3MTQ4Zjk5ODgyYzA1MGY5OTY5NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjNlYzA2ODgzZDIxYjQ1OTcxMzE1MzA0YzQxNmM2ZWI0MDA0NTM2ZmIzNDk2NGM4YjNmYzkxOTRhNDRlYjBmMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTZiMjI0NzI5YzNkMGY0ZDk3Yjk3ZmM2NTNkNjVkZmRhM2NlNzQ5NGYzNGEzYmU1ZDhiNzRhZTg2ODlmYWNkYyJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-27T22:14:48.530Z"
+    "at": "2026-10-07T02:38:11.806Z"
   }
 }

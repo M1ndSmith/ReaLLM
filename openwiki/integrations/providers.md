@@ -5,13 +5,17 @@ description: Non-empty provider API keys decide which models GET /models lists. 
 tags: [providers, catalog, ollama, nvidia, models]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-27T22:14:48.530Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
+  - id: openwiki-source-29917ce75b0d5babec26c3ce
+    resource: repo://app/api/routes/config.py
   - id: openwiki-source-edfc78d1c541ab16261576a4
     resource: repo://app/api/routes/openai.py
   - id: openwiki-source-5d4301d5bddc4e10f57a67d2
     resource: repo://app/infrastructure/catalog.py
-generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
+  - id: openwiki-source-db0ec04dc9c2d403e1b7614e
+    resource: repo://app/settings.py
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # Provider Catalog
@@ -25,5 +29,7 @@ generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
 `resolve_model` returns the single exact id, or the single suffix match. No detected providers, an unknown id, or more than one match raises `UnknownModelError`. Callers should send an id from `GET /models`.
 
 `POST /v1/embeddings` resolves the requested id through the same catalog, then calls the router. It does not add a separate embedding catalog.
+
+`GET /config` reports `unpriced_model_policy`. The setting accepts `deny`, `estimate`, or `allow_zero`. The code default is `deny`. That value is configuration. It is not a second catalog filter.
 
 Empty-key providers stay out of the catalog even if a YAML preset names their models. See [Configuration and Runtime Flags](../operations/configuration.md) and [Optional Pipeline Layers](optional-layers.md).

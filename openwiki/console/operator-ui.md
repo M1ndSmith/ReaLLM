@@ -5,7 +5,7 @@ description: The Next.js console chats through the gateway, stores the gateway k
 tags: [console, nextjs, playground, settings]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-22T20:59:37.438Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
   - id: openwiki-source-e201e686a785f09b6d899f0b
     resource: repo://compose.yaml
@@ -15,13 +15,17 @@ sources:
     resource: repo://web/app/page.tsx
   - id: openwiki-source-ec163e475f3d36294437ee03
     resource: repo://web/app/settings/page.tsx
+  - id: openwiki-source-93d2de629d071af21e8dc11a
+    resource: repo://web/components/ConsoleShell.tsx
+  - id: openwiki-source-a1f7753713d0bf5451f872a3
+    resource: repo://web/components/StatusSidebar.tsx
   - id: openwiki-source-7508529c36c13e1e94c1b201
     resource: repo://web/hooks/useChatSession.ts
   - id: openwiki-source-52efea8a30415c42de580369
     resource: repo://web/lib/auth.ts
   - id: openwiki-source-8bc4a1b8ad7b8c58f8ec316b
     resource: repo://web/lib/gateway.ts
-generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # Operator Console
@@ -40,4 +44,8 @@ A pasted gateway key is stored under `realmm.gateway_key` in `sessionStorage` an
 
 Connect snippets may still show `user_id` as an example field. That field is trace metadata on the gateway. It is not the Mem0 tenant.
 
-Settings patches `/config` for memory, PII, and guard flags. Those writes land in `data/runtime-flags.json` on the gateway process. The page tells the operator to set `GATEWAY_API_KEY` in `.env` and restart before layer toggles work. See [Gateway Authentication](../api/authentication.md).
+Settings patches `/config` for memory, PII, and guard flags. Those writes land in `data/runtime-flags.json` on the gateway process. The page tells the operator to set `GATEWAY_API_KEY` in `.env` and restart before layer toggles work. With an admin key, Settings can call `POST /billing/reconcile`. See [Gateway Authentication](../api/authentication.md).
+
+## Billing rail
+
+Every console view renders an `ops-rail`. `StatusSidebar` shows billing mode, prepaid balance, daily burn, the model/security/memory split, the deposit address, and the Circle faucet link when the status payload includes them. Recent usage lists up to five rows from `GET /billing/usage`. Refresh reloads status and usage. See [Wallet Billing](../operations/billing.md).

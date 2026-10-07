@@ -4,6 +4,7 @@ import logging
 from collections.abc import AsyncIterator, Callable
 from contextlib import contextmanager
 
+from app.application.billing import BillingCoordinator, BillingReservation
 from app.application.events import (
     StreamDelta,
     StreamEvent,
@@ -12,8 +13,12 @@ from app.application.events import (
     StreamStarted,
     StreamUsage,
 )
-from app.application.models import ChatCommand, IdentityQuotas, PromptMeta, RuntimeFlags
+from app.application.models import BillingLineItem, ChatCommand, IdentityQuotas, PromptMeta, RuntimeFlags
 from app.application.ports import (
+    BillingEntitlementPort,
+    BillingHoldPort,
+    BillingSettlementPort,
+    BillingStatusPort,
     CompletionBackend,
     FlagStorePort,
     GuardPort,
@@ -23,6 +28,7 @@ from app.application.ports import (
     PiiPort,
     PromptPort,
     StageClock,
+    UsageAuditPort,
     UsageBudgetPort,
 )
 from app.schemas import ChatMessage, ChatResponse, UsageInfo
@@ -171,6 +177,9 @@ class ChatService:
         backend: CompletionBackend,
         identities: IdentityQuotaPort | None = None,
         telemetry_factory: Callable[[], StageClock] | None = None,
+        billing: BillingEntitlementPort | BillingHoldPort | BillingSettlementPort | BillingStatusPort | None = None,
+        billing_audit: UsageAuditPort | None = None,
+        billing_rates: dict[str, float] | None = None,
     ):
         self._flags = flags
         self._catalog = catalog
@@ -182,6 +191,50 @@ class ChatService:
         self._backend = backend
         self._identities = identities
         self._telemetry_factory = telemetry_factory
+        self._billing = (
+            BillingCoordinator(
+                entitlement=billing,  # type: ignore[arg-type]
+                holds=billing,  # type: ignore[arg-type]
+                settlement=billing,  # type: ignore[arg-type]
+                audit=billing_audit,
+            )
+            if billing is not None and billing_audit is not None
+            else None
+        )
+        self._billing_rates = dict(billing_rates or {})
+
+    def _line_item_rate(self, kind: str) -> float:
+        value = self._billing_rates.get(kind, 0.0)
+        return max(0.0, float(value))
+
+    def _feature_line_items(
+        self,
+        *,
+        flags: RuntimeFlags,
+        pii_entities: list[str] | None,
+        memories_used: int | None,
+        include_memory_record: bool,
+    ) -> list[BillingLineItem]:
+        items: list[BillingLineItem] = []
+        if flags.guard and flags.guard_injection:
+            items.append(BillingLineItem(kind="security_injection_scan", usd=self._line_item_rate("security_injection_scan")))
+        if flags.guard and flags.guard_content:
+            items.append(BillingLineItem(kind="security_content_scan", usd=self._line_item_rate("security_content_scan")))
+        if flags.memory and memories_used is not None:
+            items.append(BillingLineItem(kind="memory_retrieve_attach", usd=self._line_item_rate("memory_retrieve_attach")))
+        if flags.memory and include_memory_record:
+            items.append(BillingLineItem(kind="memory_record_extract", usd=self._line_item_rate("memory_record_extract")))
+        if pii_entities is not None:
+            base = self._line_item_rate("pii_redaction")
+            per_entity = self._line_item_rate("pii_entity")
+            items.append(
+                BillingLineItem(
+                    kind="pii_redaction",
+                    usd=base + per_entity * len(pii_entities),
+                    units=max(1.0, float(len(pii_entities) or 1)),
+                )
+            )
+        return items
 
     def _clock(self) -> StageClock:
         if self._telemetry_factory is None:
@@ -278,6 +331,16 @@ class ChatService:
             identity_id=command.identity_id,
             quotas=quotas,
         )
+        billing_reservation: BillingReservation | None = None
+        if self._billing is not None:
+            estimated_usd = self._budget.estimated_input_usd(resolved, estimated)
+            billing_reservation = self._billing.pre_authorize(
+                identity_id=command.identity_id,
+                quotas=quotas,
+                estimated_usd=estimated_usd,
+                request_id=command.request_id,
+                route="/chat",
+            )
         return (
             outgoing,
             prompt_meta,
@@ -288,6 +351,7 @@ class ChatService:
             found if pii_on else None,
             True if flags.guard else None,
             reservation_id,
+            billing_reservation,
         )
 
     async def complete(self, command: ChatCommand) -> ChatResponse:
@@ -295,6 +359,7 @@ class ChatService:
         flags = self._flags.snapshot()
         fmt = normalize_response_format(command.response_format)
         reservation_id: str | None = None
+        billing_reservation: BillingReservation | None = None
 
         with clock.stage("preflight"):
             (
@@ -307,6 +372,7 @@ class ChatService:
                 pii_entities,
                 guard_passed,
                 reservation_id,
+                billing_reservation,
             ) = await self._prepare_outgoing(command, flags)
         call_kwargs = self._completion_kwargs(
             command,
@@ -339,6 +405,27 @@ class ChatService:
                     reservation_id=reservation_id,
                 )
                 reservation_id = None
+                if self._billing is not None and billing_reservation is not None:
+                    billed_usd = usage.cost_usd if usage and usage.cost_usd is not None else 0.0
+                    items = [BillingLineItem(kind="inference_model_call", usd=billed_usd)]
+                    items.extend(
+                        self._feature_line_items(
+                            flags=flags,
+                            pii_entities=pii_entities,
+                            memories_used=memories_used,
+                            include_memory_record=True,
+                        )
+                    )
+                    total_usd = sum(max(0.0, float(item.usd)) for item in items)
+                    self._billing.settle(
+                        reservation=billing_reservation,
+                        model=reported,
+                        route="/chat",
+                        actual_usd=total_usd,
+                        items=items,
+                        status="captured",
+                    )
+                    billing_reservation = None
                 if pii_redacted:
                     content, found = await self._pii.redact_text(content)
                     pii_entities = self._pii.unique_entity_types(pii_entities or [], found)
@@ -362,6 +449,8 @@ class ChatService:
         finally:
             if reservation_id is not None:
                 self._budget.release(reservation_id)
+            if self._billing is not None and billing_reservation is not None:
+                self._billing.release(billing_reservation)
         logger.info(
             "chat complete stages_ms=%s identity=%s",
             clock.snapshot(),
@@ -392,6 +481,7 @@ class ChatService:
         clock = self._clock()
         flags = self._flags.snapshot()
         reservation_id: str | None = None
+        billing_reservation: BillingReservation | None = None
         with clock.stage("preflight"):
             (
                 outgoing,
@@ -403,6 +493,7 @@ class ChatService:
                 pii_entities,
                 guard_passed,
                 reservation_id,
+                billing_reservation,
             ) = await self._prepare_outgoing(command, flags)
         buffer_output = bool(pii_redacted) or bool(guard_passed and self._guards.content_enabled(flags))
         yield StreamStarted(
@@ -462,6 +553,27 @@ class ChatService:
                     reservation_id=reservation_id,
                 )
                 reservation_id = None
+                if self._billing is not None and billing_reservation is not None:
+                    billed_usd = usage.cost_usd if usage and usage.cost_usd is not None else 0.0
+                    items = [BillingLineItem(kind="inference_model_call", usd=billed_usd)]
+                    items.extend(
+                        self._feature_line_items(
+                            flags=flags,
+                            pii_entities=pii_entities,
+                            memories_used=memories_used,
+                            include_memory_record=True,
+                        )
+                    )
+                    total_usd = sum(max(0.0, float(item.usd)) for item in items)
+                    self._billing.settle(
+                        reservation=billing_reservation,
+                        model=served,
+                        route="/chat",
+                        actual_usd=total_usd,
+                        items=items,
+                        status="captured",
+                    )
+                    billing_reservation = None
                 assistant = raw_assistant
                 if pii_redacted:
                     assistant, found = await self._pii.redact_text(raw_assistant)
@@ -486,6 +598,8 @@ class ChatService:
         finally:
             if reservation_id is not None:
                 self._budget.release(reservation_id)
+            if self._billing is not None and billing_reservation is not None:
+                self._billing.release(billing_reservation)
         used_fallback = self._catalog.fallback_from(resolved, served)
         reported = served if used_fallback else resolved
         logger.info(

@@ -106,10 +106,13 @@ describe("SettingsView", () => {
     render(
       <SettingsView
         config={null}
+        billing={null}
+        billingLoading={false}
         needsAuth
         toggleBusy={null}
         onToggle={() => undefined}
         canAdmin={false}
+        onReconcileBilling={() => undefined}
         onAdminError={() => undefined}
       />,
     );
@@ -125,6 +128,7 @@ describe("SettingsView", () => {
       <SettingsView
         config={{
           auth_required: true,
+          billing: { mode: "hybrid", cache_billable: false, unpriced_model_policy: "deny" },
           layers: {
             memory: false,
             pii: false,
@@ -134,10 +138,13 @@ describe("SettingsView", () => {
           },
           restart_for: ["keys"],
         }}
+        billing={null}
+        billingLoading={false}
         needsAuth={false}
         toggleBusy={null}
         onToggle={onToggle}
         canAdmin={false}
+        onReconcileBilling={() => undefined}
         onAdminError={() => undefined}
       />,
     );
@@ -152,6 +159,7 @@ describe("SettingsView", () => {
       <SettingsView
         config={{
           auth_required: true,
+          billing: { mode: "hybrid", cache_billable: false, unpriced_model_policy: "deny" },
           layers: {
             memory: true,
             pii: false,
@@ -161,10 +169,13 @@ describe("SettingsView", () => {
           },
           restart_for: [],
         }}
+        billing={null}
+        billingLoading={false}
         needsAuth={false}
         toggleBusy="memory"
         onToggle={() => undefined}
         canAdmin={false}
+        onReconcileBilling={() => undefined}
         onAdminError={() => undefined}
       />,
     );

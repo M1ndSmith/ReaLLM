@@ -41,6 +41,28 @@ export function formatDetail(payload: unknown, fallback: string): string {
         : "";
     return required ? `This key cannot access that route (needs ${required}).` : "Action failed: forbidden";
   }
+  if (typeof fallback === "string" && fallback.includes("(402)")) {
+    const detail =
+      payload && typeof payload === "object"
+        ? (payload as { detail?: unknown }).detail
+        : undefined;
+    const text =
+      typeof detail === "string"
+        ? detail
+        : detail && typeof detail === "object" && "error" in detail
+          ? String((detail as { error: unknown }).error)
+          : "";
+    if (/insufficient prepaid balance/i.test(text)) {
+      return "Insufficient prepaid USDC balance. Top up balance or lower model/features spend.";
+    }
+    if (/team daily usd cap exceeded/i.test(text)) {
+      return "Team daily cap reached. Raise the cap in billing policy or wait for reset.";
+    }
+    if (/per-call spend cap exceeded/i.test(text)) {
+      return "Per-call spend cap exceeded. Lower max tokens, switch to a cheaper model, or raise key cap.";
+    }
+    return "Usage payment denied by billing policy. Check balance, cap, and per-call budget.";
+  }
   if (!payload || typeof payload !== "object") return fallback;
   const detail = (payload as { detail?: unknown }).detail;
   if (typeof detail === "string") return detail;

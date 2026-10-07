@@ -26,6 +26,10 @@ def _identity_response(identity) -> IdentityPublic:
             "daily_token_budget": identity.quotas.daily_token_budget,
             "daily_usd_budget": identity.quotas.daily_usd_budget,
             "rpm": identity.quotas.rpm_limit,
+            "team_id": identity.quotas.team_id,
+            "team_daily_usd_cap": identity.quotas.team_daily_usd_cap,
+            "prepaid_required": identity.quotas.prepaid_required,
+            "max_per_call_usd": identity.quotas.max_per_call_usd,
         },
     )
 
@@ -52,6 +56,10 @@ async def create_key(body: GatewayKeyCreate, runtime: GatewayRuntime = Depends(g
                 daily_token_budget=quotas.daily_token_budget if quotas else None,
                 daily_usd_budget=quotas.daily_usd_budget if quotas else None,
                 rpm_limit=quotas.rpm if quotas else None,
+                team_id=quotas.team_id if quotas else None,
+                team_daily_usd_cap=quotas.team_daily_usd_cap if quotas else None,
+                prepaid_required=quotas.prepaid_required if quotas else None,
+                max_per_call_usd=quotas.max_per_call_usd if quotas else None,
             ),
         )
     except ValueError as exc:
@@ -74,6 +82,10 @@ async def patch_key(
                 daily_token_budget=quotas.daily_token_budget if quotas else None,
                 daily_usd_budget=quotas.daily_usd_budget if quotas else None,
                 rpm_limit=quotas.rpm if quotas else None,
+                team_id=quotas.team_id if quotas else None,
+                team_daily_usd_cap=quotas.team_daily_usd_cap if quotas else None,
+                prepaid_required=quotas.prepaid_required if quotas else None,
+                max_per_call_usd=quotas.max_per_call_usd if quotas else None,
             )
             if quotas is not None
             else None,

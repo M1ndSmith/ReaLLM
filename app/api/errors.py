@@ -6,13 +6,16 @@ from fastapi import HTTPException
 from litellm.exceptions import APIError, AuthenticationError, BadRequestError, RateLimitError
 
 from app.application.errors import (
+    BillingUnavailableError,
     BudgetExceededError,
     GuardBlockedError,
     GuardConfigError,
     IdentityRateLimitError,
+    InsufficientPrepaidBalanceError,
     InputTooLargeError,
     MemoryConfigError,
     PiiConfigError,
+    TeamCapExceededError,
     UnknownModelError,
     UnknownPromptError,
 )
@@ -44,6 +47,10 @@ def classify(exc: BaseException) -> ErrorDescriptor:
         return ErrorDescriptor(400, {"error": str(exc)}, True)
     if isinstance(exc, BudgetExceededError):
         return ErrorDescriptor(402, {"error": str(exc)}, True)
+    if isinstance(exc, InsufficientPrepaidBalanceError):
+        return ErrorDescriptor(402, {"error": str(exc)}, True)
+    if isinstance(exc, TeamCapExceededError):
+        return ErrorDescriptor(402, {"error": str(exc)}, True)
     if isinstance(exc, IdentityRateLimitError):
         return ErrorDescriptor(429, {"error": str(exc)}, True)
     if isinstance(exc, GuardBlockedError):
@@ -58,6 +65,8 @@ def classify(exc: BaseException) -> ErrorDescriptor:
     if isinstance(exc, PiiConfigError):
         return ErrorDescriptor(503, {"error": str(exc)}, True)
     if isinstance(exc, MemoryConfigError):
+        return ErrorDescriptor(503, {"error": str(exc)}, True)
+    if isinstance(exc, BillingUnavailableError):
         return ErrorDescriptor(503, {"error": str(exc)}, True)
     if isinstance(exc, AuthenticationError):
         return ErrorDescriptor(401, {"error": str(exc)}, True)

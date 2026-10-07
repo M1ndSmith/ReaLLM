@@ -10,6 +10,7 @@ ReaLMM is a self-hosted LLM operator built on top of LiteLLM router. A harness t
 4. Routing: Retries, cache, and fallbacks
 5. Observability and tracing
 6. Operator console
+7. Usage settlement for model calls, guards, memory, and PII, with wallet prepaid USDC
 
 ## Prerequisites
 
@@ -84,6 +85,8 @@ set -a && . ./.env && set +a
 curl -s http://127.0.0.1:8000/healthz
 curl -s http://127.0.0.1:8000/models \
   -H "Authorization: Bearer ${GATEWAY_API_KEY}"
+curl -s http://127.0.0.1:8000/billing/status \
+  -H "Authorization: Bearer ${GATEWAY_API_KEY}"
 ```
 
 Skip the auth header only if you started the host path with `GATEWAY_ALLOW_OPEN=1` and no gateway key.
@@ -101,13 +104,15 @@ Use an id from `/models`. For OpenAI SDKs, set `base_url` to `http://127.0.0.1:8
 
 ### Console
 
-Open `http://localhost:3000`. Paste the gateway key if asked. Playground chats, Connect copies clients, Settings toggles layers and issues keys.
+Open `http://localhost:3000`. Paste the gateway key if asked. Playground chats, Connect copies clients, Settings toggles layers and issues keys. The right rail shows billing mode, USDC balance, the Arc deposit address, the Circle faucet link, and recent usage.
 
 <img src="assets/demo/playground.png" alt="Playground" width="1000">
 
 <img src="assets/demo/connect.png" alt="Connect" width="1000">
 
 <img src="assets/demo/settings.png" alt="Settings" width="1000">
+
+<img src="assets/demo/billing.png" alt="Billing rail" width="420">
 
 Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALKTHROUGH.md).
 
@@ -118,6 +123,12 @@ Operator details (scopes, sidecars, errors): [`USAGE_WALKTHROUGH.md`](USAGE_WALK
 - `GATEWAY_API_KEY` (`secret string`, no default): required because Docker Compose sets `GATEWAY_ALLOW_OPEN=0`.
 - `GATEWAY_KEY_PEPPER` (`secret string`, no default): required when Docker Compose enables gateway authentication.
 - Optional layers live in [`config/realmm.yaml`](config/realmm.yaml). Host presets: [`env/`](env/) selects [`config/`](config/). Env overrides YAML. Memory uses local FastEmbed unless `memory.embedder` is `openai` or another embedding model id. `nvidia/nemotron-3-embed-1b` is one of those ids. Other ids need `memory.embedding_dims`. `env/nvidia.env` points at `config/nvidia.yaml` (Nemotron chat, embeddings, and content safety). Stored facts are scoped to the authenticated key (`default` for `GATEWAY_API_KEY`). A client `user_id` is trace metadata only. Facts already stored under `local` do not appear under a real key. Guards need `guards.enabled` plus `groq/meta-llama/llama-prompt-guard-2-22m` and `groq/meta-llama/llama-guard-4-12b`. With PII on, a streamed reply is buffered and redacted once at the end. The chat estimate is reserved before the provider call. Operator details: [Usage walkthrough](USAGE_WALKTHROUGH.md).
+- [`config/realmm.yaml`](config/realmm.yaml) sets `billing.mode: wallet`. Env overrides the same fields: `billing.mode` (`off`, `shadow`, `hybrid`, or `wallet`), `billing.prepaid_required`, `billing.usd_to_usdc_rate`, `billing.cache_billable`, `billing.unpriced_model_policy`, `billing.settlement_timeout_sec`, `billing.security_injection_usd`, `billing.security_content_usd`, `billing.memory_retrieve_usd`, `billing.memory_record_usd`, `billing.pii_base_usd`, `billing.pii_entity_usd`, `billing.arc_rpc_url`, `billing.arc_chain_id`, `billing.usdc_address`, `billing.wallet_key_path`, `billing.funded_team_id`. What each mode enforces is in [Usage walkthrough](USAGE_WALKTHROUGH.md).
+- Wallet mode creates `data/arc-wallet.json` on first start if it is missing. The private key stays in that file. Fund the operator balance as follows:
+  1. Copy `wallet_address` from `GET /billing/status` or the console billing rail.
+  2. Open [https://faucet.circle.com](https://faucet.circle.com).
+  3. Choose Arc Testnet and paste that address.
+  4. After the transfer lands, call `POST /billing/reconcile` (admin) or send a paid request. The gateway reads USDC from `https://rpc.testnet.arc.io` and sets the operator balance to the chain balance minus lifetime settled USDC.
 
 ## Contributing
 

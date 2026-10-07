@@ -6,13 +6,14 @@ It assumes you want to:
 - run the gateway and console locally,
 - make real API calls (native and OpenAI-compatible),
 - operate auth/runtime toggles safely,
+- inspect prepaid balance, feature spend, and denials,
 - troubleshoot common failures quickly.
 
 ## 1) Who This Is For
 
 ### Operator (console user)
-- Goal: run `web` console, chat, inspect health/status, toggle runtime layers, manage inbound keys.
-- Main surfaces: `Playground`, `Connect`, `Settings`.
+- Goal: run `web` console, chat, inspect health/status and prepaid balance, toggle runtime layers, manage inbound keys.
+- Main surfaces: `Playground`, `Connect`, `Settings`, and the billing rail.
 
 ### API Integrator (backend consumer)
 - Goal: call `POST /chat`, `POST /v1/chat/completions`, or `POST /v1/embeddings` reliably.
@@ -39,8 +40,10 @@ flowchart TD
   verifyApi --> nativeUse[UseNativeChatApi]
   verifyApi --> openaiUse[UseOpenAICompatibleApi]
   verifyUi --> uiPlaybook[UsePlaygroundConnectSettings]
-  nativeUse --> ops[OperateAuthConfigSidecars]
-  openaiUse --> ops
+  nativeUse --> hold[BillingHold]
+  openaiUse --> hold
+  hold --> settle[SettleAndAudit]
+  settle --> ops[OperateAuthConfigSidecars]
   uiPlaybook --> ops
   ops --> troubleshoot[Troubleshoot]
   troubleshoot --> validate[RunValidationChecks]
@@ -48,18 +51,11 @@ flowchart TD
 
 ## 3) Fastest Start (Host Venv)
 
-### 3.1 Prepare env files
+Install and start from [README](README.md).
 
-Short path from the repo root (chat only, memory, or full stack):
+Preset files under [`env/`](env/): `groq.env`, `ollama.env`, `memory.env`, `full.env`, `nvidia.env`. Each sets `REALMM_CONFIG` to the matching file under [`config/`](config/). [`.env.example`](.env.example) is keys and deployment wiring. [`config/realmm.yaml`](config/realmm.yaml) is the policy file.
 
-```bash
-cp env/groq.env .env
-# or: env/ollama.env  env/memory.env  env/full.env  env/nvidia.env
-```
-
-Each env preset sets `REALMM_CONFIG` to the matching file under [`config/`](config/). [`.env.example`](.env.example) is keys and deployment wiring. [`config/realmm.yaml`](config/realmm.yaml) is the policy file.
-
-Fill at least one provider key (`GROQ_API_KEY`, `OPENAI_API_KEY`, or dummy `OLLAMA_API_KEY` plus a pulled model). Presets and the example set `GATEWAY_ALLOW_OPEN=1` for the loopback-only command below. Do not keep that on a reachable bind.
+Fill at least one provider key (`GROQ_API_KEY`, `OPENAI_API_KEY`, or dummy `OLLAMA_API_KEY` plus a pulled model). Presets and the example set `GATEWAY_ALLOW_OPEN=1` for the loopback-only host command. Do not keep that on a reachable bind.
 
 Settings overlay (`data/runtime-flags.json`) can keep MEMORY / PII / GUARD on after the policy file says off. Turn layers off in Settings, not only in `config/realmm.yaml`.
 
@@ -68,22 +64,6 @@ Optional but common:
 - `REDIS_URL=redis://localhost:6379/0` for shared cache/RPM/budget (host uvicorn does not use Redis unless this is set),
 - `OBS_METRICS=1` if you want `/metrics`.
 
-### 3.2 Run backend
-
-```bash
-uv pip install -r requirements.txt
-.venv/bin/python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
-```
-
-### 3.3 Run frontend
-
-```bash
-cd web
-cp .env.local.example .env.local
-npm install
-npm run dev
-```
-
 Default URLs:
 - Console: `http://localhost:3000`
 - Gateway: `http://127.0.0.1:8000`
@@ -91,16 +71,11 @@ Default URLs:
 
 ## 4) Fastest Start (Docker Compose)
 
-Use this when you want Redis + isolated container runtime. From the repo root:
-
-```bash
-cp .env.example .env
-docker compose up --build
-```
+Install and start from [README](README.md). Use Compose when you want Redis and an isolated container runtime.
 
 Notes:
 - Set independent, random `GATEWAY_API_KEY` and `GATEWAY_KEY_PEPPER` values before starting. Compose forces `GATEWAY_ALLOW_OPEN=0` and refuses to start without both. `GATEWAY_KEY_PEPPER` is also required when any issued key exists, and before a new key is hashed, including `GATEWAY_ALLOW_OPEN=1`. Open mode with an empty key file may still serve the legacy gateway key.
-- Gateway is still reached at `http://127.0.0.1:8000` from browser.
+- Gateway is still reached at `http://127.0.0.1:8000` from the browser.
 - Compose sets gateway Redis to `redis://redis:6379/0`.
 - First memory/PII requests may download models into `./data`.
 
@@ -159,6 +134,27 @@ curl -s http://127.0.0.1:8000/v1/embeddings \
   -d '{"model":"<catalog-model-id>","input":["hello"]}'
 ```
 
+### 5.4 Billing status, usage, and policy
+
+`GET /billing/status` is also in the README check. Status and usage need `read`. Reconcile and team policy need `admin`.
+
+```bash
+curl -s "http://127.0.0.1:8000/billing/usage?offset=0&limit=25" \
+  -H "Authorization: Bearer ${GATEWAY_API_KEY}"
+curl -s http://127.0.0.1:8000/billing/teams/team-a \
+  -H "Authorization: Bearer ${GATEWAY_API_KEY}"
+curl -s -X PATCH http://127.0.0.1:8000/billing/teams/team-a \
+  -H "Authorization: Bearer ${GATEWAY_API_KEY}" \
+  -H "Content-Type: application/json" \
+  -d '{"team_id":"team-a","daily_usd_cap":25,"prepaid_balance_usdc":10}'
+curl -s -X POST http://127.0.0.1:8000/billing/reconcile \
+  -H "Authorization: Bearer ${GATEWAY_API_KEY}"
+```
+
+`GET /health` and `GET /budget` include `line_item_totals`. `GET /config` includes billing mode, cache billable, and the unpriced-model policy. Usage is paginated with `offset` and `limit`.
+
+In `wallet` mode, reconcile returns `mode` `arc` when the RPC read succeeds. A later Arc sync overwrites the funded team's balance from the chain. Other teams stay on the file ledger. A team-policy patch can set another team's prepaid balance. It does not stick for the funded team after the next chain read.
+
 ## 6) Frontend Usage Playbook
 
 ### 6.1 Playground (chat)
@@ -168,7 +164,7 @@ curl -s http://127.0.0.1:8000/v1/embeddings \
 - Send a user message.
 - Use `New chat` to mint a new `conversation_id`. Long-term facts stay on the authenticated key. A new conversation does not partition them.
 
-The sidebar Sidecars row includes a ready lamp and Redis mode from `GET /ready`.
+The right rail shows billing mode, prepaid balance, the Arc deposit address, the Circle faucet link, daily burn, the feature split, the top cost driver, and recent usage. The Sidecars row includes a ready lamp and Redis mode from `GET /ready`.
 
 Expected behavior:
 - if request succeeds, assistant response appears with meta (tokens/cost/cache/fallback if present),
@@ -192,7 +188,7 @@ Expected behavior:
   - `GUARD`
   - `GUARD_INJECTION`
   - `GUARD_CONTENT`
-- When the pasted key has `admin`, the Gateway keys panel lists keys, creates a new one (secret shown once), and revokes active keys.
+- When the pasted key has `admin`, the Gateway keys panel lists keys, creates a new one (secret shown once), and revokes active keys. Settings also shows billing mode hints and **Reconcile billing**.
 
 Important:
 - These toggles update `data/runtime-flags.json`.
@@ -259,15 +255,41 @@ Admin key lifecycle endpoints:
   - `/health` gives broad status (may show degraded),
   - `/ready` is the strict gate (503 when not ready).
 
+### 8.4 Billing line items and wallet balance
+
+Captured usage can include:
+
+- `inference_model_call`
+- `security_injection_scan`
+- `security_content_scan`
+- `memory_retrieve_attach`
+- `memory_record_extract`
+- `pii_redaction`
+
+Chat settlement records the model call plus feature items for sidecars that ran. Embeddings record the model call. Holds and settlements use one idempotency key. A failed provider call releases the hold. Feature costs settle on the same billing subject as the parent request. The audit row stores the line-item list. The audit file is `data/usage-audit.jsonl`.
+
+| Mode | Hold and settle | Spend denial | Balance debit |
+|---|---|---|---|
+| `off` | no | no | no |
+| `shadow` | yes | no | no |
+| `hybrid` | yes | yes | yes when prepaid applies |
+| `wallet` | yes | yes, prepaid is mandatory | yes |
+
+`shadow` records totals and does not block spend or debit prepaid balance. `wallet` enforces prepaid even when the key quota `prepaid_required` is false. Available USDC is the on-chain balance minus `lifetime_settled_usdc`. Daily rollover resets `spent_usd` and keeps `lifetime_settled_usdc`, so a faucet deposit is not spendable again the next day. Keys with `team_id` use that team's ledger row. Keys with no `team_id` draw `billing.funded_team_id` (`operator` unless overridden). Chain id is `5042002`. USDC is `balanceOf` on `0x3600000000000000000000000000000000000000` (6 decimals). A failed Arc RPC returns HTTP 503 and does not treat the wallet as funded.
+
+Key quota fields that affect billing: `team_id`, `team_daily_usd_cap`, `prepaid_required`, `max_per_call_usd`.
+
+Daily check: `/healthz`, `/health`, `/ready`, and `/billing/status`. For a new key, set `read` and `chat` at minimum, then the quota fields above. Seed USDC for the funded team from the faucet, then reconcile. For any other `team_id`, set that team's prepaid balance with the billing policy patch.
+
 ## 9) Troubleshooting Matrix (Backend + Frontend)
 
 - `401 gateway_unauthorized` -> missing/invalid gateway key -> set/paste `GATEWAY_API_KEY`, send Bearer or `X-Api-Key`.
 - `403 gateway_key_required` on `/config` patch -> config patch requires configured gateway auth -> set `GATEWAY_API_KEY` in `.env`, restart.
 - `403 forbidden` with `required_scope` -> key lacks scope -> use/create key with needed scope (`read`, `chat`, `config`, or `admin`).
 - `400` unknown model -> requested id not in catalog -> call `GET /models` and use exact returned id.
-- `402` budget exceeded -> process daily cap or per-key quota tripped -> raise caps or reduce load.
+- `402` budget or prepaid denial -> process daily cap, per-key quota, team daily USD cap, prepaid balance, or `max_per_call_usd` -> raise the cap, fund the wallet, or wait for the UTC daily reset.
 - `429` rate limited -> provider limit or identity RPM cap -> reduce request rate or raise limits.
-- `503` guard/memory/pii errors -> sidecar enabled but missing dependency/model config -> verify sidecar env settings.
+- `503` guard/memory/pii errors, or Arc RPC down in `wallet` mode -> sidecar missing a dependency or model, or the USDC read failed -> verify sidecar settings, or fund `wallet_address` only after status shows it. A failed read does not grant credit.
 - `/ready` returns `503` -> provider unavailable or Redis readiness failure -> restore provider access and/or Redis reachability.
 - Frontend "Could not reach gateway" -> backend down or wrong `NEXT_PUBLIC_GATEWAY_URL` -> start backend and fix `web/.env.local`.
 - Settings toggles disabled -> missing key or missing `config/admin` scope -> paste correct key and ensure required scope.
@@ -279,7 +301,7 @@ Admin key lifecycle endpoints:
 
 ```bash
 uv pip install -r requirements-dev.txt
-PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q tests/test_main.py tests/test_openai_compat.py tests/test_auth.py tests/test_scopes.py tests/test_budget.py tests/test_identity_budget.py tests/test_identity_rpm.py tests/test_reliability.py tests/test_ready.py tests/test_observability.py
+PYTEST_DISABLE_PLUGIN_AUTOLOAD=1 .venv/bin/python -m pytest -q tests/test_main.py tests/test_openai_compat.py tests/test_auth.py tests/test_scopes.py tests/test_budget.py tests/test_identity_budget.py tests/test_identity_rpm.py tests/test_reliability.py tests/test_ready.py tests/test_observability.py tests/test_billing.py
 ```
 
 ### Frontend checks
@@ -293,7 +315,7 @@ npm run build
 ```
 
 ### Minimal smoke probes
-- `GET /healthz`, `/health`, `/ready`, `/models`, `/config`, `/budget`
+- `GET /healthz`, `/health`, `/ready`, `/models`, `/config`, `/budget`, `/billing/status`
 - `POST /chat` (json + stream)
 - `POST /v1/chat/completions`
 - `POST /v1/embeddings`
@@ -307,6 +329,7 @@ npm run build
   - `app/api/routes/meta.py`
   - `app/api/routes/config.py`
   - `app/api/routes/admin.py`
+  - `app/api/routes/billing.py`
 - Auth and scope checks:
   - `app/api/auth.py`
   - `app/infrastructure/identities.py`
@@ -319,7 +342,9 @@ npm run build
   - `web/components/SettingsView.tsx`
   - `web/components/AdminKeysPanel.tsx`
   - `web/components/ConnectView.tsx`
+  - `web/components/StatusSidebar.tsx`
   - `web/hooks/useGatewayCatalog.ts`
   - `web/hooks/useRuntimeConfig.ts`
   - `web/hooks/useChatSession.ts`
+  - `web/hooks/useBillingState.ts`
 

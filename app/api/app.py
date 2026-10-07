@@ -8,7 +8,7 @@ from starlette.middleware.cors import CORSMiddleware
 
 from app.api.auth import require_gateway_auth
 from app.api.middleware.request_context import RequestContextMiddleware
-from app.api.routes import admin, chat, config, memory, meta, metrics, openai, ready, root
+from app.api.routes import admin, billing, chat, config, memory, meta, metrics, openai, ready, root
 from app.container import GatewayRuntime
 from app.settings import GatewaySettings
 
@@ -75,6 +75,7 @@ def create_app(runtime: GatewayRuntime) -> FastAPI:
     api.include_router(chat.router)
     api.include_router(openai.router)
     api.include_router(admin.router)
+    api.include_router(billing.router)
     application.include_router(root.router)
     application.include_router(api)
     return application

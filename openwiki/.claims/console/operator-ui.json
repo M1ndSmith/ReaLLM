@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d4a4363d212860ad1eada197f87c4c75f1a031251e2acb4998044bd110d0330d",
+  "pageVersion": "sha256:6f3297cdda860fef36b704053d71ecd8bae01f78fdee0dd04cd2e4a051b4c22a",
   "claims": [
     {
       "id": "claim_adef0d676f9d4695b30dcc56d5931339",
@@ -63,10 +63,24 @@
           "version": "repo-lines-v1:sha256:d7bfed5c149faf4eac3f711e9ad7c3a7bd898f1943282642e6d49e289de852cf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNkNTY1YzkyYmM1NzkzNmIzMTdmNTVmNDY2M2JlYWEwOTgzM2IyNzE2YjI5YmExMzViMGZlOGYyZGQ4YWZlZjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiNjA2MDljNmQ5Zjk0YjhjNDE3Mzk2N2ZjMDhjZDk4OTdjNTIxODkyZjUxNjBjYWFkYzA2ODhlNGZmN2I2ZTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdmMzI2OTRjOWZhY2JlYmE5OWVlMzViMGUzZjM2MTVlMWU5ZmEzMWNhYjI2MDMzOTdmMWI3ZjVjZjVkOTc2NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwNmUxOGNkNDQ4Yzc3NjIzYjVlNDMxMDkzNDJlMTgzMTc1ZjNmODM4YjI0Zjg2M2M2OGZkNGJmNWE5ZjU1Y2UifQ"
         }
       ]
+    },
+    {
+      "id": "claim_01cd48f67af04a028c2d0003fa1ac261",
+      "statement": "The console right rail reads billing status and usage. Settings reconcile calls POST /billing/reconcile when the operator can administer.",
+      "evidence": [
+        {
+          "resource": "repo://web/components/ConsoleShell.tsx#L184-L196",
+          "version": "repo-lines-v1:sha256:1b39f198858ebe3afbd61c3c22bf208167bc9c78801a4e0f2b790e6cc1610fbd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhNThhZjk5M2FjMmM3NzAwYmI5YTAxOTJiYmI1MmZmZDM3OTBkOWEyOWFmMDhjZWRjNzA2ZTMzZjI2NTg1MTIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZkYTU5M2ViODNjNzlmZTljNmQyNjhkMWMxYjg3ODdhMDkyODEwODYyYjIxZmU4YTFkMTYyZjRmMWQxZjMxMWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg0M2MxZTUwYmI3YjUwYmI5OGEwZjBjZDM0MzM3Mjk4N2ZmYTk2ODA2YThmN2YzNjYxYmFhMjkzYTFmZTIzNTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBlMTdkZWUxMGMwMGUzNzZjMGE0MjE5MWM2OTRkZjlhOWU4YzQxOTNiODZkOGY2OTQzOTIyZmNlYWQ5MjcxMTkifQ"
+        },
+        {
+          "resource": "repo://web/components/StatusSidebar.tsx#L55-L80",
+          "version": "repo-lines-v1:sha256:2b62df020f26aa5e214a4205eb69e1584a06093d1276a41767315b77a23a4478:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiZWE4ZjYxNDFmZTU1OGUwZjZjNTAzZDc3MWVlZTVkY2MxMjg2NWIxZTllZjRmNGFjNjM5YWQwMjA3ZmY3MWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExOGI3ZWFhY2I0MzFhMWY1YjA4NGZiMDlkNDc0ZjU2NWQxZTNjYmZjYmYzZTc4MzNkNTA3MTllMDZjOWEwNzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmY2M2Yzc3OTRiM2Q3MGI3NTYyNDUxNWNkYWYzYmI2NDBhMGQxYzRmNjMyMTBlNjdlOWM5ZDkzZGRmNDQwODYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ1ZjE3ZDk1M2E4ODUyMGQ3MGRlNzY4Y2EyYWJjM2Y1NTk5NGUyODRlODJkNzZlMTVmMGFhZjFiNDUzNzQzNDkifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-22T20:59:37.438Z"
+    "at": "2026-10-07T02:38:11.806Z"
   }
 }

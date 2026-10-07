@@ -15,6 +15,9 @@ router = APIRouter(dependencies=[Depends(require_scopes("chat"))])
 
 
 def command_from_chat(body: ChatRequest, request: Request) -> ChatCommand:
+    request_id = getattr(request.state, "request_id", None)
+    if not isinstance(request_id, str):
+        request_id = None
     return ChatCommand(
         model=body.model,
         messages=body.messages,
@@ -31,6 +34,7 @@ def command_from_chat(body: ChatRequest, request: Request) -> ChatCommand:
         max_tokens=body.max_tokens,
         tools=body.tools,
         tool_choice=body.tool_choice,
+        request_id=request_id,
     )
 
 

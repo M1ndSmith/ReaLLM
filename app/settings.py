@@ -13,6 +13,7 @@ _DEFAULT_INJECTION_MODEL = "groq/meta-llama/llama-prompt-guard-2-22m"
 _DEFAULT_CONTENT_MODEL = "groq/meta-llama/llama-guard-4-12b"
 _OFF = {"0", "false", "no", "off", "none"}
 _ON = {"1", "true", "yes", "on"}
+_BILLING_MODES = {"off", "shadow", "hybrid", "wallet"}
 _DEFAULT_PROVIDER_RPM = {
     "groq": 30,
     "openai": 500,
@@ -279,6 +280,42 @@ def flatten_policy(policy: dict[str, Any]) -> dict[str, Any]:
     ):
         if src in budget:
             out[dest] = budget[src]
+
+    billing = _mapping(policy, "billing")
+    for src, dest in (
+        ("mode", "billing_mode"),
+        ("prepaid_required", "billing_prepaid_required"),
+        ("usd_to_usdc_rate", "billing_usd_to_usdc_rate"),
+        ("cache_billable", "billing_cache_billable"),
+        ("unpriced_model_policy", "billing_unpriced_model_policy"),
+        ("settlement_timeout_sec", "billing_settlement_timeout_sec"),
+        ("security_injection_usd", "billing_security_injection_usd"),
+        ("security_content_usd", "billing_security_content_usd"),
+        ("memory_retrieve_usd", "billing_memory_retrieve_usd"),
+        ("memory_record_usd", "billing_memory_record_usd"),
+        ("pii_base_usd", "billing_pii_base_usd"),
+        ("pii_entity_usd", "billing_pii_entity_usd"),
+        ("arc_rpc_url", "billing_arc_rpc_url"),
+        ("arc_chain_id", "billing_arc_chain_id"),
+        ("usdc_address", "billing_usdc_address"),
+        ("wallet_key_path", "billing_wallet_key_path"),
+        ("funded_team_id", "billing_funded_team_id"),
+    ):
+        if src in billing:
+            value = billing[src]
+            if value is None:
+                continue
+            if src in {"prepaid_required", "cache_billable"}:
+                out[dest] = _flag(value)
+            elif src == "mode":
+                if isinstance(value, bool):
+                    out[dest] = "shadow" if value else "off"
+                else:
+                    out[dest] = str(value)
+            elif src in {"unpriced_model_policy", "arc_rpc_url", "usdc_address", "wallet_key_path", "funded_team_id"}:
+                out[dest] = str(value).strip()
+            else:
+                out[dest] = value
     return out
 
 
@@ -345,6 +382,23 @@ class GatewaySettings(BaseSettings):
     max_input_tokens: int | None = None
     daily_token_budget: int | None = None
     daily_usd_budget: float | None = None
+    billing_mode: str = "off"
+    billing_prepaid_required: str = "0"
+    billing_usd_to_usdc_rate: float = 1.0
+    billing_cache_billable: str = "0"
+    billing_unpriced_model_policy: str = "deny"
+    billing_settlement_timeout_sec: int = 120
+    billing_security_injection_usd: float = 0.0
+    billing_security_content_usd: float = 0.0
+    billing_memory_retrieve_usd: float = 0.0
+    billing_memory_record_usd: float = 0.0
+    billing_pii_base_usd: float = 0.0
+    billing_pii_entity_usd: float = 0.0
+    billing_arc_rpc_url: str = "https://rpc.testnet.arc.io"
+    billing_arc_chain_id: int = 5042002
+    billing_usdc_address: str = "0x3600000000000000000000000000000000000000"
+    billing_wallet_key_path: str = "data/arc-wallet.json"
+    billing_funded_team_id: str = "operator"
 
     memory: str = "0"
     memory_llm_model: str = ""
@@ -431,6 +485,81 @@ class GatewaySettings(BaseSettings):
         if parsed is not None and parsed < 0:
             raise ValueError("DAILY_USD_BUDGET must be >= 0")
         return parsed
+
+    @field_validator("billing_mode", mode="before")
+    @classmethod
+    def _billing_mode(cls, value: Any) -> str:
+        text = (str(value or "off")).strip().lower()
+        if text not in _BILLING_MODES:
+            raise ValueError("BILLING_MODE must be one of off, shadow, hybrid, wallet")
+        return text
+
+    @field_validator(
+        "billing_usd_to_usdc_rate",
+        "billing_security_injection_usd",
+        "billing_security_content_usd",
+        "billing_memory_retrieve_usd",
+        "billing_memory_record_usd",
+        "billing_pii_base_usd",
+        "billing_pii_entity_usd",
+        mode="before",
+    )
+    @classmethod
+    def _billing_non_negative_float(cls, value: Any) -> float:
+        parsed = _optional_float(value)
+        if parsed is None:
+            return 0.0
+        if parsed < 0:
+            raise ValueError("billing values must be >= 0")
+        return parsed
+
+    @field_validator("billing_settlement_timeout_sec", mode="before")
+    @classmethod
+    def _billing_settlement_timeout(cls, value: Any) -> int:
+        parsed = _int_or_default(value, 120)
+        if parsed < 1:
+            raise ValueError("BILLING_SETTLEMENT_TIMEOUT_SEC must be >= 1")
+        return parsed
+
+    @field_validator("billing_arc_rpc_url", mode="before")
+    @classmethod
+    def _billing_arc_rpc(cls, value: Any) -> str:
+        text = str(value or "").strip()
+        return text or "https://rpc.testnet.arc.io"
+
+    @field_validator("billing_usdc_address", mode="before")
+    @classmethod
+    def _billing_usdc_address(cls, value: Any) -> str:
+        text = str(value or "").strip()
+        return text or "0x3600000000000000000000000000000000000000"
+
+    @field_validator("billing_wallet_key_path", mode="before")
+    @classmethod
+    def _billing_wallet_key_path(cls, value: Any) -> str:
+        text = str(value or "").strip()
+        return text or "data/arc-wallet.json"
+
+    @field_validator("billing_funded_team_id", mode="before")
+    @classmethod
+    def _billing_funded_team(cls, value: Any) -> str:
+        text = str(value or "").strip()
+        return text or "operator"
+
+    @field_validator("billing_arc_chain_id", mode="before")
+    @classmethod
+    def _billing_arc_chain_id(cls, value: Any) -> int:
+        parsed = _int_or_default(value, 5042002)
+        if parsed < 1:
+            raise ValueError("BILLING_ARC_CHAIN_ID must be >= 1")
+        return parsed
+
+    @field_validator("billing_unpriced_model_policy", mode="before")
+    @classmethod
+    def _billing_unpriced_policy(cls, value: Any) -> str:
+        text = (str(value or "deny")).strip().lower()
+        if text not in {"deny", "estimate", "allow_zero"}:
+            raise ValueError("BILLING_UNPRICED_MODEL_POLICY must be deny, estimate, or allow_zero")
+        return text
 
     @field_validator("redis_url", mode="before")
     @classmethod
@@ -540,6 +669,27 @@ class GatewaySettings(BaseSettings):
             return False
         raw = (self.langfuse_tracing or "1").strip().lower()
         return raw not in _OFF
+
+    def billing_mode_value(self) -> str:
+        return (self.billing_mode or "off").strip().lower()
+
+    def billing_enabled(self) -> bool:
+        return self.billing_mode_value() != "off"
+
+    def billing_shadow_mode(self) -> bool:
+        return self.billing_mode_value() == "shadow"
+
+    def billing_wallet_mode(self) -> bool:
+        return self.billing_mode_value() == "wallet"
+
+    def billing_enforce_mode(self) -> bool:
+        return self.billing_mode_value() in {"hybrid", "wallet"}
+
+    def billing_prepaid_required_on(self) -> bool:
+        return parse_on(self.billing_prepaid_required)
+
+    def billing_cache_billable_on(self) -> bool:
+        return parse_on(self.billing_cache_billable)
 
     def memory_on(self) -> bool:
         return parse_on(self.memory)

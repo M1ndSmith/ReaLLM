@@ -19,6 +19,9 @@ router = APIRouter(dependencies=[Depends(require_scopes("read"))])
 @router.get("/health", response_model=HealthResponse)
 async def health(runtime: GatewayRuntime = Depends(get_runtime)) -> HealthResponse:
     flags = runtime.flags.snapshot()
+    budget = runtime.budget.status()
+    billing = runtime.billing.status()
+    budget = budget.model_copy(update={"line_item_totals": billing.line_item_totals})
     return HealthResponse(
         status="ok",
         providers=runtime.catalog.detected_providers(),
@@ -28,7 +31,7 @@ async def health(runtime: GatewayRuntime = Depends(get_runtime)) -> HealthRespon
             source=runtime.prompts.prompts_source(),
             tracing=runtime.prompts.tracing_enabled(),
         ),
-        budget=runtime.budget.status(),
+        budget=budget,
         memory=runtime.memory.status(flags),
         pii=runtime.pii.status(flags.pii),
         guard=runtime.guards.status(flags),
@@ -53,4 +56,6 @@ async def prompts(runtime: GatewayRuntime = Depends(get_runtime)) -> PromptsResp
 
 @router.get("/budget", response_model=BudgetInfo)
 async def budget(runtime: GatewayRuntime = Depends(get_runtime)) -> BudgetInfo:
-    return runtime.budget.status()
+    current = runtime.budget.status()
+    billing = runtime.billing.status()
+    return current.model_copy(update={"line_item_totals": billing.line_item_totals})

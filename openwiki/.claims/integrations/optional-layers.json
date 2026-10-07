@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:3733abff97d6795647ff9656fb41cd573c26a1af0fe8029df596f23d45fad580",
+  "pageVersion": "sha256:3a3f33038d5bc466c4d8d79273250e5914f570543c746bb26d77c48802cb8a42",
   "claims": [
     {
       "id": "claim_026809c361df41dd92e877a94470fe2d",
@@ -117,10 +117,20 @@
           "version": "repo-lines-v1:sha256:5b1500bf1ff4a4616b9b1ed03fdbf3632b500a33bdacdc41645f71102e3ee8f3:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTdmYjhlYmMwZDI5MzAwYTQ2YWRjM2E4MzdkZTMyNTk5NDJkNDRlYTY3ODhjMDBmNmUzYWE5NzYzZDNiNjFmZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjVkZWY1ZDYxZmMyMWFmMmUwM2ZiMmVjZjg4YTUwYTFlYzUyYzZlODJiOGI1ZTk5ZmRiYTBhM2MwZTAyM2U3MCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDhmZDQ1MGY2MmY5ZGJlOTBmMjY0Y2FmMDY3MDc2ZmUwNjkzODA3OTUwNTM0ZjlhM2RmMWNiMjhkNGUxYjMzNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmJhMWNkZmU3MWExZjZmYjQ0NTIyMzE0MGVhZWUzNjMzODcwMDZiMTQwOWE0NGUzMWVhNTQ0MTg4NWYxMGU0YyJ9"
         }
       ]
+    },
+    {
+      "id": "claim_9df37b79cbba43c4a4d65a39b4ff87a8",
+      "statement": "Chat settlement adds feature line items for injection, content, memory retrieve, memory record, and PII when those layers ran. PII cost is the base rate plus the entity rate times the entity count.",
+      "evidence": [
+        {
+          "resource": "repo://app/application/chat.py#L210-L237",
+          "version": "repo-lines-v1:sha256:67bd012912361c6af169804293e83d50afc025d0e32ba53efb01a53369caec87:eyJzZWxlY3RlZExpbmVDb3VudCI6MjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiNDMwNTU0ZTIwYjg2YTUzMTVlY2I0ODIyZDc3MmQ5OGVhMjYzMWFjMWNmYzBhYjM1N2Y3YWNhNDVmMDVlNDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI0MTgxMzdiYTU1NDdiYTI2NDU4NjIzNTM0Mzk5ZTI1ZTNjNGVjMzlmYTU0OTQ5ZDc3MjJhMTE4NGM5YWE1MzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVhMDM5NTkwZjRlMjQ3N2M3YTM1YzQ0ZTQyYTY0NTJkMTNmOTU5ZWZlZWM0NTZiY2JhZjVlNTk5YjM4YTRkYjYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiODNlNjY0NThmNzgzN2M0OTJlOGRmMWQ1NGY3NTU3YTZlMTI0NzEzYWY5OWFiMWEzZmNiNjIwMDI4MjVkNDgifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.5.2",
-    "at": "2026-09-27T22:14:48.530Z"
+    "at": "2026-10-07T02:38:11.806Z"
   }
 }

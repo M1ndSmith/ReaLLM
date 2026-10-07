@@ -3,6 +3,8 @@ from __future__ import annotations
 from fastapi import APIRouter, Depends, Request
 from fastapi.responses import StreamingResponse
 
+from app.application.billing import BillingCoordinator
+from app.application.models import BillingLineItem
 from app.api.dependencies import bound_identity_id, get_runtime, require_scopes
 from app.api.encoders.openai import (
     completion_id,
@@ -121,6 +123,18 @@ async def openai_embeddings(
             identity_id=identity_id,
             quotas=quotas,
         )
+        request_id = getattr(request.state, "request_id", None)
+        if not isinstance(request_id, str):
+            request_id = None
+        subject = runtime.billing.subject_for(identity_id, quotas)
+        estimated_usd = runtime.budget.estimated_input_usd(resolved, estimated)
+        runtime.billing.assert_can_spend(subject, estimated_usd, quotas=quotas)
+        billing_key = BillingCoordinator.idempotency_key(
+            identity_id=identity_id,
+            request_id=request_id,
+            route="/v1/embeddings",
+        )
+        billing_hold = runtime.billing.hold(subject=subject, estimated_usd=estimated_usd, idempotency_key=billing_key)
         payload: dict = {"model": resolved, "input": body.input}
         if body.encoding_format:
             payload["encoding_format"] = body.encoding_format
@@ -137,9 +151,30 @@ async def openai_embeddings(
                 identity_id=identity_id,
                 reservation_id=reservation_id,
             )
+            billed_usd = runtime.budget.completion_usd(result, resolved) or 0.0
+            items = [BillingLineItem(kind="inference_model_call", usd=billed_usd)]
+            runtime.billing.settle(
+                hold_id=billing_hold,
+                actual_usd=billed_usd,
+                idempotency_key=billing_key,
+                items=items,
+                subject=subject,
+            )
+            runtime.billing_audit.append_usage_event(
+                idempotency_key=billing_key,
+                subject=subject,
+                hold_id=billing_hold,
+                model=resolved,
+                route="/v1/embeddings",
+                items=items,
+                total_usd=billed_usd,
+                status="captured",
+            )
+            billing_hold = None
             reservation_id = None
             return body_out
         finally:
             runtime.budget.release(reservation_id)
+            runtime.billing.release(billing_hold)
     except Exception as exc:
         raise_chat(exc)

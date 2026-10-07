@@ -47,6 +47,8 @@ def isolate_env(monkeypatch, tmp_path):
     from app.infrastructure.catalog import ProviderCatalog
     from app.infrastructure.prompts import PromptRepository
 
+    # Wallet mode creates an Arc key and calls the testnet RPC. Tests opt in.
+    monkeypatch.setenv("BILLING_MODE", "off")
     monkeypatch.setenv("MEMORY", "0")
     monkeypatch.setenv("PII", "0")
     monkeypatch.setenv("GUARD", "0")

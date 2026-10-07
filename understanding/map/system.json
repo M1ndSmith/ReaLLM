@@ -1,0 +1,29 @@
+{
+  "summary": "ReaLMM (package realmm 0.1.0, Python >=3.12,<3.15) is one FastAPI process in front of LiteLLM, plus a Next.js console. app/main.py exports the ASGI app from create_configured_app(). That function loads .env with override=False, constructs GatewaySettings, build_runtime(), and create_app(). The application package does not import FastAPI, infrastructure, or provider libraries. Bootstrap is the only cross-layer wire.",
+  "nodes": [
+    {"id": "mod.main", "kind": "module", "path": "app/main.py", "role": "ASGI entry app = create_configured_app()."},
+    {"id": "sym.create_configured_app", "kind": "symbol", "path": "app/bootstrap.py", "role": "dotenv, settings, runtime, FastAPI app."},
+    {"id": "sym.build_runtime", "kind": "symbol", "path": "app/bootstrap.py", "role": "Constructs flags, catalog, prompts, redis health, budget, router, pii, memory, guards, identities, metrics, and ChatService."},
+    {"id": "sym.GatewayRuntime", "kind": "symbol", "path": "app/container.py", "role": "Held on app.state.runtime. Lifespan calls start() then close()."},
+    {"id": "sym.create_app", "kind": "symbol", "path": "app/api/app.py", "role": "Title ReaLMM, version 0.1.0. CORS middleware bound to live settings. RequestContextMiddleware. Root router is open; every other router sits behind require_gateway_auth."},
+    {"id": "sym.ChatService", "kind": "symbol", "path": "app/application/chat.py", "role": "Domain orchestration. No FastAPI."},
+    {"id": "port.CompletionBackend", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by LiteLLMRouterRuntime."},
+    {"id": "port.ModelCatalogPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by ProviderCatalog."},
+    {"id": "port.PromptPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by PromptRepository."},
+    {"id": "port.MemoryPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by MemoryRuntime."},
+    {"id": "port.PiiPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by PiiRuntime."},
+    {"id": "port.GuardPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by GuardService."},
+    {"id": "port.UsageBudgetPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by BudgetRuntime."},
+    {"id": "port.IdentityQuotaPort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by GatewayIdentityStore."},
+    {"id": "port.FlagStorePort", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by RuntimeFlagStore."},
+    {"id": "port.StageClock", "kind": "port", "path": "app/application/ports.py", "role": "Implemented by StageTelemetry. Null clock when no factory is passed."},
+    {"id": "test.architecture", "kind": "test", "path": "tests/test_architecture.py", "role": "Locks the layer boundaries and that bootstrap imports ChatService, create_app, and LiteLLMRouterRuntime."}
+  ],
+  "notes": [
+    "build_runtime data directory defaults to <repo>/data and prompts to <repo>/prompts.",
+    "GatewayRuntime.start configures logging, loads flags, refuses to start without GATEWAY_API_KEY unless GATEWAY_ALLOW_OPEN=1, and refuses multi-key auth without GATEWAY_KEY_PEPPER unless open mode is on. It warns when WEB_CONCURRENCY or UVICORN_WORKERS is above 1 and Redis is off.",
+    "close() drains memory tasks with a 5 second timeout, then closes the budget and the router.",
+    "FastAPI description in create_app says this is an opinionated LiteLLM operator stack, not a Portkey or LiteLLM Proxy replacement.",
+    "pyproject has no console scripts. The process is uvicorn app.main:app."
+  ]
+}

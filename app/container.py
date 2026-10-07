@@ -6,6 +6,9 @@ from dataclasses import dataclass
 
 from app.application.chat import ChatService
 from app.infrastructure.budget import BudgetRuntime
+from app.infrastructure.billing_gateway import BillingGateway
+from app.infrastructure.billing_noop import NoopBilling
+from app.infrastructure.billing_store import BillingStore
 from app.infrastructure.catalog import ProviderCatalog
 from app.infrastructure.flags import RuntimeFlagStore
 from app.infrastructure.guards import GuardService
@@ -17,6 +20,7 @@ from app.infrastructure.pii import PiiRuntime
 from app.infrastructure.prompts import PromptRepository
 from app.infrastructure.redis_health import RedisHealth
 from app.infrastructure.router import LiteLLMRouterRuntime
+from app.infrastructure.usage_audit import UsageAuditLog
 from app.settings import GatewaySettings
 
 logger = logging.getLogger(__name__)
@@ -37,6 +41,9 @@ class GatewayRuntime:
     metrics: MetricsRuntime
     redis_health: RedisHealth
     chat: ChatService
+    billing: BillingStore | NoopBilling
+    billing_audit: UsageAuditLog
+    billing_gateway: BillingGateway
 
     async def start(self) -> None:
         configure_logging(self.settings)
@@ -63,13 +70,14 @@ class GatewayRuntime:
         await self.prompts.refresh_async()
         flags = self.flags.snapshot()
         logger.info(
-            "providers=%s auth=%s redis=%s layers=memory:%s pii:%s guard:%s",
+            "providers=%s auth=%s redis=%s layers=memory:%s pii:%s guard:%s billing=%s",
             ",".join(self.catalog.detected_providers()) or "none",
             "on" if auth_on else "off",
             self.redis_health.mode(),
             _on(flags.memory),
             _on(flags.pii),
             _on(flags.guard),
+            self.settings.billing_mode_value(),
         )
 
     async def close(self) -> None:

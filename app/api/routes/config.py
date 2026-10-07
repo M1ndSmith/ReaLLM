@@ -15,6 +15,11 @@ router = APIRouter()
 async def get_config(request: Request, runtime: GatewayRuntime = Depends(get_runtime)) -> ConfigResponse:
     payload = runtime.flags.config_payload(auth_required=runtime.identities.auth_enabled())
     payload["identity"] = _identity_payload(getattr(request.state, "gateway_identity", None))
+    payload["billing"] = {
+        "mode": runtime.settings.billing_mode_value(),
+        "cache_billable": runtime.settings.billing_cache_billable_on(),
+        "unpriced_model_policy": runtime.settings.billing_unpriced_model_policy,
+    }
     return ConfigResponse.model_validate(payload)
 
 
@@ -33,6 +38,11 @@ async def patch_config(
         "guard_content": layers.guard_content,
     }
     payload["identity"] = _identity_payload(getattr(request.state, "gateway_identity", None))
+    payload["billing"] = {
+        "mode": runtime.settings.billing_mode_value(),
+        "cache_billable": runtime.settings.billing_cache_billable_on(),
+        "unpriced_model_policy": runtime.settings.billing_unpriced_model_policy,
+    }
     return ConfigResponse.model_validate(payload)
 
 
@@ -50,5 +60,9 @@ def _identity_payload(identity: GatewayIdentity | None) -> dict | None:
             "daily_token_budget": identity.quotas.daily_token_budget,
             "daily_usd_budget": identity.quotas.daily_usd_budget,
             "rpm": identity.quotas.rpm_limit,
+            "team_id": identity.quotas.team_id,
+            "team_daily_usd_cap": identity.quotas.team_daily_usd_cap,
+            "prepaid_required": identity.quotas.prepaid_required,
+            "max_per_call_usd": identity.quotas.max_per_call_usd,
         },
     }

@@ -14,6 +14,38 @@ export function formatCost(value: unknown) {
   return `$${n.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
 }
 
+export function formatUsdc(value: unknown) {
+  if (value == null || value === "") return "";
+  const n = Number(value);
+  if (!Number.isFinite(n)) return "";
+  return `${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")} USDC`;
+}
+
+export function dominantSpendDriver(lineItems: Record<string, number> | undefined): { kind: string; usd: number } | null {
+  if (!lineItems) return null;
+  let top: { kind: string; usd: number } | null = null;
+  for (const [kind, raw] of Object.entries(lineItems)) {
+    const usd = Number(raw);
+    if (!Number.isFinite(usd) || usd <= 0) continue;
+    if (!top || usd > top.usd) top = { kind, usd };
+  }
+  return top;
+}
+
+export function groupedFeatureSpend(lineItems: Record<string, number> | undefined): Record<"model" | "security" | "memory" | "pii", number> {
+  const grouped = { model: 0, security: 0, memory: 0, pii: 0 };
+  if (!lineItems) return grouped;
+  for (const [kind, raw] of Object.entries(lineItems)) {
+    const usd = Number(raw);
+    if (!Number.isFinite(usd) || usd <= 0) continue;
+    if (kind === "inference_model_call") grouped.model += usd;
+    else if (kind.startsWith("security_")) grouped.security += usd;
+    else if (kind.startsWith("memory_")) grouped.memory += usd;
+    else if (kind.startsWith("pii_")) grouped.pii += usd;
+  }
+  return grouped;
+}
+
 export function budgetText(
   health: { budget?: { daily_tokens: number; daily_token_limit: number | null } | null } | null,
 ): string {

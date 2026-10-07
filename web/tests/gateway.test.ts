@@ -21,6 +21,12 @@ describe("formatDetail", () => {
     expect(formatDetail({ error: { message: "upstream" } }, "x")).toBe("upstream");
     expect(formatDetail({ error: "boom" }, "x")).toBe("boom");
     expect(formatDetail({ foo: 1 }, "x")).toBe("x");
+    expect(
+      formatDetail({ detail: "Insufficient prepaid balance. Need $1, available $0." }, "Request failed (402)."),
+    ).toMatch(/Insufficient prepaid USDC balance/i);
+    expect(
+      formatDetail({ detail: "Team daily USD cap exceeded. $0 used, $0 left." }, "Request failed (402)."),
+    ).toMatch(/Team daily cap reached/i);
   });
 });
 

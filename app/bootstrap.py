@@ -6,7 +6,12 @@ from dotenv import load_dotenv
 
 from app.application.chat import ChatService
 from app.container import GatewayRuntime
+from app.infrastructure.arc_usdc import ArcUsdcReader
+from app.infrastructure.arc_wallet import load_or_create_wallet, wallet_file_path
 from app.infrastructure.budget import BudgetRuntime
+from app.infrastructure.billing_gateway import BillingGateway
+from app.infrastructure.billing_noop import NoopBilling
+from app.infrastructure.billing_store import BillingStore
 from app.infrastructure.catalog import ProviderCatalog
 from app.infrastructure.flags import RuntimeFlagStore
 from app.infrastructure.guards import GuardService
@@ -18,6 +23,7 @@ from app.infrastructure.prompts import PromptRepository
 from app.infrastructure.redis_health import RedisHealth
 from app.infrastructure.router import LiteLLMRouterRuntime
 from app.infrastructure.telemetry import StageTelemetry
+from app.infrastructure.usage_audit import UsageAuditLog
 from app.settings import GatewaySettings
 
 _ROOT = Path(__file__).resolve().parent.parent
@@ -57,6 +63,26 @@ def build_runtime(
     guards = GuardService(settings, catalog, router, budget)
     identities = GatewayIdentityStore(settings, data / "gateway-keys.json")
     metrics = MetricsRuntime(settings.obs_metrics_on())
+    wallet = None
+    chain_reader = None
+    if settings.billing_wallet_mode():
+        wallet = load_or_create_wallet(
+            wallet_file_path(settings.billing_wallet_key_path, data),
+            chain_id=settings.billing_arc_chain_id,
+        )
+        chain_reader = ArcUsdcReader(settings.billing_arc_rpc_url, settings.billing_usdc_address)
+    billing = (
+        BillingStore(
+            settings,
+            state_path=data / "billing-state.json",
+            chain_reader=chain_reader,
+            wallet_address=wallet.address if wallet is not None else None,
+        )
+        if settings.billing_enabled()
+        else NoopBilling()
+    )
+    billing_audit = UsageAuditLog(data / "usage-audit.jsonl")
+    billing_gateway = BillingGateway(mode="arc" if settings.billing_wallet_mode() else "ledger", store=billing)
     chat = ChatService(
         flags=flags,
         catalog=catalog,
@@ -68,6 +94,16 @@ def build_runtime(
         backend=router,
         identities=identities,
         telemetry_factory=StageTelemetry,
+        billing=billing,
+        billing_audit=billing_audit,
+        billing_rates={
+            "security_injection_scan": settings.billing_security_injection_usd,
+            "security_content_scan": settings.billing_security_content_usd,
+            "memory_retrieve_attach": settings.billing_memory_retrieve_usd,
+            "memory_record_extract": settings.billing_memory_record_usd,
+            "pii_redaction": settings.billing_pii_base_usd,
+            "pii_entity": settings.billing_pii_entity_usd,
+        },
     )
     return GatewayRuntime(
         settings=settings,
@@ -83,6 +119,9 @@ def build_runtime(
         metrics=metrics,
         redis_health=redis_health,
         chat=chat,
+        billing=billing,
+        billing_audit=billing_audit,
+        billing_gateway=billing_gateway,
     )
 
 

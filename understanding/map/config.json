@@ -1,0 +1,30 @@
+{
+  "summary": "GatewaySettings source order is init, environment, pydantic dotenv, PolicyYamlSource, then file secrets. Field defaults apply when no source sets a value. PolicyYamlSource flattens config YAML. The usual .env path is load_dotenv_once(override=False) before GatewaySettings() is constructed, so those values arrive as process environment. REALMM_CONFIG selects the YAML file; the default path is config/realmm.yaml. Runtime layer toggles are a JSON overlay, not a rewrite of the YAML.",
+  "nodes": [
+    {"id": "sym.GatewaySettings", "kind": "symbol", "path": "app/settings.py", "role": "pydantic-settings model. env_file is None. extra ignore."},
+    {"id": "sym.PolicyYamlSource", "kind": "symbol", "path": "app/settings.py", "role": "Comment in source: nested YAML mapped onto fields, below env, above defaults."},
+    {"id": "sym.flatten_policy", "kind": "symbol", "path": "app/settings.py", "role": "Maps rate_limits, reliability, memory, pii, guards, and budget sections onto flat setting names."},
+    {"id": "cfg.realmm", "kind": "config", "path": "config/realmm.yaml", "role": "Default file. Sections: rate_limits, reliability, memory, pii, guards, budget."},
+    {"id": "cfg.groq", "kind": "config", "path": "config/groq.yaml", "role": "Sections: memory, pii, guards."},
+    {"id": "cfg.ollama", "kind": "config", "path": "config/ollama.yaml", "role": "Sections: memory, pii, guards."},
+    {"id": "cfg.memory", "kind": "config", "path": "config/memory.yaml", "role": "Sections: memory, pii, guards."},
+    {"id": "cfg.full", "kind": "config", "path": "config/full.yaml", "role": "Sections: memory, pii, guards."},
+    {"id": "cfg.nvidia", "kind": "config", "path": "config/nvidia.yaml", "role": "Sections: rate_limits, reliability, memory, pii, guards, budget."},
+    {"id": "adp.RuntimeFlagStore", "kind": "adapter", "path": "app/infrastructure/flags.py", "role": "FLAG_NAMES MEMORY, PII, GUARD, GUARD_INJECTION, GUARD_CONTENT. Does not mutate os.environ."},
+    {"id": "store.runtime_flags", "kind": "store", "path": "data/runtime-flags.json", "role": "Overlay file."},
+    {"id": "store.gateway_keys", "kind": "store", "path": "data/gateway-keys.json", "role": "Identity store path passed by bootstrap."},
+    {"id": "store.budget_state", "kind": "store", "path": "data/budget-state.json", "role": "File budget ledger."},
+    {"id": "store.mem0", "kind": "store", "path": "data/mem0/qdrant", "role": "Qdrant path created by MemoryRuntime."},
+    {"id": "store.prompts", "kind": "store", "path": "prompts/chat-assistant.json", "role": "Shipped local prompt file."},
+    {"id": "test.settings", "kind": "test", "path": "tests/test_settings.py", "role": "Process env wins over dotenv. YAML applies until env overrides. Secrets stay out of repr. Provider keys remain in environ. Allow-open defaults off. Embedder is validated."}
+  ],
+  "notes": [
+    "flatten_policy copies rate_limits.default_rpm and default_tpm, reliability.retries/cache/cache_ttl/fallbacks, memory.enabled/llm_model/embedder/embedding_dims, pii.enabled/spacy_model/entities, guards.enabled/injection/content/injection_model/content_model/content_ignore, and budget max_output_tokens, max_input_tokens, daily_token_budget, daily_usd_budget.",
+    "Provider RPM and TPM: YAML providers table, then DEFAULT_RPM/DEFAULT_TPM env, then {PROVIDER}_RPM and {PROVIDER}_TPM env.",
+    "Auth-related settings seen on the model: gateway_api_key, gateway_multi_key default 1, gateway_key_pepper, gateway_allow_open default 0, gateway_allow_split_budget default 0.",
+    "Memory embedder default in MemoryRuntime is fastembed. openai has built-in dims. Other names need memory.embedding_dims. NVIDIA embed ids are a separate built-in path.",
+    "RESTART_FOR is keys, redis, budgets, MEMORY_EMBEDDER, PII_ENTITIES. PATCH /config only applies the five layer flags.",
+    "Compose overrides REDIS_URL, workers, GATEWAY_ALLOW_OPEN, CORS_ORIGINS, CONSOLE_URL, and Hugging Face / FastEmbed cache paths under /app/data/cache. The data directory is a bind mount, not baked into the image.",
+    "On-disk key and budget JSON contents were not opened. Paths come from bootstrap call sites."
+  ]
+}

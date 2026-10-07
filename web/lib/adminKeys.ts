@@ -11,6 +11,12 @@ export async function createGatewayKey(payload: {
   key_id: string;
   scopes: string[];
   label?: string;
+  quotas?: {
+    team_id?: string;
+    team_daily_usd_cap?: number;
+    max_per_call_usd?: number;
+    prepaid_required?: boolean;
+  };
 }): Promise<GatewayKeyCreated> {
   return fetchJson<GatewayKeyCreated>("/admin/keys", {
     method: "POST",

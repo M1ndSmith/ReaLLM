@@ -5,7 +5,7 @@ description: Secrets stay in the environment. Operator policy is YAML, env overr
 tags: [configuration, yaml, env, runtime-flags, nvidia]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-27T22:14:48.530Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
   - id: openwiki-source-29917ce75b0d5babec26c3ce
     resource: repo://app/api/routes/config.py
@@ -19,9 +19,11 @@ sources:
     resource: repo://compose.yaml
   - id: openwiki-source-cb7b64ac5490a877c9488251
     resource: repo://config/nvidia.yaml
+  - id: openwiki-source-c0159de4398b69b176680e62
+    resource: repo://config/realmm.yaml
   - id: openwiki-source-d95c6ba201846bc81d4f6fbe
     resource: repo://env/nvidia.env
-generated: { by: "cursor", at: "2026-09-27T22:14:48.530Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # Configuration and Runtime Flags
@@ -32,7 +34,9 @@ Provider API keys stay in the environment. The catalog reads `*_API_KEY` from `o
 
 ## YAML
 
-`config/realmm.yaml` holds rate limits, retries, cache, fallbacks, memory, PII, guards, and daily budget caps. The default file leaves memory, PII, and guards disabled and leaves daily caps unset. If the policy file is missing, the loader returns an empty mapping and field defaults apply.
+`config/realmm.yaml` holds rate limits, retries, cache, fallbacks, memory, PII, guards, daily budget caps, and `billing.*`. The default file leaves memory, PII, and guards disabled and leaves daily caps unset. Its billing mode is `wallet`. If the policy file is missing, the loader returns an empty mapping and field defaults apply. The code default for `billing_mode` is `off`.
+
+The billing mapping copies `mode`, `prepaid_required`, `usd_to_usdc_rate`, `cache_billable`, `unpriced_model_policy`, `settlement_timeout_sec`, the feature USD rates, `arc_rpc_url`, `arc_chain_id`, `usdc_address`, `wallet_key_path`, and `funded_team_id`. `BILLING_MODE` must be `off`, `shadow`, `hybrid`, or `wallet`. An environment value overrides the YAML value. `config/nvidia.yaml` has no `billing` block, so that preset keeps the field default unless `BILLING_MODE` is set. See [Wallet Billing](billing.md).
 
 `config/nvidia.yaml` is the NVIDIA preset. It sets the memory chat model to `nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b`, the embedder to `nvidia/nemotron-3-embed-1b`, and both `guards.content_model` and `guards.injection_model` to `nvidia_nim/nvidia/nemotron-3.5-content-safety`. In that file memory and the content guard are on, and PII and the injection guard are off until a runtime flag turns them on. `env/nvidia.env` points `REALMM_CONFIG` at that file and leaves `NVIDIA_NIM_API_KEY` empty.
 

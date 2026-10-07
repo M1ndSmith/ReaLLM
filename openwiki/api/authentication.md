@@ -5,7 +5,7 @@ description: Fail-closed inbound auth, the peppered key store, scopes, and how o
 tags: [authentication, gateway, keys, scopes]
 verified:
   - by: openwiki/0.5.2
-    at: 2026-09-22T20:59:37.438Z
+    at: 2026-10-07T02:38:11.806Z
 sources:
   - id: openwiki-source-1a98b5004c773391f6b97056
     resource: repo://app/api/app.py
@@ -15,16 +15,18 @@ sources:
     resource: repo://app/api/dependencies.py
   - id: openwiki-source-308fbb178a333ad189eacc81
     resource: repo://app/api/routes/admin.py
+  - id: openwiki-source-7f65a53097020df6ced82736
+    resource: repo://app/api/routes/billing.py
   - id: openwiki-source-f739a7216051b6f3d7707c10
     resource: repo://app/container.py
   - id: openwiki-source-c28551f669b931e2bd19a260
     resource: repo://app/infrastructure/identities.py
-generated: { by: "cursor", at: "2026-09-22T20:59:37.438Z" }
+generated: { by: "cursor", at: "2026-10-07T02:38:11.806Z" }
 ---
 
 # Gateway Authentication
 
-Inbound calls are authenticated before they reach chat, memory, config, or admin handlers. The root router is mounted outside that dependency. Everything else sits on a router that depends on `require_gateway_auth`.
+Inbound calls are authenticated before they reach chat, memory, config, admin, or billing handlers. The root router is mounted outside that dependency. Everything else sits on a router that depends on `require_gateway_auth`.
 
 See [HTTP API Surface](http-surface.md) for which paths are public, and [Configuration and Runtime Flags](../operations/configuration.md) for where the pepper and gateway key are set.
 
@@ -59,6 +61,10 @@ Valid scope names are `read`, `chat`, `config`, and `admin`. Unknown names are d
 `GET`, `POST`, and `PATCH /admin/keys`, and `DELETE /admin/keys/{key_id}`, all require `admin`. Create returns the secret once. List and patch responses use the public identity shape and do not include the hash. Delete revokes the key.
 
 The bootstrap record for `GATEWAY_API_KEY`, when a pepper is set and the file is empty, is stored as id `default` with all four scopes.
+
+## Billing scopes
+
+`billing.router` is included on that authenticated router. `GET /billing/status` and `GET /billing/usage` require `read`. `GET` and `PATCH /billing/teams/{team_id}`, and `POST /billing/reconcile`, require `admin`.
 
 ## Tests
 
