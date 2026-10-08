@@ -37,7 +37,7 @@ export function useOperatorState(config: ConfigResponse | null, needsAuth: boole
       blockedActions: blocked,
       message:
         blocked.length === 0
-          ? "Authenticated. This key can access chat, config, and admin routes."
+          ? null
           : `Authenticated as ${config.identity.id}, but this key cannot access: ${blocked.join(", ")}.`,
     };
   }, [config, needsAuth]);

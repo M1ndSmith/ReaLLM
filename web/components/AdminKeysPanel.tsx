@@ -23,6 +23,7 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
   const [scopes, setScopes] = useState<string[]>(["chat"]);
   const [issuedSecret, setIssuedSecret] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [pendingRevoke, setPendingRevoke] = useState<string | null>(null);
 
   const reload = useCallback(async () => {
     if (!enabled) return;
@@ -89,6 +90,7 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
     setBusy(true);
     try {
       await revokeGatewayKey(id);
+      setPendingRevoke(null);
       await reload();
     } catch (err) {
       onError(err instanceof Error ? err.message : "Could not revoke gateway key.");
@@ -98,11 +100,14 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
   }
 
   return (
-    <section className="admin-keys">
-      <h2>Gateway keys</h2>
-      <p className="hint">
-        Create scoped inbound keys. The secret is shown once. Provider keys stay in .env.
-      </p>
+    <section className="card">
+      <header className="card-head">
+        <div>
+          <h2 className="card-title">Gateway keys</h2>
+          <p className="card-desc">Create scoped inbound keys. The secret is shown once. Provider keys stay in .env.</p>
+        </div>
+      </header>
+      <div className="card-body stack">
       {issuedSecret ? (
         <pre className="secret-once" data-testid="issued-secret">
           {issuedSecret}
@@ -112,7 +117,14 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
         <label className="label" htmlFor="newKeyId">
           Key id
         </label>
-        <input id="newKeyId" value={keyId} onChange={(event) => setKeyId(event.target.value)} />
+        <input
+          id="newKeyId"
+          name="keyId"
+          spellCheck={false}
+          autoComplete="off"
+          value={keyId}
+          onChange={(event) => setKeyId(event.target.value)}
+        />
         <label className="label" htmlFor="newKeyLabel">
           Label
         </label>
@@ -165,7 +177,7 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
             </label>
           ))}
         </div>
-        <button className="ghost" type="button" disabled={busy} onClick={() => void onCreate()}>
+        <button type="button" disabled={busy} onClick={() => void onCreate()}>
           Create key
         </button>
       </div>
@@ -182,14 +194,24 @@ export function AdminKeysPanel({ enabled, onError }: Props) {
                 {item.revoked_at ? " · revoked" : ""}
               </p>
             </div>
-            {item.revoked_at ? null : (
-              <button className="ghost" type="button" disabled={busy} onClick={() => void onRevoke(item.id)}>
+            {item.revoked_at ? null : pendingRevoke === item.id ? (
+              <span className="scope-row">
+                <button className="destructive" type="button" disabled={busy} onClick={() => void onRevoke(item.id)}>
+                  Confirm revoke
+                </button>
+                <button className="ghost" type="button" disabled={busy} onClick={() => setPendingRevoke(null)}>
+                  Cancel
+                </button>
+              </span>
+            ) : (
+              <button className="destructive" type="button" disabled={busy} onClick={() => setPendingRevoke(item.id)}>
                 Revoke
               </button>
             )}
           </li>
         ))}
       </ul>
+      </div>
     </section>
   );
 }

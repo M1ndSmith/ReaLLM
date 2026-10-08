@@ -1,7 +1,7 @@
 import { render, screen } from "@testing-library/react";
 import { describe, expect, it } from "vitest";
 
-import { StatusSidebar } from "@/components/StatusSidebar";
+import { BillingPanel, StatusSidebar } from "@/components/StatusSidebar";
 
 describe("StatusSidebar", () => {
   it("renders provider and sidecar lamps", () => {
@@ -12,24 +12,14 @@ describe("StatusSidebar", () => {
           { key: "memory", label: "MEMORY", on: true },
           { key: "pii", label: "PII", on: false },
         ]}
-        billing={{
-          mode: "hybrid",
-          prepaid_required: true,
-          ledger: "file",
-          team_id: "team-a",
-          prepaid_balance_usdc: 12.5,
-          team_daily_spent_usd: 1.2,
-          team_daily_cap_usd: 5,
-          line_item_totals: { inference_model_call: 1.0, security_injection_scan: 0.2 },
-        }}
       />,
     );
     expect(screen.getByText("groq")).toBeInTheDocument();
     expect(screen.getByText("openai")).toBeInTheDocument();
     expect(screen.getByText("MEMORY").closest("span")).toHaveClass("on");
     expect(screen.getByText("PII").closest("span")).not.toHaveClass("on");
-    expect(screen.getByText("12.5 USDC")).toBeInTheDocument();
-    expect(screen.queryByText("cap reached")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("MEMORY on")).toBeInTheDocument();
+    expect(screen.getByLabelText("PII off")).toBeInTheDocument();
   });
 
   it("shows a hint when no providers are configured", () => {
@@ -42,11 +32,28 @@ describe("StatusSidebar", () => {
     expect(screen.getByText(/Redis mode: local/i)).toBeInTheDocument();
   });
 
+  it("shows prepaid balance without a cap warning", () => {
+    render(
+      <BillingPanel
+        billing={{
+          mode: "hybrid",
+          prepaid_required: true,
+          ledger: "file",
+          team_id: "team-a",
+          prepaid_balance_usdc: 12.5,
+          team_daily_spent_usd: 1.2,
+          team_daily_cap_usd: 5,
+          line_item_totals: { inference_model_call: 1.0, security_injection_scan: 0.2 },
+        }}
+      />,
+    );
+    expect(screen.getByText("12.5 USDC")).toBeInTheDocument();
+    expect(screen.queryByText("cap reached")).not.toBeInTheDocument();
+  });
+
   it("shows cap reached badge", () => {
     render(
-      <StatusSidebar
-        providers={["groq"]}
-        lamps={[]}
+      <BillingPanel
         billing={{
           mode: "wallet",
           prepaid_required: true,
@@ -64,9 +71,7 @@ describe("StatusSidebar", () => {
 
   it("shows the Arc deposit address and faucet link", () => {
     render(
-      <StatusSidebar
-        providers={["groq"]}
-        lamps={[]}
+      <BillingPanel
         billing={{
           mode: "wallet",
           prepaid_required: true,

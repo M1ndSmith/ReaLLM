@@ -1,4 +1,4 @@
-import { render, screen, within } from "@testing-library/react";
+import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { createRef } from "react";
 import { describe, expect, it, vi } from "vitest";
@@ -69,7 +69,7 @@ describe("ConnectView", () => {
     expect(onCopy).toHaveBeenCalledWith("python", "python-body");
     await user.click(screen.getByRole("button", { name: "Copy OpenAI" }));
     expect(onCopy).toHaveBeenCalledWith("openai", "openai-body");
-    expect(screen.getByText(/not a Portkey or LiteLLM Proxy replacement/)).toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "curl" })).toBeInTheDocument();
   });
 
   it("shows Copied on the active snippet button", () => {
@@ -116,7 +116,7 @@ describe("SettingsView", () => {
         onAdminError={() => undefined}
       />,
     );
-    const buttons = screen.getAllByRole("button", { name: "Off" });
+    const buttons = screen.getAllByRole("switch", { name: /Off$/ });
     expect(buttons.length).toBeGreaterThan(0);
     for (const button of buttons) expect(button).toBeDisabled();
   });
@@ -148,9 +148,7 @@ describe("SettingsView", () => {
         onAdminError={() => undefined}
       />,
     );
-    const memory = screen.getByRole("heading", { name: "MEMORY" }).closest("section");
-    expect(memory).not.toBeNull();
-    await user.click(within(memory as HTMLElement).getByRole("button", { name: "Off" }));
+    await user.click(screen.getByRole("switch", { name: "MEMORY Off" }));
     expect(onToggle).toHaveBeenCalledWith("memory", true);
   });
 
@@ -179,7 +177,7 @@ describe("SettingsView", () => {
         onAdminError={() => undefined}
       />,
     );
-    expect(screen.getByRole("button", { name: "Saving" })).toBeDisabled();
+    expect(screen.getByRole("switch", { name: "MEMORY Saving…" })).toBeDisabled();
     expect(screen.getByText(/These flags apply on the next chat/i)).toBeInTheDocument();
   });
 });

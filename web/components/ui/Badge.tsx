@@ -1,7 +1,5 @@
 import type { ReactNode } from "react";
 
-type Tone = "neutral" | "good" | "warn" | "danger";
-
-export function Badge({ children, tone = "neutral" }: { children: ReactNode; tone?: Tone }) {
-  return <span className={`ui-badge ui-badge-${tone}`}>{children}</span>;
+export function Badge({ children }: { children: ReactNode }) {
+  return <span className="badge">{children}</span>;
 }

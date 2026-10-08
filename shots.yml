@@ -2,24 +2,33 @@
 # Capture writes /tmp/realmm-demo-session.js from the environment, then deletes it.
 - output: assets/demo/playground.png
   url: http://127.0.0.1:3000/
-  width: 1280
-  height: 1100
+  width: 1680
+  height: 680
   wait: 300
   js_file: /tmp/realmm-demo-session.js
-  wait_for: "() => document.body.innerText.includes('Authenticated')"
+  wait_for: "() => document.body.innerText.includes('Chat with the selected model') && document.body.innerText.includes('nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b')"
 
 - output: assets/demo/connect.png
   url: http://127.0.0.1:3000/connect
-  width: 1280
-  height: 1500
+  width: 1680
+  height: 1296
   wait: 300
   js_file: /tmp/realmm-demo-session.js
-  wait_for: "() => document.body.innerText.includes('Authenticated') && document.body.innerText.includes('Copy curl')"
+  wait_for: "() => document.body.innerText.includes('Copy curl') && document.body.innerText.includes('nvidia_nim/nvidia/nemotron-3.5-lightning-30b-a3b')"
 
 - output: assets/demo/settings.png
   url: http://127.0.0.1:3000/settings
-  width: 1280
-  height: 1100
+  width: 1680
+  height: 1328
   wait: 300
   js_file: /tmp/realmm-demo-session.js
-  wait_for: "() => document.body.innerText.includes('These flags apply on the next chat.')"
+  wait_for: "() => document.body.innerText.toLowerCase().includes('these flags apply on the next chat.')"
+
+- output: assets/demo/billing.png
+  url: http://127.0.0.1:3000/settings
+  width: 1680
+  height: 1328
+  wait: 300
+  js_file: /tmp/realmm-demo-session.js
+  crop: billing
+  wait_for: "() => document.body.innerText.toLowerCase().includes('prepaid balance') && document.body.innerText.toLowerCase().includes('deposit address')"

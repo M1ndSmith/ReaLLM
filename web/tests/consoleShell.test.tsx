@@ -242,7 +242,7 @@ describe("ConsoleShell", () => {
     });
 
     render(<ConsoleShell view="settings" />);
-    await user.click(screen.getAllByRole("button", { name: "Off" })[0]);
+    await user.click(screen.getByRole("switch", { name: "MEMORY Off" }));
     await waitFor(() => {
       expect(chatMock.reportError).toHaveBeenCalledWith("toggle denied");
     });

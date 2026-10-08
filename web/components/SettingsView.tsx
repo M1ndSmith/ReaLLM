@@ -1,7 +1,7 @@
 "use client";
 
 import { AdminKeysPanel } from "@/components/AdminKeysPanel";
-import { formatCost, formatUsdc, groupedFeatureSpend } from "@/lib/formatters";
+import { BillingPanel } from "@/components/StatusSidebar";
 import type { BillingStatusResponse, ConfigLayers, ConfigResponse } from "@/lib/types";
 
 const DEFAULT_LAYERS: ConfigLayers = {
@@ -11,6 +11,14 @@ const DEFAULT_LAYERS: ConfigLayers = {
   guard_injection: true,
   guard_content: true,
 };
+
+const LAYER_ROWS = [
+  ["memory", "MEMORY", ""],
+  ["pii", "PII", ""],
+  ["guard", "GUARD", ""],
+  ["guard_injection", "GUARD_INJECTION", "Used when Guard is on."],
+  ["guard_content", "GUARD_CONTENT", "Used when Guard is on."],
+] as const;
 
 type Props = {
   config: ConfigResponse | null;
@@ -37,73 +45,53 @@ export function SettingsView({
 }: Props) {
   const layers = config?.layers || DEFAULT_LAYERS;
   const canPatch = Boolean(config?.auth_required) && !needsAuth;
-  const spend = groupedFeatureSpend(billing?.line_item_totals);
   return (
-    <div className="snippets">
-      <section className="setting-row setting-row-stack">
-        <div>
-          <h2>Billing mode</h2>
-          <p className="hint">
-            {config?.billing
-              ? `${String(config.billing.mode).toUpperCase()} mode, unpriced policy ${config.billing.unpriced_model_policy}, cache billable ${
-                  config.billing.cache_billable ? "yes" : "no"
-                }.`
-              : "Billing hints unavailable. Load /config with a key that has read scope."}
-          </p>
-        </div>
-        <div className="billing-quick-grid">
+    <div className="stack">
+      <BillingPanel
+        billing={billing}
+        billingLoading={billingLoading}
+        canReconcile={canAdmin}
+        onReconcile={onReconcileBilling}
+      />
+      <section className="card">
+        <header className="card-head">
           <div>
-            <div className="label">Prepaid balance</div>
-            <strong>{formatUsdc(billing?.prepaid_balance_usdc) || "n/a"}</strong>
-          </div>
-          <div>
-            <div className="label">Today burn</div>
-            <strong>{formatCost(billing?.team_daily_spent_usd) || "$0"}</strong>
-          </div>
-          <div>
-            <div className="label">Feature split</div>
-            <strong>
-              {formatCost(spend.model) || "$0"} / {formatCost(spend.security + spend.memory + spend.pii) || "$0"}
-            </strong>
-          </div>
-          <button className="ghost" type="button" onClick={onReconcileBilling} disabled={!canAdmin || billingLoading}>
-            {billingLoading ? "Refreshing" : "Reconcile billing"}
-          </button>
-        </div>
-      </section>
-      <p className="hint">
-        {canPatch
-          ? "These flags apply on the next chat. Changing embedder, Presidio entities, Redis, budgets, or provider keys still needs .env and a restart."
-          : "Set GATEWAY_API_KEY in .env, restart uvicorn, and paste the key here to toggle layers from this page. .env remains valid without a gateway key."}
-      </p>
-      {(
-        [
-          ["memory", "MEMORY", layers.memory],
-          ["pii", "PII", layers.pii],
-          ["guard", "GUARD", layers.guard],
-          ["guard_injection", "GUARD_INJECTION", layers.guard_injection],
-          ["guard_content", "GUARD_CONTENT", layers.guard_content],
-        ] as const
-      ).map(([field, label, on]) => (
-        <section key={field} className="setting-row">
-          <div>
-            <h2>{label}</h2>
-            <p className="hint">
-              {field === "guard_injection" || field === "guard_content"
-                ? "Used when GUARD is on."
-                : "Overlay flag. Not a provider key."}
+            <h2 className="card-title">Layers</h2>
+            <p className="card-desc">
+              {canPatch
+                ? "These flags apply on the next chat. Changing embedder, Presidio entities, Redis, budgets, or provider keys still needs .env and a restart."
+                : "Set GATEWAY_API_KEY in .env, restart uvicorn, and paste the key here to toggle layers from this page. .env remains valid without a gateway key."}
             </p>
           </div>
-          <button
-            className={on ? "ghost on" : "ghost"}
-            type="button"
-            disabled={!canPatch || toggleBusy != null}
-            onClick={() => void onToggle(field, !on)}
-          >
-            {toggleBusy === field ? "Saving" : on ? "On" : "Off"}
-          </button>
-        </section>
-      ))}
+        </header>
+        <div className="card-body">
+          <div className="layer-list">
+            {LAYER_ROWS.map(([field, label, hint]) => {
+              const on = layers[field];
+              const state = toggleBusy === field ? "Saving…" : on ? "On" : "Off";
+              return (
+                <div key={field} className="layer-row">
+                  <div>
+                    <div className="row-title">{label}</div>
+                    {hint ? <p className="hint">{hint}</p> : null}
+                  </div>
+                  <button
+                    className="outline"
+                    type="button"
+                    role="switch"
+                    aria-checked={on}
+                    aria-label={`${label} ${state}`}
+                    disabled={!canPatch || toggleBusy != null}
+                    onClick={() => void onToggle(field, !on)}
+                  >
+                    {state}
+                  </button>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </section>
       <AdminKeysPanel enabled={canAdmin} onError={onAdminError} />
     </div>
   );

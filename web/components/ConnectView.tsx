@@ -8,47 +8,31 @@ type Props = {
   onCopy: (label: string, text: string) => void;
 };
 
+const SNIPPETS = [
+  ["curl", "Copy curl", "curl"],
+  ["Python", "Copy Python", "python"],
+  ["OpenAI SDK", "Copy OpenAI", "openai"],
+] as const;
+
 export function ConnectView({ curl, python, openai, copied, onCopy }: Props) {
+  const bodies = { curl, python, openai };
   return (
-    <div className="snippets">
-      <section className="callout">
-        <p className="hint">
-          Copy production-ready snippets for agents and workflows. This is an opinionated LiteLLM operator stack, not a
-          Portkey or LiteLLM Proxy replacement. Calls are usage-billed by model and enabled sidecars, so route each team
-          through scoped gateway keys and policy caps.
-        </p>
-        <p className="hint">
-          Optional <code>response_format</code> is request JSON, not a console toggle. Use <code>/v1</code> when an OpenAI
-          SDK needs <code>base_url</code>; native <code>/chat</code> preserves sidecar metadata.
-        </p>
-      </section>
-      <section>
-        <div className="snippet-head">
-          <h2>curl</h2>
-          <button className="ghost" type="button" onClick={() => void onCopy("curl", curl)}>
-            {copied === "curl" ? "Copied" : "Copy curl"}
-          </button>
-        </div>
-        <pre>{curl}</pre>
-      </section>
-      <section>
-        <div className="snippet-head">
-          <h2>Python</h2>
-          <button className="ghost" type="button" onClick={() => void onCopy("python", python)}>
-            {copied === "python" ? "Copied" : "Copy Python"}
-          </button>
-        </div>
-        <pre>{python}</pre>
-      </section>
-      <section>
-        <div className="snippet-head">
-          <h2>OpenAI SDK</h2>
-          <button className="ghost" type="button" onClick={() => void onCopy("openai", openai)}>
-            {copied === "openai" ? "Copied" : "Copy OpenAI"}
-          </button>
-        </div>
-        <pre>{openai}</pre>
-      </section>
+    <div className="stack">
+      {SNIPPETS.map(([title, action, key]) => (
+        <section key={key} className="card">
+          <div className="card-head">
+            <h2 className="card-title">{title}</h2>
+            <div aria-live="polite">
+              <button className="outline" type="button" onClick={() => void onCopy(key, bodies[key])}>
+                {copied === key ? "Copied" : action}
+              </button>
+            </div>
+          </div>
+          <div className="card-body">
+            <pre>{bodies[key]}</pre>
+          </div>
+        </section>
+      ))}
     </div>
   );
 }

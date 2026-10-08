@@ -49,7 +49,7 @@ describe("useOperatorState", () => {
     );
     expect(result.current.authState).toBe("authorized");
     expect(result.current.blockedActions).toEqual([]);
-    expect(result.current.message).toMatch(/can access chat, config, and admin/i);
+    expect(result.current.message).toBeNull();
   });
 
   it("returns blocked actions when scopes are partial", () => {

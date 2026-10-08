@@ -57,6 +57,8 @@ describe("AdminKeysPanel", () => {
     render(<AdminKeysPanel enabled onError={() => undefined} />);
     await waitFor(() => expect(screen.getByText("worker")).toBeInTheDocument());
     await user.click(screen.getByRole("button", { name: "Revoke" }));
+    expect(revokeGatewayKey).not.toHaveBeenCalled();
+    await user.click(screen.getByRole("button", { name: "Confirm revoke" }));
     expect(revokeGatewayKey).toHaveBeenCalledWith("worker");
   });
 
@@ -97,6 +99,7 @@ describe("AdminKeysPanel", () => {
     await user.click(screen.getByRole("button", { name: "Create key" }));
     await waitFor(() => expect(onError).toHaveBeenCalledWith("create failed"));
     await user.click(screen.getByRole("button", { name: "Revoke" }));
+    await user.click(screen.getByRole("button", { name: "Confirm revoke" }));
     await waitFor(() => expect(onError).toHaveBeenCalledWith("revoke failed"));
   });
 });

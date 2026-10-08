@@ -1,19 +1,15 @@
 import type { Metadata } from "next";
 import type { ReactNode } from "react";
-import localFont from "next/font/local";
+import { Geist, Geist_Mono } from "next/font/google";
 
 import "./globals.css";
 
-const sans = localFont({
-  src: "../fonts/Outfit-Variable.ttf",
-  weight: "400 600",
+const sans = Geist({
+  subsets: ["latin"],
   variable: "--font-body",
 });
-const mono = localFont({
-  src: [
-    { path: "../fonts/IBMPlexMono-Regular.ttf", weight: "400", style: "normal" },
-    { path: "../fonts/IBMPlexMono-Medium.ttf", weight: "500", style: "normal" },
-  ],
+const mono = Geist_Mono({
+  subsets: ["latin"],
   variable: "--font-mono",
 });
 
@@ -24,8 +20,8 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${sans.variable} ${mono.variable}`}>{children}</body>
+    <html lang="en" className={`dark ${sans.variable} ${mono.variable}`} style={{ colorScheme: "dark" }}>
+      <body>{children}</body>
     </html>
   );
 }

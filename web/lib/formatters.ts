@@ -6,19 +6,30 @@ export function formatTokens(usage: { total_tokens?: number; prompt_tokens?: num
   return `${total} tok`;
 }
 
+const usdFormat = new Intl.NumberFormat("en-US", {
+  style: "currency",
+  currency: "USD",
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 6,
+});
+
+const usdcFormat = new Intl.NumberFormat("en-US", {
+  minimumFractionDigits: 0,
+  maximumFractionDigits: 4,
+});
+
 export function formatCost(value: unknown) {
   if (value == null || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  if (n === 0) return "$0";
-  return `$${n.toFixed(6).replace(/0+$/, "").replace(/\.$/, "")}`;
+  return usdFormat.format(n);
 }
 
 export function formatUsdc(value: unknown) {
   if (value == null || value === "") return "";
   const n = Number(value);
   if (!Number.isFinite(n)) return "";
-  return `${n.toFixed(4).replace(/0+$/, "").replace(/\.$/, "")} USDC`;
+  return `${usdcFormat.format(n)} USDC`;
 }
 
 export function dominantSpendDriver(lineItems: Record<string, number> | undefined): { kind: string; usd: number } | null {

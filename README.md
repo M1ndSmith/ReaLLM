@@ -104,7 +104,7 @@ Use an id from `/models`. For OpenAI SDKs, set `base_url` to `http://127.0.0.1:8
 
 ### Console
 
-Open `http://localhost:3000`. Paste the gateway key if asked. Playground chats, Connect copies clients, Settings toggles layers and issues keys. The right rail shows billing mode, USDC balance, the Arc deposit address, the Circle faucet link, and recent usage.
+Open `http://localhost:3000`. Paste the gateway key if asked. Playground chats and lists recent usage beside the transcript. Connect copies clients. Settings toggles layers, issues keys, and shows billing mode, USDC balance, the Arc deposit address, the Circle faucet link, and Reconcile billing.
 
 <img src="assets/demo/playground.png" alt="Playground" width="1000">
 
